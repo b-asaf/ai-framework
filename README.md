@@ -3,27 +3,6 @@
 ## Installation
 Install OpenCode: `npm install -g opencode-ai`
 
-## Configuration
-Connect to GitHub via CMD:
-- `opencode auth login`
-  - Select provider: "Github Copilot"
-  - Select deployment type: "Github.com"
-  - Connect to Rafael GitHub
-- Open in **Edge** the URL that is in the CMD and paste the code
-
-  **OR**
-
-  [Follow the tutorial](https://rafaelcoil.sharepoint.com/:u:/r/sites/GitHubCopilot/SitePages/%D7%9E%D7%93%D7%A8%D7%99%D7%9A-%D7%94%D7%AA%D7%A7%D7%A0%D7%94.aspx?csf=1&web=1&e=Ws8sil)
-
-- Validate that `login` succeeded
-
-##### Optional
-OpenCode Desktop (if CLI is not your tool):
-Download OpenCode desktop app: https://opencode.ai/download
-Or use the installation that is in the folder
-
----
-
 ## How to use in a project
 
 ### Option A — Installer script (recommended)
