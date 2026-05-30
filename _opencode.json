@@ -1,0 +1,28 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": [
+    "AGENTS.md"
+  ],
+  "permission": {
+    "bash": {
+      "git status": "allow",
+      "git log *": "allow",
+      "git diff *": "allow",
+      "git branch": "allow",
+      "git branch *": "allow",
+      "git checkout -b *": "deny",
+      "git commit *": "deny",
+      "git push *": "deny",
+      "git merge *": "deny",
+      "git rebase *": "deny",
+      "git reset *": "deny",
+      "git push --force *": "deny",
+      "*": "ask"
+    },
+    "edit": "ask",
+    "write": "allow"
+  },
+  "suggest": {
+    "autofix": false
+  }
+}

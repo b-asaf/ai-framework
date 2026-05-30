@@ -1,0 +1,16 @@
+#!/bin/sh
+# pre-push: prevent direct push to protected branches
+PROTECTED="main master develop"
+while read local_ref local_sha remote_ref remote_sha; do
+  BRANCH=$(echo "$remote_ref" | sed 's|refs/heads/||')
+  for protected in $PROTECTED; do
+    if [ "$BRANCH" = "$protected" ]; then
+      echo ""
+      echo "❌ ERROR: Direct push to '$BRANCH' is not allowed."
+      echo "   Push to your feature branch and open a Pull Request."
+      echo ""
+      exit 1
+    fi
+  done
+done
+exit 0

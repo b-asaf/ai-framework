@@ -1,0 +1,15 @@
+#!/bin/sh
+# pre-commit: prevent direct commits to protected branches
+BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null)
+PROTECTED="main master develop"
+for protected in $PROTECTED; do
+  if [ "$BRANCH" = "$protected" ]; then
+    echo ""
+    echo "❌ ERROR: Direct commits to '$BRANCH' are not allowed."
+    echo "   Create a feature branch: git checkout -b feat/your-task-name"
+    echo "   Prefixes: feat/ fix/ chore/ refactor/ docs/ hotfix/ release/"
+    echo ""
+    exit 1
+  fi
+done
+exit 0
