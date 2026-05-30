@@ -213,4 +213,4 @@ After first-run, describe any task in plain language. The agents handle the rest
 | Skills not found | Verify `.opencode/skills/` exists and contains skill folders — re-run `bash install.sh` if missing |
 | Microservice agents missing | First-run topology step may have detected monolith — re-run analysis or manually add sub_agents to `_opencode.json` |
 | Refactoring plan not generated | No violations detected — check `project-overview` for convention findings |
-| Git hooks not enforcing | Run `bash scripts/hooks/install-hooks.sh` in each repo root (see `git-hooks` skill) |
+| Git hooks not enforcing | Run `bash scripts/hooks/install-hooks.sh` in each repo root (see `git-hooks` skill) |"# ai-framework" 
