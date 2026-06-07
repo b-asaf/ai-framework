@@ -24,30 +24,39 @@ Then execute all first-run steps before accepting any task.
 ### Check 2 — Branch guard
 
 If the developer's message describes a task that requires writing or editing files —
-**stop. Say this before writing a single file:**
+**stop. Propose a branch name before writing a single file:**
 
-> "Before I make any changes, please confirm a feature branch is open.
-> Please run: `git checkout -b <prefix>/<task-name>`
-> Reply with 'done' when the branch is open."
+> "Before I make any changes I'll create a branch. I propose:
+> `<prefix>/<task-name>`
+> Reply 'yes' to confirm and I'll create it, or tell me a different name."
 
-Do not write or edit any file until the developer confirms the branch is open.
+Wait for the developer's confirmation. Once confirmed, run:
+```
+git checkout -b <confirmed-branch-name>
+```
+
+Only after the branch is created may any file be written or edited.
 
 Branch prefixes: `feat/` `fix/` `chore/` `refactor/` `docs/` `hotfix/` `release/`
+
+Name rules: lowercase, hyphens only, ≤ 50 chars, derived from the task description.
 
 ---
 
 ## Non-negotiable rules
 
-### 1. Git is the developer's responsibility
+### 1. Git — what agents may and may not do
 
-Agents **may** run: `git status`, `git log`, `git diff`, `git branch`
+Agents **may** run: `git status`, `git log`, `git diff`, `git branch`,
+`git checkout -b` (only after developer confirms the proposed branch name — see Check 2)
 
-Agents **must NEVER** run: `git checkout -b`, `git commit`, `git push`,
-`git merge`, `git rebase`, `git reset`
+Agents **must NEVER** run: `git commit`, `git push`, `git merge`,
+`git rebase`, `git reset`, `git push --force`
 
 ### 2. Branch before any write
 
-No file write or edit until the developer confirms a branch is open. See Check 2.
+No file write or edit until the agent has created the branch and confirmed it
+to the developer. See Check 2.
 
 ### 3. No 3rd-party changes without approval
 
@@ -136,8 +145,8 @@ the user's request.
 ```
 Developer: "do X"
     ↓
-CHECK 1: Is first-run done?  → if not, run first-run-analysis
-CHECK 2: Is branch open?     → if not, ask developer to create one
+CHECK 1: Is first-run done?         → if not, run first-run-analysis
+CHECK 2: Is a branch open?          → propose name → developer confirms → agent runs git checkout -b
     ↓
 product-manager → requirements grill → confirmed spec
 architect       → solution grill     → confirmed HLD + PR breakdown
