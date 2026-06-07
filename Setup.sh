@@ -10,6 +10,7 @@ Supported tools
   Claude Code   ~/.claude/
   OpenCode      ~/.config/opencode/   (also reads ~/.claude/ as fallback)
   Codex CLI     ~/.codex/
+  Gemini CLI    ~/.gemini/
   Copilot       %LOCALAPPDATA%/github-copilot/intellij/   (Windows only)
 
 Usage
@@ -50,6 +51,7 @@ HOME = Path.home()
 CLAUDE_DIR  = HOME / ".claude"
 OPENCODE_DIR = HOME / ".config" / "opencode"
 CODEX_DIR   = HOME / ".codex"
+GEMINI_DIR  = HOME / ".gemini"
 COPILOT_DIR = (
     Path(os.environ.get("LOCALAPPDATA", "")) / "github-copilot" / "intellij"
     if IS_WIN else None
@@ -71,6 +73,9 @@ def build_link_map() -> list[tuple[Path, Path, str]]:
 
         # Codex CLI
         (CODEX_DIR / "AGENTS.md",        i / "SHARED.md",  "file"),
+
+        # Gemini CLI
+        (GEMINI_DIR / "GEMINI.md",       i / "GEMINI.md",  "file"),
     ]
 
     # Copilot IntelliJ — Windows only, skip silently on other OS
