@@ -2,7 +2,7 @@
 
 Agentic development framework for teams using AI coding tools.
 Single source of truth for instructions, skills, agents, and workflow rules —
-Works across all major LLM tools with zero drift.
+works across all major LLM tools with zero drift.
 
 ---
 
@@ -13,6 +13,7 @@ Works across all major LLM tools with zero drift.
 | **Claude Code** | `~/.claude/CLAUDE.md` + skills + agents |
 | **OpenCode** | `~/.config/opencode/AGENTS.md` |
 | **Codex CLI** | `~/.codex/AGENTS.md` |
+| **Gemini CLI** | `~/.gemini/GEMINI.md` |
 | **Copilot IntelliJ** | `global-copilot-instructions.md` + agents + git commit |
 
 All tools read from `instructions/SHARED.md` as the single source of truth.
@@ -97,6 +98,8 @@ instructions/SHARED.md  ──→  ~/.config/opencode/AGENTS.md
 
 instructions/CLAUDE.md  ──→  ~/.claude/CLAUDE.md
 
+instructions/GEMINI.md  ──→  ~/.gemini/GEMINI.md
+
 instructions/COPILOT.md ──→  %LOCALAPPDATA%/github-copilot/.../global-copilot-instructions.md
 
 instructions/GIT_COMMIT.md ──→  %LOCALAPPDATA%/github-copilot/.../global-git-commit-instructions.md
@@ -113,6 +116,7 @@ agents/                 ──→  ~/.claude/agents/
 |---|---|---|
 | Shared behavior rule | `instructions/SHARED.md` | Propagates to all tools automatically |
 | Claude Code-only rule | `instructions/CLAUDE.md` | |
+| Gemini CLI-only rule | `instructions/GEMINI.md` | |
 | Copilot-only rule | `instructions/COPILOT.md` | |
 | New skill | `skills/<name>/skill.md` | Load on-demand per task |
 | New agent | `agents/<name>.md` | |
