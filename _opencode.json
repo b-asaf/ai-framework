@@ -11,7 +11,7 @@
       "git diff *": "allow",
       "git branch": "allow",
       "git branch *": "allow",
-      "git checkout -b *": "deny",
+      "git checkout -b *": "allow",
       "git commit *": "deny",
       "git push *": "deny",
       "git merge *": "deny",
