@@ -10,20 +10,18 @@
 Claude Code must respect these git permission boundaries at the tool level
 (mirroring the `_opencode.json` permission block for OpenCode users):
 
-| Command pattern        | Permission |
-| ---------------------- | ---------- |
-| `git status`           | allow      |
-| `git log *`            | allow      |
-| `git diff *`           | allow      |
-| `git branch`           | allow      |
-| `git branch *`         | allow      |
-| `git checkout -b *`    | deny       |
-| `git commit *`         | deny       |
-| `git push *`           | deny       |
-| `git merge *`          | deny       |
-| `git rebase *`         | deny       |
-| `git reset *`          | deny       |
-| `git push --force *`   | deny       |
+| Command pattern      | Behaviour    |
+| -------------------- | ------------ |
+| `git status`         | allowed      |
+| `git log`            | allowed      |
+| `git diff`           | allowed      |
+| `git branch`         | allowed      |
+| `git checkout -b *`  | only after developer confirms proposed branch name — see SHARED.md Check 2 |
+| `git commit *`       | never        |
+| `git push *`         | never        |
+| `git merge *`        | never        |
+| `git rebase *`       | never        |
+| `git reset *`        | never        |
 | everything else        | ask        |
 
 ## Skills location
