@@ -76,3 +76,13 @@ PR 2 — feat: use new [package] API in [feature]
 
 ## When a task is too large
 If a task cannot be broken into PRs each under ~400 lines of meaningful change, flag it to the developer and ask for scope reduction or phasing before starting implementation.
+
+## Micro-slice rules
+
+A slice is the unit of work delivered, reviewed, and verified independently. These rules define what makes a slice valid:
+
+- **One behaviour per slice.** Each slice represents exactly one meaningful behaviour change. If it takes more than one implementation agent session to build, it is too large — split it.
+- **Independent verifiability.** A slice must be reviewable and QA-verifiable without waiting for any other slice to be complete. If it cannot be verified independently, split it further.
+- **Never layer-based.** Slices are never defined around technical layers (controllers, services, repositories) or internal refactors — those are engineering concerns, not delivery units. A slice is defined by a user-visible or externally-observable behaviour change.
+
+Smaller is always better. Fewer, smaller slices complete the review cycle faster and keep implementation unblocked.
