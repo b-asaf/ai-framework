@@ -18,6 +18,9 @@ description: Use when writing, modifying, refactoring, or reviewing code to enfo
 - **Booleans use `is` / `has` / `can` prefix.** `isActive`, `hasPermission`, `canDelete`.
 - **One word per concept.** Pick `fetch`, `retrieve`, or `get` — use it consistently everywhere.
 - **Use domain language.** Prefer terms from `CONTEXT.md` and `project-overview` for business concepts. Prefer well-known CS terms (`Queue`, `Visitor`, `Factory`) for technical concepts.
+- **Include units in numeric names.** Any numeric parameter, variable, or field whose value is meaningless without knowing its unit must include the unit in its name. `durationInMs`, `timeoutInSeconds`, `offsetInDays`, `ratePerSecond`, `thresholdInPercent`. A bare `int duration` or `long timeout` forces every caller to consult the docs or the source.
+  - Exempt: loop counters, collection sizes, array indices, and booleans.
+  - Applies to: method parameters, local variables, fields, and constants.
 - **Avoid mental mapping.** Readers should never need to translate `r` into "the url after stripping the host". Names encode meaning directly.
 
 ## Write-time checklist
@@ -27,9 +30,14 @@ Before finalising any name:
 2. Could it be confused with something else in this codebase?
 3. Can a new team member understand it in 5 seconds?
 4. Is it consistent with how the same concept is named elsewhere?
+5. If it is a numeric value — does the name include the unit? (`durationInMs` not `duration`)
 
 ## Review cite format
 
 `[NAMING] <file>:<line> — <what the name is, what it actually means, what it should be renamed to>`
 
-Naming findings are **NON-BLOCKING** unless the name is actively misleading (contradicts what the code does) — in that case it is **BLOCKING**.
+Examples:
+- `[NAMING] SchedulerService.java:34 — parameter 'delay' should be 'delayInMs' (unit is ambiguous)`
+- `[NAMING] OrderRepository.java:12 — 'accountList' is a Set, not a List; rename to 'accountSet'`
+
+Naming findings are **NON-BLOCKING** unless the name is actively misleading (contradicts what the code does) or a numeric name is missing its unit — in that case it is **BLOCKING**.
