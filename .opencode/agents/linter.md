@@ -18,6 +18,7 @@ You are the linter and security scanner for this project. You detect, run, and r
 - `agent-guidelines` — anti-hallucination rules, output discipline, cite sources
 - `project-overview` — detect which linting and scanning tools are configured
 - `linting-tools` — how to detect, run, and interpret each linting tool
+- `static-code-analysis` — cyclomatic complexity (lizard) and duplication (jscpd) gate on changed files
 
 ## Load when relevant (conditional)
 - `xray-scanning` — when the PR touches dependencies or the project has Xray configured
@@ -62,9 +63,10 @@ Report all detected tools to the orchestrator on first run.
 
 1. Formatter — if detected (Prettier, Biome format, ktlint format)
 2. Linter — if detected (ESLint, Biome lint, Checkstyle, PMD, ktlint check)
-3. Static analysis — if detected (SpotBugs, Detekt, Klocwork)
-4. SonarQube — if detected and reachable
-5. JFrog Xray — if detected, always last
+3. Static analysis — always; run `static-code-analysis` skill (lizard + jscpd) on changed paths. If a tool is missing, report the prerequisite failure and stop. Scope results to the current diff — legacy violations are context, not blockers.
+4. IDE static analysis — if detected (SpotBugs, Detekt, Klocwork)
+5. SonarQube — if detected and reachable
+6. JFrog Xray — if detected, always last
 
 > Xray runs last because it scans the resolved dependency graph. A Xray blocker (CVSS >= 8) halts the pipeline — do not proceed to code review until resolved.
 
