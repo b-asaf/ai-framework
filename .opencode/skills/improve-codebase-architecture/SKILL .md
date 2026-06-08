@@ -79,3 +79,42 @@ Each refactor is a separate PR with no feature work bundled in. Load `atomic-cha
 ## Output after the session
 
 Update `docs/refactoring-plan.md` with any candidates that were identified but not immediately actioned, so they're not lost.
+
+---
+
+## Screaming Architecture
+
+*(Robert C. Martin: "The architecture should scream the use case of the application, not the framework.")*
+
+A visitor reading the top-level folder structure should immediately understand **what the system does**, not what language, framework, or database it uses.
+
+**The two questions every folder must answer:**
+1. What business capability or feature does this folder own?
+2. What is the single reason everything in this folder would change?
+
+If a folder cannot answer both cleanly, it is too broad and must be split.
+
+**Guiding principles:**
+- **Feature-first, layer-second.** Group by business domain slice first (`orders/`, `billing/`, `notifications/`), then by layer within it if needed. A flat `controllers/` folder spanning all features is inside-out thinking.
+- **Framework and language are invisible at the top level.** Nothing in the folder tree should reveal the web framework, ORM, or programming language — those are implementation details, not architecture.
+- **Dependency isolation governs split decisions.** If a change to one file forces another module to recompile or re-test, the two concerns are too tightly coupled.
+- **Tests mirror the source structure.** Whether tests live beside source files or in a parallel tree is dictated by the language's build toolchain (Java/Maven enforces `src/test/` mirroring `src/main/`; most JS/TS projects co-locate). Either is fine — what is not fine is a test tree that uses a completely different organisational scheme than the source tree.
+
+When proposing any architecture change, include a proposed folder sketch showing new or changed locations and an explicit statement of which existing modules are touched and why.
+
+## The Swap Test
+
+Before approving any design that crosses a boundary (persistence, external service, API), ask: *can I swap the database for in-memory, or swap the HTTP transport for a CLI interface, by changing only files in the infrastructure/interface layer?*
+
+If no, the boundary is not properly drawn. Redesign until the swap is a single-file concern.
+
+**Persistence boundary:**
+- Repository interfaces are application-layer types. They accept and return only domain types. No SQL, no ORM types, no pagination cursors leak into this interface.
+- An `InMemoryRepository` must be trivially writable. If it is complex, the repository interface is too wide.
+
+**API boundary:**
+- Controllers are adapters. They translate between the external protocol (HTTP, GraphQL) and the use case's input/output types.
+- A protocol change or version bump touches only the controller/adapter layer — zero use-case changes.
+
+**External service boundary:**
+- Third-party SDKs (payment, email, storage) are never called directly from use cases. Depend on a narrow domain interface; the infrastructure adapter wraps the SDK. Switching vendors = one new adapter file, nothing else.
