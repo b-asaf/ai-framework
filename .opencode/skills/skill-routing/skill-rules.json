@@ -1,0 +1,103 @@
+{
+  "$comment": "Authoritative skill routing table. Read by the orchestrator at task start. Replaces the ad-hoc routing table in SHARED.md so the orchestrator always has a machine-readable source. intentPatterns are matched against the developer's message. priority: critical > high > medium > low.",
+  "rules": [
+    {
+      "skill": "diagnose",
+      "priority": "critical",
+      "enforcement": "suggest",
+      "keywords": ["bug", "broken", "error", "exception", "crash", "failing", "not working", "fix", "issue", "regression"],
+      "intentPatterns": ["fix .+", "debug .+", "why (is|does|isn't|doesn't).+", ".+ not working", ".+ throws", ".+ fails"]
+    },
+    {
+      "skill": "tdd",
+      "priority": "high",
+      "enforcement": "suggest",
+      "keywords": ["test", "tests", "spec", "coverage", "unit test", "integration test"],
+      "intentPatterns": ["(add|write|create|fix) .* test", "test .+", "cover .+"]
+    },
+    {
+      "skill": "zoom-out",
+      "priority": "high",
+      "enforcement": "suggest",
+      "keywords": ["unfamiliar", "new codebase", "first time", "haven't seen", "understand the code"],
+      "intentPatterns": ["(explore|understand|orient|map) .+", "what does .+ do", "how (is|does) .+ work"]
+    },
+    {
+      "skill": "pattern-enforcement",
+      "priority": "high",
+      "enforcement": "suggest",
+      "keywords": ["pattern", "convention", "style", "structure", "new file", "new class", "new component", "new service"],
+      "intentPatterns": ["(add|create|implement|build) (a |an |new ).+"]
+    },
+    {
+      "skill": "improve-codebase-architecture",
+      "priority": "high",
+      "enforcement": "suggest",
+      "keywords": ["refactor", "architecture", "restructure", "redesign", "clean up", "technical debt"],
+      "intentPatterns": ["refactor .+", "improve (the |) architecture", "restructure .+"]
+    },
+    {
+      "skill": "code-standards",
+      "priority": "high",
+      "enforcement": "suggest",
+      "keywords": ["implement", "build", "create", "add", "develop"],
+      "intentPatterns": ["(implement|build|create|add|develop) .+"]
+    },
+    {
+      "skill": "atomic-changes",
+      "priority": "high",
+      "enforcement": "suggest",
+      "keywords": ["pr", "pull request", "merge", "review", "branch"],
+      "intentPatterns": ["(create|open|prepare|make) .*(pr|pull request|branch)"]
+    },
+    {
+      "skill": "third-party-policy",
+      "priority": "critical",
+      "enforcement": "suggest",
+      "keywords": ["dependency", "package", "library", "install", "npm", "gradle", "maven", "pip", "yarn", "add package", "new library"],
+      "intentPatterns": ["(add|install|update|remove|upgrade|downgrade) .*(package|library|dependency|dep|npm|gradle|maven)"]
+    },
+    {
+      "skill": "documentation",
+      "priority": "medium",
+      "enforcement": "suggest",
+      "keywords": ["docs", "documentation", "readme", "changelog", "adr", "architecture doc"],
+      "intentPatterns": ["(update|write|create|add) .*(doc|readme|changelog|adr)"]
+    },
+    {
+      "skill": "api-contracts",
+      "priority": "high",
+      "enforcement": "suggest",
+      "keywords": ["api", "endpoint", "rest", "graphql", "grpc", "contract", "schema", "openapi"],
+      "intentPatterns": ["(add|change|modify|create) .*(endpoint|api|route|mutation|query|schema)"]
+    },
+    {
+      "skill": "db-patterns",
+      "priority": "high",
+      "enforcement": "suggest",
+      "keywords": ["database", "db", "migration", "schema", "query", "repository", "entity", "table", "column"],
+      "intentPatterns": ["(add|change|create) .*(table|column|migration|entity|schema|index)"]
+    },
+    {
+      "skill": "clean-code-security",
+      "priority": "critical",
+      "enforcement": "suggest",
+      "keywords": ["auth", "authentication", "authorization", "login", "token", "jwt", "password", "permission", "role", "security", "input", "user input", "form"],
+      "intentPatterns": ["(add|implement|change) .*(auth|login|permission|role|token|password|security)"]
+    },
+    {
+      "skill": "localization",
+      "priority": "medium",
+      "enforcement": "suggest",
+      "keywords": ["i18n", "localization", "translation", "rtl", "string", "locale", "language"],
+      "intentPatterns": ["(add|update|fix) .*(string|translation|locale|language|rtl)"]
+    },
+    {
+      "skill": "static-code-analysis",
+      "priority": "high",
+      "enforcement": "suggest",
+      "keywords": ["review", "lint", "quality", "complexity", "duplication"],
+      "intentPatterns": ["(run|check) .*(lint|review|quality|analysis)"]
+    }
+  ]
+}
