@@ -56,8 +56,26 @@ Long agentic sessions accumulate context. The orchestrator manages this actively
 ### For all agents — output discipline
 - Lead with the result, not the reasoning. Put conclusions first.
 - Use structured output (tables, checklists, code blocks) over prose where possible.
-- Do not re-summaries what previous agents already reported unless directly relevant.
+- Do not re-summarise what previous agents already reported unless directly relevant.
 - Keep explanations proportional to complexity — simple tasks get simple responses.
+
+### Skill loading — use skill-rules.json
+At the start of every task, read `skills/skill-routing/skill-rules.json` before choosing
+which skills to load. This is the authoritative routing table — do not rely on memory or
+the task classification table in SHARED-reference.md alone.
+
+Match the developer's message against `keywords` and `intentPatterns` in each rule.
+Load all matching skills with priority `critical` or `high` before starting work.
+Tell the developer which skills were loaded and why.
+
+### Context budget — proactive compaction
+Monitor session length. When either trigger fires, load `handoff` before the next step
+and propose compacting the session:
+
+- **Response count:** orchestrator has produced **more than 8 agent responses** this session
+- **Token volume:** any single response contains more than **~3,000 tokens** of output
+
+Do not wait for the session to feel slow. Trigger proactively at the threshold.
 
 ### For the orchestrator — checkpoint summaries
 After each agent completes a step, the orchestrator produces a compact **checkpoint summary** before routing to the next agent. This replaces the full conversation context with a structured state snapshot.
