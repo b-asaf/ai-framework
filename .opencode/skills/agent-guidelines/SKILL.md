@@ -26,8 +26,19 @@ Every structural decision must be traceable. When following a pattern, naming co
 
 If you cannot cite a file or an explicit developer decision, you do not know — treat it as missing and trigger the appropriate discovery or clarification flow.
 
-### Prefer reading over recalling
-When working in a project, always read the relevant existing files before generating anything. Your training knowledge of a framework or library is a starting point — the project's actual code is the source of truth. Patterns in the codebase override general best practice.
+### Investigate before answering (anti-hallucination — mandatory)
+
+<investigate_before_answering>
+Never speculate about code you have not opened. If the developer references a specific
+file, read it before answering. Investigate and read relevant files BEFORE answering
+questions about the codebase. Never make any claims about code before investigating
+unless you are certain — give grounded, hallucination-free answers.
+</investigate_before_answering>
+
+When working in a project, always read the relevant existing files before generating
+anything. Your training knowledge of a framework or library is a starting point —
+the project's actual code is the source of truth. Patterns in the codebase override
+general best practice.
 
 ### Ask when uncertain
 If a requirement, decision, or pattern is ambiguous, ask the developer before proceeding. A short clarifying question is always better than confident wrong output. Use this format:
