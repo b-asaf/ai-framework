@@ -1,43 +1,40 @@
 # GEMINI.md
-> Gemini CLI-specific instructions.
-> All rules from SHARED.md apply. This file adds Gemini CLI-specific behaviour only.
+> Gemini CLI global instructions file (`~/.gemini/GEMINI.md`).
+> Imports shared rules, then adds Gemini-specific behaviour.
+> RTK appends its block below — the @import preserves SHARED.md as the source of truth.
+
+@./SHARED.md
 
 ---
 
-## Context loading
+## Gemini CLI — additional rules
 
-Gemini CLI reads `GEMINI.md` from the project root or `~/.gemini/GEMINI.md` globally.
-All shared rules (branch guard, first-run, git restrictions, post-implementation
-pipeline) are inherited from `instructions/SHARED.md`, which is symlinked to
-`~/.gemini/GEMINI.md` by `setup.py`.
+### Tool permissions
 
-## Tool permissions
+Gemini CLI has no declarative permission config. Enforce these boundaries
+through instruction compliance in addition to the rules in SHARED.md:
 
-Gemini CLI does not have a declarative permission config like `_opencode.json`.
-Enforce these git boundaries through instruction compliance:
+| Command pattern     | Behaviour                                                                  |
+| ------------------- | -------------------------------------------------------------------------- |
+| `git status`        | allowed                                                                    |
+| `git log`           | allowed                                                                    |
+| `git diff`          | allowed                                                                    |
+| `git branch`        | allowed                                                                    |
+| `git checkout -b *` | only after developer confirms proposed branch name — see Check 2           |
+| `git commit *`      | never                                                                      |
+| `git push *`        | never                                                                      |
+| `git merge *`       | never                                                                      |
+| `git rebase *`      | never                                                                      |
+| `git reset *`       | never                                                                      |
 
-| Command pattern      | Behaviour    |
-| -------------------- | ------------ |
-| `git status`         | allowed      |
-| `git log`            | allowed      |
-| `git diff`           | allowed      |
-| `git branch`         | allowed      |
-| `git checkout -b *`  | only after developer confirms proposed branch name — see SHARED.md Check 2 |
-| `git commit *`       | never        |
-| `git push *`         | never        |
-| `git merge *`        | never        |
-| `git rebase *`       | never        |
-| `git reset *`        | never        |
+### Skills
 
-## Skills and agents
+Gemini CLI has native skill discovery under `~/.gemini/skills/`.
+Skills are symlinked there by `setup.py`. At task start, read
+`skill-rules.json` and load matching skills by reading their SKILL.md file.
 
-Gemini CLI does not have a native skill/agent loading system.
-Load skills by reading the relevant markdown file at the start of a task and
-summarising its rules before proceeding. Skills live in `skills/` in this repo.
+### Completion behaviour
 
-## Completion behaviour
-
-- Match the existing code style exactly
+- Match existing code style exactly — no auto-formatting
 - Surgical changes only — touch nothing outside the task scope
-- After generating code, summarise what changed and flag anything that needs
-  testing or review
+- After generating code, summarise what changed and flag anything needing review
