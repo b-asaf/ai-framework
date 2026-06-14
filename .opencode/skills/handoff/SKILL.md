@@ -7,6 +7,9 @@ description: Compact the current conversation into a handoff document so a fresh
 
 When a session grows long, context degrades. Earlier decisions get diluted. A fresh agent starting mid-task without context makes wrong assumptions. The handoff document fixes this — it's a structured snapshot that lets any agent (or the same agent in a new session) pick up exactly where things left off.
 
+This skill produces two outputs: a detailed handoff document (for the immediate next
+message) and a short entry in `docs/session-summary.md` (for any future session).
+
 ## When to use
 
 - Session is getting long and responses are slowing down
@@ -69,7 +72,33 @@ Session: [brief description of what this session was doing]
 
 **Keep it short.** The handoff document should be readable in 2 minutes. If it's longer, you're duplicating instead of referencing.
 
+## Also append to session-summary.md
+
+In addition to the handoff document, append a dated entry to `docs/session-summary.md`
+(create it if it doesn't exist). This is the durable cross-session record — the handoff
+document is for the *next message*, this entry is for *future sessions* that may not
+have access to the handoff file.
+
+```markdown
+## Session — [date]
+
+### What changed
+[1-3 bullets — files/areas touched this session]
+
+### Decisions made
+[Bullets, each citing where confirmed — same as "Confirmed decisions" above]
+
+### Pending
+[What's left to do, in one line]
+```
+
+Keep this entry short — 5-10 lines maximum. It is a pointer for future sessions to
+orient quickly, not a duplicate of the handoff document. If `session-summary.md`
+already has a "Pending" section from a previous session that this session resolved,
+update that entry rather than leaving stale pending items.
+
 ## After writing
 
 Tell the developer:
-> "Handoff saved to `.handoff-[task-slug].md`. Start a new session and say: 'Continue from handoff — read `.handoff-[task-slug].md` first.'"
+> "Handoff saved to `.handoff-[task-slug].md` and logged in `docs/session-summary.md`.
+> Start a new session and say: 'Continue from handoff — read `.handoff-[task-slug].md` first.'"

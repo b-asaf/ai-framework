@@ -79,6 +79,29 @@ Match the developer's message against `keywords` and `intentPatterns` in each ru
 Load all matching skills with priority `critical` or `high` before starting work.
 Tell the developer which skills were loaded and why.
 
+### Context ordering — for prompt caching
+
+<context_ordering>
+The order content is loaded determines whether prompt caching can apply. Cache
+matching is prefix-based: one different token early in the context invalidates the
+cache for everything after it. Always assemble context in this order:
+
+1. **SHARED.md / SHARED-reference.md** (rules — identical across all sessions and projects)
+2. **Skill content** — `.opencode/skills/*/SKILL.md` for all loaded skills (identical
+   across all sessions of all projects — same framework, same skills)
+3. **Agent definition** — `.opencode/agents/<agent>.md` (identical across all sessions
+   of all projects using this agent)
+4. **project-overview/sub/*.md** — project-specific, changes per-repo
+5. **Task description and conversation** — changes every turn
+
+Never place project-specific content (`project-overview`, `docs/`, file contents)
+before framework content (rules, skills, agent definitions) in the assembled context.
+Doing so breaks caching for the entire framework block on every session.
+
+This costs nothing to follow and compounds: steps 1-3 become a stable cached prefix
+shared across every session, every project, and every developer using this framework.
+</context_ordering>
+
 ### Context budget — proactive compaction
 Monitor session length. When either trigger fires, load `handoff` before the next step
 and propose compacting the session:
