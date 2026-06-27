@@ -37,7 +37,7 @@ Goal: agile vertical PRs, no broken changes, no risky git actions without approv
 ### `.opencode/` — tool-specific config and content
 - `agents/` — 16 agent definitions
 - `skills/` — 36 skill folders + `skill-routing/skill-rules.json`
-- `verification/scripts/` — git hooks (install via `python setup.py --project`)
+- `verification/scripts/` — git hooks (install via `python setup.py --install-hooks`)
 
 ### Key structural rules
 - `[XXX]` in `project-overview` = first-run not done. Never remove until first-run populates them.
