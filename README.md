@@ -267,7 +267,7 @@ or hybrid and adjusts the agent routing accordingly.
 
 ### VS Code multi-root workspace
 
-Create a `.code-workspace` file and run `setup.py --project` inside each repo:
+Create a `.code-workspace` file and run `python ~/ai-framework/setup.py --project` inside each repo:
 
 ```
 workspace/
@@ -321,15 +321,15 @@ will be detected and wired automatically.
 
 ## Troubleshooting
 
-| Problem                                  | Fix                                                              |
-| ---------------------------------------- | ---------------------------------------------------------------- |
-| `python: command not found`              | Try `python3 setup.py --global` instead                          |
-| `Permission denied` on symlink (Windows) | Enable Developer Mode in Windows Settings, or add `--copy`       |
-| Tool shows "not found" but is installed  | Restart your terminal (PATH needs to refresh), then re-run setup |
-| VS Code Copilot has no instructions      | Run `python setup.py --project` from inside the project folder   |
-| Skills not loading in OpenCode           | Verify `~/.config/opencode/skills/` exists — re-run `--global`   |
-| OpenCode not reading global config       | Verify `~/.config/opencode/AGENTS.md` exists — re-run `--global` |
-| `No .git directory` error on --project   | Run `--project` from the root of a git repo, not a parent folder |
+| Problem                                  | Fix                                                                                  |
+| ---------------------------------------- | ------------------------------------------------------------------------------------ |
+| `python: command not found`              | Try `python3 setup.py --global` instead                                              |
+| `Permission denied` on symlink (Windows) | Enable Developer Mode in Windows Settings, or add `--copy`                           |
+| Tool shows "not found" but is installed  | Restart your terminal (PATH needs to refresh), then re-run setup                     |
+| VS Code Copilot has no instructions      | Run `python /path/to/ai-framework/setup.py --project` from inside the project folder |
+| Skills not loading in OpenCode           | Verify `~/.config/opencode/skills/` exists — re-run `--global`                       |
+| OpenCode not reading global config       | Verify `~/.config/opencode/AGENTS.md` exists — re-run `--global`                     |
+| `No .git directory` error on --project   | Run `--project` from the root of a git repo, not a parent folder                     |
 
 ---
 

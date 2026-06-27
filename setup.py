@@ -16,7 +16,7 @@ Step 1 - Install once on this machine (run from the ai-framework folder):
 
 Step 2 - Add git hooks to a project (run from inside each git repo):
 
-    python setup.py --project
+    python /path/to/ai-framework/setup.py --project
 
 OTHER OPTIONS
 -------------
@@ -80,10 +80,14 @@ HOOKS        = REPO / ".opencode" / "hooks"
 
 RTK_BIN_DIR = HOME / ".ai-framework" / "bin"
 RTK_EXE     = RTK_BIN_DIR / ("rtk.exe" if IS_WIN else "rtk")
-RTK_URLS    = {
-    "Windows": "https://github.com/rtk-ai/rtk/releases/latest/download/rtk-x86_64-pc-windows-msvc.zip",
-    "Darwin":  "https://github.com/rtk-ai/rtk/releases/latest/download/rtk-x86_64-apple-darwin.tar.gz",
-    "Linux":   "https://github.com/rtk-ai/rtk/releases/latest/download/rtk-x86_64-unknown-linux-musl.tar.gz",
+RTK_RELEASE = "v0.42.4"
+RTK_BASE_URL = f"https://github.com/rtk-ai/rtk/releases/download/{RTK_RELEASE}"
+RTK_ARTIFACTS = {
+    ("Windows", "x86_64"): "rtk-x86_64-pc-windows-msvc.zip",
+    ("Darwin",  "x86_64"): "rtk-x86_64-apple-darwin.tar.gz",
+    ("Darwin",  "aarch64"): "rtk-aarch64-apple-darwin.tar.gz",
+    ("Linux",   "x86_64"): "rtk-x86_64-unknown-linux-musl.tar.gz",
+    ("Linux",   "aarch64"): "rtk-aarch64-unknown-linux-gnu.tar.gz",
 }
 
 # ── Tool detection ────────────────────────────────────────────────────────────
@@ -95,7 +99,8 @@ def _detect():
     if rtk_candidate:
         try:
             r = subprocess.run([rtk_candidate, "--version"], capture_output=True, text=True)
-            rtk_ok = r.returncode == 0
+            out = (r.stdout + r.stderr).lower()
+            rtk_ok = r.returncode == 0 and "rtk" in out and "version" in out
         except Exception:
             pass
 
@@ -105,7 +110,7 @@ def _detect():
         "codex":            bool(shutil.which("codex")    or CODEX_DIR.exists()),
         "gemini":           bool(shutil.which("gemini")   or GEMINI_DIR.exists()),
         "copilot_intellij": IS_WIN and COPILOT_INTELLIJ is not None and COPILOT_INTELLIJ.exists(),
-        "copilot_vscode":   bool(shutil.which("code") or VSCODE_SETTINGS.exists()),
+        "copilot_vscode":   bool(shutil.which("code") or VSCODE_SETTINGS.parent.exists() or VSCODE_SETTINGS.exists()),
         "rtk":              rtk_ok,
     }
 
@@ -130,20 +135,61 @@ def install_rtk(dry):
         info(f"would download RTK to {RTK_BIN_DIR}")
         return None
 
-    url     = RTK_URLS.get(platform.system())
-    is_zip  = platform.system() == "Windows"
+    arch = platform.machine().lower()
+    if arch in ("amd64", "x86_64"):
+        arch = "x86_64"
+    elif arch in ("arm64", "aarch64"):
+        arch = "aarch64"
 
-    if not url:
-        warn(f"Unsupported platform for RTK auto-install: {platform.system()}")
+    system = platform.system()
+    artifact = RTK_ARTIFACTS.get((system, arch))
+    if not artifact:
+        warn(f"Unsupported platform/architecture for RTK auto-install: {system}/{arch}")
         info("Install manually: https://github.com/rtk-ai/rtk/releases")
         return None
+
+    url = f"{RTK_BASE_URL}/{artifact}"
+    checksum_url = f"{RTK_BASE_URL}/checksums.txt"
+    is_zip = system == "Windows"
 
     RTK_BIN_DIR.mkdir(parents=True, exist_ok=True)
     tmp_archive = str(RTK_BIN_DIR / ("rtk-dl.zip" if is_zip else "rtk-dl.tar.gz"))
 
+    def _sha256(path):
+        import hashlib
+        h = hashlib.sha256()
+        with open(path, "rb") as fh:
+            for chunk in iter(lambda: fh.read(8192), b""):
+                h.update(chunk)
+        return h.hexdigest()
+
     try:
         info(f"Downloading RTK from GitHub releases...")
         urllib.request.urlretrieve(url, tmp_archive)
+
+        info("Downloading RTK checksum manifest...")
+        checksum_data = urllib.request.urlopen(checksum_url, timeout=30).read().decode("utf-8")
+
+        expected = None
+        for line in checksum_data.splitlines():
+            line = line.strip()
+            if not line or " " not in line:
+                continue
+            parts = line.split()
+            if len(parts) >= 2 and parts[1].endswith(artifact):
+                expected = parts[0]
+                break
+
+        if not expected:
+            warn("Could not verify RTK checksum for downloaded artifact")
+            return None
+
+        actual = _sha256(tmp_archive)
+        if actual != expected:
+            warn("RTK checksum mismatch - aborting install")
+            warn(f"expected {expected}")
+            warn(f"actual   {actual}")
+            return None
 
         if is_zip:
             with zipfile.ZipFile(tmp_archive, "r") as z:
@@ -225,12 +271,41 @@ def wire_vscode_settings(dry):
     settings = {}
     if VSCODE_SETTINGS.exists():
         try:
-            content = VSCODE_SETTINGS.read_text(encoding="utf-8").strip()
-            if content:
-                # Strip JSON comments (VS Code allows // comments in settings.json)
-                clean = re.sub(r"//.*$", "", content, flags=re.MULTILINE)
-                clean = re.sub(r"/\*.*?\*/", "", clean, flags=re.DOTALL)
-                settings = json.loads(clean)
+            content = VSCODE_SETTINGS.read_text(encoding="utf-8")
+            if content.strip():
+                # Strip JSON comments safely without removing quoted text
+                clean = []
+                in_string = False
+                escape = False
+                i = 0
+                while i < len(content):
+                    ch = content[i]
+                    if ch == '\\' and not escape:
+                        escape = True
+                        clean.append(ch)
+                        i += 1
+                        continue
+                    if ch == '"' and not escape:
+                        in_string = not in_string
+                        clean.append(ch)
+                        i += 1
+                        continue
+                    escape = False
+                    if not in_string and ch == '/' and i + 1 < len(content):
+                        nxt = content[i + 1]
+                        if nxt == '/':
+                            i = content.find('\n', i + 2)
+                            if i == -1:
+                                break
+                            clean.append('\n')
+                            continue
+                        if nxt == '*':
+                            j = content.find('*/', i + 2)
+                            i = j + 2 if j != -1 else len(content)
+                            continue
+                    clean.append(ch)
+                    i += 1
+                settings = json.loads(''.join(clean))
         except Exception as exc:
             warn(f"Could not parse {VSCODE_SETTINGS}: {exc}")
             warn("Skipping VS Code settings wiring - fix manually if needed")
@@ -238,8 +313,18 @@ def wire_vscode_settings(dry):
     else:
         VSCODE_SETTINGS.parent.mkdir(parents=True, exist_ok=True)
 
-    settings["github.copilot.chat.codeGeneration.instructions"]          = code_instructions
-    settings["github.copilot.chat.commitMessageGeneration.instructions"] = commit_instructions
+    def _merge_instruction_list(key, desired):
+        existing = settings.get(key)
+        if not isinstance(existing, list):
+            existing = []
+        merged = []
+        for item in existing + desired:
+            if item not in merged:
+                merged.append(item)
+        settings[key] = merged
+
+    _merge_instruction_list("github.copilot.chat.codeGeneration.instructions", code_instructions)
+    _merge_instruction_list("github.copilot.chat.commitMessageGeneration.instructions", commit_instructions)
 
     VSCODE_SETTINGS.write_text(json.dumps(settings, indent=2, ensure_ascii=False), encoding="utf-8")
     ok(str(VSCODE_SETTINGS))
@@ -320,12 +405,18 @@ def _remove(path):
     if not path.exists() and not path.is_symlink():
         return
     if path.is_symlink() or (IS_WIN and _is_junction(path)):
-        path.unlink(missing_ok=True)
+        if path.is_symlink():
+            path.unlink(missing_ok=True)
+        else:
+            path.rmdir()
         return
-    bak = path.with_suffix(path.suffix + ".bak")
+    base = path.with_suffix(path.suffix + ".bak")
+    bak = base
+    counter = 1
+    while bak.exists():
+        bak = base.with_name(f"{base.name}.{counter}")
+        counter += 1
     info(f"backing up {path.name} -> {bak.name}")
-    if bak.exists():
-        shutil.rmtree(bak) if bak.is_dir() else bak.unlink()
     path.rename(bak)
 
 def _is_junction(path):

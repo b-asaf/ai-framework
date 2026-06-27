@@ -37,7 +37,7 @@ Apply the **deletion test** to anything you suspect is shallow: would deleting t
 
 Use the domain vocabulary from `CONTEXT.md` and `project-overview`. Use `docs/adr/` for past architectural decisions before suggesting something that's already been considered and rejected.
 
-### 2. Present candidates
+### 3. Present candidates
 
 Show a numbered list of deepening opportunities. For each:
 
@@ -49,23 +49,24 @@ Show a numbered list of deepening opportunities. For each:
    Effort: [small / medium / large]
 ```
 
-### 3. Grill on the chosen candidate
+### 4. Grill on the chosen candidate
 
 Once the developer picks one, drop into a grilling conversation (load `grill-me`). Walk the design tree:
+
 - What sits behind the seam?
 - What tests survive the refactor?
 - What tests need to change?
 - What callers are affected?
 - Can this be done in atomic PRs?
 
-### 4. Update docs as decisions crystallise
+### 5. Update docs as decisions crystallise
 
 - New domain term introduced? Add it to `CONTEXT.md`.
 - Developer rejects a candidate with a load-bearing reason? Offer an ADR:
   > "Want me to record this as an ADR so future architecture reviews don't re-suggest it?"
-  Only offer when the reason would genuinely help a future reviewer — skip ephemeral reasons ("not now") or self-evident ones.
+  > Only offer when the reason would genuinely help a future reviewer — skip ephemeral reasons ("not now") or self-evident ones.
 
-### 5. Execute atomically
+### 6. Execute atomically
 
 Each refactor is a separate PR with no feature work bundled in. Load `atomic-changes` before starting implementation. Load `tdd` — refactors need a green test suite before and after every step.
 
@@ -84,17 +85,19 @@ Update `docs/refactoring-plan.md` with any candidates that were identified but n
 
 ## Screaming Architecture
 
-*(Robert C. Martin: "The architecture should scream the use case of the application, not the framework.")*
+_(Robert C. Martin: "The architecture should scream the use case of the application, not the framework.")_
 
 A visitor reading the top-level folder structure should immediately understand **what the system does**, not what language, framework, or database it uses.
 
 **The two questions every folder must answer:**
+
 1. What business capability or feature does this folder own?
 2. What is the single reason everything in this folder would change?
 
 If a folder cannot answer both cleanly, it is too broad and must be split.
 
 **Guiding principles:**
+
 - **Feature-first, layer-second.** Group by business domain slice first (`orders/`, `billing/`, `notifications/`), then by layer within it if needed. A flat `controllers/` folder spanning all features is inside-out thinking.
 - **Framework and language are invisible at the top level.** Nothing in the folder tree should reveal the web framework, ORM, or programming language — those are implementation details, not architecture.
 - **Dependency isolation governs split decisions.** If a change to one file forces another module to recompile or re-test, the two concerns are too tightly coupled.
@@ -104,17 +107,20 @@ When proposing any architecture change, include a proposed folder sketch showing
 
 ## The Swap Test
 
-Before approving any design that crosses a boundary (persistence, external service, API), ask: *can I swap the database for in-memory, or swap the HTTP transport for a CLI interface, by changing only files in the infrastructure/interface layer?*
+Before approving any design that crosses a boundary (persistence, external service, API), ask: _can I swap the database for in-memory, or swap the HTTP transport for a CLI interface, by changing only files in the infrastructure/interface layer?_
 
 If no, the boundary is not properly drawn. Redesign until the swap is a single-file concern.
 
 **Persistence boundary:**
+
 - Repository interfaces are application-layer types. They accept and return only domain types. No SQL, no ORM types, no pagination cursors leak into this interface.
 - An `InMemoryRepository` must be trivially writable. If it is complex, the repository interface is too wide.
 
 **API boundary:**
+
 - Controllers are adapters. They translate between the external protocol (HTTP, GraphQL) and the use case's input/output types.
 - A protocol change or version bump touches only the controller/adapter layer — zero use-case changes.
 
 **External service boundary:**
+
 - Third-party SDKs (payment, email, storage) are never called directly from use cases. Depend on a narrow domain interface; the infrastructure adapter wraps the SDK. Switching vendors = one new adapter file, nothing else.
