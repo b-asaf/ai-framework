@@ -1,6 +1,8 @@
 # COPILOT.md
-> GitHub Copilot (IntelliJ / JetBrains) specific instructions.
-> All rules from SHARED.md apply. This file adds Copilot-specific behaviour only.
+> GitHub Copilot instructions — default tool for this framework.
+> Works with VS Code (wired to `.github/copilot-instructions.md`)
+> and IntelliJ / WebStorm / JetBrains IDEs (wired globally on Windows).
+> All rules from SHARED.md apply. This file adds Copilot-specific behaviour on top.
 
 ---
 
