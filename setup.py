@@ -148,10 +148,39 @@ def wire_vscode(det):
     settings = {}
     if VSCODE_SETTINGS.exists():
         try:
-            raw   = VSCODE_SETTINGS.read_text(encoding="utf-8")
-            clean = re.sub(r"//.*$", "", raw, flags=re.MULTILINE)
-            clean = re.sub(r"/\*.*?\*/", "", clean, flags=re.DOTALL)
-            settings = json.loads(clean)
+            raw = VSCODE_SETTINGS.read_text(encoding="utf-8")
+            clean = []
+            in_string = False
+            escape = False
+            i = 0
+            while i < len(raw):
+                ch = raw[i]
+                if ch == '\\' and not escape:
+                    escape = True
+                    clean.append(ch)
+                    i += 1
+                    continue
+                if ch == '"' and not escape:
+                    in_string = not in_string
+                    clean.append(ch)
+                    i += 1
+                    continue
+                escape = False
+                if not in_string and ch == '/' and i + 1 < len(raw):
+                    nxt = raw[i + 1]
+                    if nxt == '/':
+                        i = raw.find('\n', i + 2)
+                        if i == -1:
+                            break
+                        clean.append('\n')
+                        continue
+                    if nxt == '*':
+                        j = raw.find('*/', i + 2)
+                        i = j + 2 if j != -1 else len(raw)
+                        continue
+                clean.append(ch)
+                i += 1
+            settings = json.loads(''.join(clean))
         except Exception as exc:
             warn(f"Could not parse settings.json: {exc} — skipping VS Code wiring")
             return
@@ -301,12 +330,15 @@ def add_git_template():
     hooks_src = REPO / "hooks"
     if not hooks_src.exists():
         return
+    template_dir = REPO / "git-template"
     try:
+        template_dir.mkdir(parents=True, exist_ok=True)
+        (template_dir / "hooks").mkdir(parents=True, exist_ok=True)
         subprocess.run(
-            ["git", "config", "--global", "init.templateDir", str(hooks_src)],
+            ["git", "config", "--global", "init.templateDir", str(template_dir)],
             check=True, capture_output=True
         )
-        ok(f"git init.templateDir -> {hooks_src}")
+        ok(f"git init.templateDir -> {template_dir}")
         info("Git hooks will be installed in every new clone automatically")
         info("For existing repos: cd your-repo && git init  (safe, just refreshes hooks)")
     except Exception as exc:

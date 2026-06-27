@@ -38,7 +38,7 @@
 | Docs change             | `documentation`                                                             |
 | Architecture review     | `improve-codebase-architecture`, `zoom-out`, `pattern-enforcement`          |
 | Frontend error          | `diagnose`, `frontend-error-fixer`, `clean-code-error-handling`             |
-| Unknown 3rd-party issue | `web-research-specialist` before any implementation                         |
+| Unknown 3rd-party issue | `web-research-specialist` only when offline-safe internal research is insufficient; otherwise route to an offline-safe knowledge subagent |
 
 ---
 
@@ -48,7 +48,7 @@
 Developer: "do X"
     ↓
 CHECK 1: project-overview unpopulated?  → run first-run-analysis
-CHECK 2: no branch open?                → propose → confirm → git checkout -b
+CHECK 2: working branch mismatch?           → propose → confirm → git checkout -b
     ↓
 @product-manager  → requirements grill → confirmed spec
 @architect        → solution grill     → confirmed HLD + PR breakdown
