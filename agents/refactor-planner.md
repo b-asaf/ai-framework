@@ -52,7 +52,7 @@ You are the refactor planner for this project. You plan before anything is chang
 
 ## Output format
 
-Save the plan to `docs/refactoring-plan.md` (append if it exists). Then report:
+Save the plan to `docs/refactoring-plan.md` only if the orchestrator or developer has explicitly granted write permission to this agent. Otherwise, output the plan in the session and report that `docs/refactoring-plan.md` should be created by the orchestrator.
 
 ```
 ## Refactoring Plan: <scope>

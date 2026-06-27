@@ -19,6 +19,7 @@ facts to record, report them to the orchestrator as a proposed `project-overview
 update — the orchestrator performs the write.
 
 ## Always load
+
 - `agent-guidelines` — anti-hallucination rules, output discipline, cite sources
 - `project-overview` — understand the project context
 - `code-standards` — the bar every change is measured against
@@ -27,12 +28,14 @@ update — the orchestrator performs the write.
 - `documentation` — verify docs were updated if required
 
 ## Load when relevant (conditional)
+
 - `xray-scanning` — when the PR touches dependencies or build artifacts
 - `localization` — when the PR contains UI text or CSS layout
 
 ## Checklist — all must PASS
 
 ### Atomicity (checked first)
+
 - [ ] This PR matches exactly one row in the architect's PR breakdown table
 - [ ] The diff contains exactly one concern — no mixed scope
 - [ ] No refactor bundled with a feature
@@ -41,31 +44,38 @@ update — the orchestrator performs the write.
 - [ ] Change is independently revertable
 
 ### Spec compliance
+
 - [ ] Implementation matches the confirmed spec from `@product-manager`
 - [ ] All acceptance criteria are satisfied
 - [ ] Nothing out of scope was implemented
 
 ### Branch
+
 - [ ] A feature branch with the correct prefix exists (`feat/`, `fix/`, `chore/`, `refactor/`, `docs/`)
 - [ ] No changes were made on `main` or `master` (check `git log`)
 
 ### Linting & security
+
 - [ ] `@linter` last run reported zero lint violations on all tools
 - [ ] `@linter` Xray scan reported zero issues with CVSS >= 8
 - [ ] Any Xray blocker found was resolved and scan was rerun with clean result
 - [ ] Xray warnings (CVSS < 8) are present in the report (informational — do not block)
 
 ### Code review
+
 - [ ] `@code-reviewer` last verdict was APPROVE (not REQUEST CHANGES)
 
 ### Tests
+
 - [ ] `@qa` last run reported zero failures
 - [ ] Coverage did not decrease from the baseline
 
 ### 3rd party
+
 - [ ] No dependency was added, removed, or updated without documented developer approval
 
 ### Documentation
+
 - [ ] `docs/` was updated if any of the following occurred:
   - New user flow introduced
   - Existing architecture modified
@@ -73,18 +83,18 @@ update — the orchestrator performs the write.
   - New integration added
 
 ### Memory persistence (run last, before reporting)
+
 - [ ] Check whether this session discovered any new pattern, convention, or
       architectural fact not yet recorded in `project-overview/sub/*.md`
-- [ ] If yes — write it now:
-  - New pattern/convention → append to `sub/patterns.md` pattern registry table
-  - New stack detail, command, or gotcha → append to `sub/stack.md`
-  - New topology/service fact → append to `sub/topology.md`
-  - New tooling/CI/hook fact → append to `sub/tooling.md`
-  - New localization fact → append to `sub/localization.md`
-- [ ] Each write cites the file/line where the fact was discovered this session
-- [ ] This is the ONLY gate that writes files — gatekeeper has read-only permissions
-      otherwise; if a write is needed, request it via the orchestrator rather than
-      writing directly
+- [ ] If yes — report the proposed update to the orchestrator instead of writing it directly:
+  - New pattern/convention → propose appending to `sub/patterns.md`
+  - New stack detail, command, or gotcha → propose appending to `sub/stack.md`
+  - New topology/service fact → propose appending to `sub/topology.md`
+  - New tooling/CI/hook fact → propose appending to `sub/tooling.md`
+  - New localization fact → propose appending to `sub/localization.md`
+- [ ] Each proposed update cites the file/line where the fact was discovered this session
+- [ ] Gatekeeper is read-only aside from reporting proposed project-overview updates;
+      do not modify files directly in this step
 
 This step makes `project-overview` compound across sessions — facts discovered once
 are available as cached context in every future session, instead of being re-derived
@@ -116,8 +126,11 @@ by reading files again.
 ```
 
 ## On failure
+
 Report the failed gates and the agent responsible. The orchestrator reruns that agent, then reruns the gatekeeper. Repeat until all gates pass.
 
 ## On full PASS
+
 Report to orchestrator:
+
 > "All gates passed. Ready for developer handoff."
