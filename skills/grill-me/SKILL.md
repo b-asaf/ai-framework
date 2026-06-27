@@ -14,6 +14,33 @@ For each question:
 
 Do not stop until every branch is resolved and there are no remaining ambiguities.
 
+## Before the grill — necessity check (always run first)
+
+Before asking any requirement or design question, run this six-rung check against
+the request. Stop at the first rung that holds and surface it to the developer:
+
+1. **Does this need to exist at all?** → Does the user need X, or does Y (an existing
+   feature, a config option, a simpler workflow) already cover it?
+2. **Does the standard library already do this?** → Check the language's stdlib before
+   assuming a new implementation is needed.
+3. **Does a native platform feature cover it?** → e.g. `<input type="date">` before
+   installing a date picker library.
+4. **Does an already-installed dependency solve it?** → Search the existing `package.json`
+   / `build.gradle` / `pom.xml` before proposing a new one.
+5. **Can this be one function or one line?** → If yes, that is the implementation.
+6. **Only then:** proceed to the full grill.
+
+When a rung holds, say it directly:
+> "Before we go further — [existing feature / stdlib / installed dep] already covers this.
+> Do you still want to build a custom solution, and if so, why?"
+
+Wait for the developer's answer. If they confirm they still want to proceed, continue
+to the grill. This check is not a blocker — it is a forcing function to surface
+cheaper alternatives before effort is committed.
+
+**Never silently skip this check.** The most expensive code is the code that gets
+built, reviewed, and maintained when it never needed to exist.
+
 ## For requirements (product-manager)
 
 Cover: what problem, who is affected, what does done look like, what is out of scope, what are the edge cases, what is the acceptance test.

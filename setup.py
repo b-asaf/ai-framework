@@ -1,320 +1,405 @@
 #!/usr/bin/env python3
 """
-ai-framework setup script
-=========================
-Wires the framework into every AI tool on this machine via symlinks (Mac/Linux)
-or directory junctions / file copies (Windows).
+ai-framework setup
+==================
+Run once per machine from the ai-framework folder.
+Re-run to repair broken links or wire newly installed tools.
 
-Supported tools
----------------
-  Claude Code   ~/.claude/
-  OpenCode      ~/.config/opencode/
-  Codex CLI     ~/.codex/
-  Gemini CLI    ~/.gemini/
-  Cursor        ~/.cursor/rules/
-  Windsurf      ~/.codeium/windsurf/memories/
-  VS Code       .github/copilot-instructions.md  (project-level — run from repo root)
-  Copilot       %LOCALAPPDATA%/github-copilot/intellij/  (Windows only)
+    python setup.py
 
-Usage
------
-  python setup.py                  # link into all detected tools
-  python setup.py --copy           # copy instead of symlink (CI / no-symlink envs)
-  python setup.py --check          # dry-run: show what would be linked / copied
-  python setup.py --install-hooks  # also install git hooks into .git/hooks/
-  python setup.py --rtk            # also run rtk init for each detected tool
-  python setup.py --help
+No flags needed. The script detects installed tools automatically.
 """
 
-import argparse
+import json
 import os
 import platform
+import re
 import shutil
 import subprocess
 import sys
+import urllib.request
+import zipfile
 from pathlib import Path
-
-# ── Colour helpers ────────────────────────────────────────────────────────────
 
 IS_WIN = platform.system() == "Windows"
 
-def _c(code: str, text: str) -> str:
+def _c(code, text):
     return text if IS_WIN else f"\033[{code}m{text}\033[0m"
 
-def ok(msg: str)   -> None: print(_c("0;32", f"  ✔  {msg}"))
-def warn(msg: str) -> None: print(_c("1;33", f"  ⚠  {msg}"))
-def info(msg: str) -> None: print(_c("0;36", f"     {msg}"))
-def bold(msg: str) -> None: print(_c("1",    msg))
-def err(msg: str)  -> None: print(_c("0;31", f"  ✘  {msg}")); sys.exit(1)
-
-# ── Paths ─────────────────────────────────────────────────────────────────────
+def ok(msg):   print(_c("0;32", f"  OK   {msg}"))
+def warn(msg): print(_c("1;33", f"  WARN {msg}"))
+def info(msg): print(_c("0;36", f"       {msg}"))
+def bold(msg): print(_c("1",    msg))
 
 REPO = Path(__file__).resolve().parent
 HOME = Path.home()
 
-CLAUDE_DIR   = HOME / ".claude"
-OPENCODE_DIR = HOME / ".config" / "opencode"
-CODEX_DIR    = HOME / ".codex"
-GEMINI_DIR   = HOME / ".gemini"
-CURSOR_DIR   = HOME / ".cursor" / "rules"
-WINDSURF_DIR = HOME / ".codeium" / "windsurf" / "memories"
-COPILOT_DIR  = (
+# ── Target locations ──────────────────────────────────────────────────────────
+
+OPENCODE_DIR     = HOME / ".config" / "opencode"
+CLAUDE_DIR       = HOME / ".claude"
+CODEX_DIR        = HOME / ".codex"
+GEMINI_DIR       = HOME / ".gemini"
+COPILOT_INTELLIJ = (
     Path(os.environ.get("LOCALAPPDATA", "")) / "github-copilot" / "intellij"
     if IS_WIN else None
 )
 
+if IS_WIN:
+    VSCODE_SETTINGS = Path(os.environ.get("APPDATA", "")) / "Code" / "User" / "settings.json"
+elif platform.system() == "Darwin":
+    VSCODE_SETTINGS = HOME / "Library" / "Application Support" / "Code" / "User" / "settings.json"
+else:
+    VSCODE_SETTINGS = HOME / ".config" / "Code" / "User" / "settings.json"
+
+# ── Repo source paths ─────────────────────────────────────────────────────────
+
+AGENTS_MD    = REPO / "AGENTS.md"
+OPENCODE_CFG = REPO / "opencode.json"
+INSTRUCTIONS = REPO / "instructions"
+SKILLS       = REPO / "skills"
+AGENTS       = REPO / "agents"
+COMMANDS     = REPO / "commands"
+HOOKS        = REPO / "hooks"
+
+RTK_BIN_DIR = REPO / "bin"
+RTK_EXE     = RTK_BIN_DIR / ("rtk.exe" if IS_WIN else "rtk")
+RTK_URLS    = {
+    "Windows": "https://github.com/rtk-ai/rtk/releases/latest/download/rtk-x86_64-pc-windows-msvc.zip",
+    "Darwin":  "https://github.com/rtk-ai/rtk/releases/latest/download/rtk-x86_64-apple-darwin.tar.gz",
+    "Linux":   "https://github.com/rtk-ai/rtk/releases/latest/download/rtk-x86_64-unknown-linux-musl.tar.gz",
+}
+
 # ── Tool detection ────────────────────────────────────────────────────────────
 
-def _detect_installed_tools() -> dict:
+def detect():
+    rtk_candidate = shutil.which("rtk") or (str(RTK_EXE) if RTK_EXE.exists() else None)
+    rtk_ok = False
+    if rtk_candidate:
+        try:
+            r = subprocess.run([rtk_candidate, "--version"], capture_output=True, text=True)
+            rtk_ok = r.returncode == 0
+        except Exception:
+            pass
     return {
-        "claude":   bool(shutil.which("claude")   or CLAUDE_DIR.exists()),
         "opencode": bool(shutil.which("opencode") or OPENCODE_DIR.exists()),
+        "claude":   bool(shutil.which("claude")   or CLAUDE_DIR.exists()),
         "codex":    bool(shutil.which("codex")    or CODEX_DIR.exists()),
         "gemini":   bool(shutil.which("gemini")   or GEMINI_DIR.exists()),
-        "cursor":   bool(shutil.which("cursor")   or (HOME / ".cursor").exists()),
-        "windsurf": bool(shutil.which("windsurf") or (HOME / ".codeium").exists()),
-        "vscode":   bool(shutil.which("code")),
-        "copilot":  IS_WIN and COPILOT_DIR is not None and COPILOT_DIR.exists(),
-        "rtk":      bool(shutil.which("rtk")),
+        "copilot_intellij": IS_WIN and COPILOT_INTELLIJ is not None and COPILOT_INTELLIJ.exists(),
+        "copilot_vscode":   bool(shutil.which("code") or VSCODE_SETTINGS.exists()),
+        "rtk":      rtk_ok,
     }
 
-# ── Link map ──────────────────────────────────────────────────────────────────
-# Each entry: (link_path, target_path, kind, tool_key)
-# kind     = "file" | "dir"
-# tool_key = key in detected dict; None = always wire
+# ── Link table ────────────────────────────────────────────────────────────────
 
-def build_link_map(detected: dict) -> list:
-    i   = REPO / "instructions"
-    w   = i / "wrappers"          # wrapper files that import SHARED.md
-    skl = REPO / ".opencode" / "skills"
-    agt = REPO / ".opencode" / "agents"
+def build_links(det):
+    links = []
 
-    links = [
-        # ── Claude Code ────────────────────────────────────────────────────
-        (CLAUDE_DIR / "CLAUDE.md",           i / "CLAUDE.md",              "file", "claude"),
-        (CLAUDE_DIR / "skills",              skl,                           "dir",  "claude"),
-        (CLAUDE_DIR / "agents",              agt,                           "dir",  "claude"),
-
-        # ── OpenCode — wrapper (not direct symlink; survives rtk init) ────
-        (OPENCODE_DIR / "AGENTS.md",         w / "opencode-AGENTS.md",     "file", "opencode"),
-
-        # ── Codex CLI — wrapper with skills block ─────────────────────────
-        (CODEX_DIR / "AGENTS.md",            w / "codex-AGENTS.md",        "file", "codex"),
-
-        # ── Gemini CLI — wrapper using @import syntax ─────────────────────
-        (GEMINI_DIR / "GEMINI.md",           i / "GEMINI.md",              "file", "gemini"),
-        # Wire skills for native Gemini skill discovery
-        (GEMINI_DIR / "skills",              skl,                           "dir",  "gemini"),
-
-        # ── Cursor ────────────────────────────────────────────────────────
-        (CURSOR_DIR / "shared.mdc",          i / "CURSOR.md",              "file", "cursor"),
-
-        # ── Windsurf ──────────────────────────────────────────────────────
-        (WINDSURF_DIR / "global-rules.md",   i / "WINDSURF.md",            "file", "windsurf"),
-    ]
-
-    # VS Code Copilot — project-level only
-    if detected.get("vscode"):
-        links.append((
-            Path.cwd() / ".github" / "copilot-instructions.md",
-            i / "VSCODE.md", "file", "vscode",
-        ))
-
-    # Copilot IntelliJ — Windows only
-    if IS_WIN and COPILOT_DIR is not None and detected.get("copilot"):
+    if det["opencode"]:
         links += [
-            (COPILOT_DIR / "global-copilot-instructions.md",    i / "COPILOT.md",    "file", "copilot"),
-            (COPILOT_DIR / "global-agents-instructions.md",     w / "opencode-AGENTS.md", "file", "copilot"),
-            (COPILOT_DIR / "global-git-commit-instructions.md", i / "GIT_COMMIT.md", "file", "copilot"),
+            (OPENCODE_DIR / "opencode.json", OPENCODE_CFG,                      "file"),
+            (OPENCODE_DIR / "AGENTS.md",     AGENTS_MD,                          "file"),
+            (OPENCODE_DIR / "agents",        AGENTS,                             "dir"),
+            (OPENCODE_DIR / "skills",        SKILLS,                             "dir"),
+            (OPENCODE_DIR / "commands",      COMMANDS,                           "dir"),
+            (OPENCODE_DIR / "hooks",         HOOKS,                              "dir"),
+        ]
+
+    if det["claude"]:
+        links += [
+            (CLAUDE_DIR / "CLAUDE.md",  INSTRUCTIONS / "CLAUDE.md", "file"),
+            (CLAUDE_DIR / "AGENTS.md",  AGENTS_MD,                  "file"),
+            (CLAUDE_DIR / "agents",     AGENTS,                     "dir"),
+            (CLAUDE_DIR / "skills",     SKILLS,                     "dir"),
+            (CLAUDE_DIR / "commands",   COMMANDS,                   "dir"),
+            (CLAUDE_DIR / "hooks",      HOOKS,                      "dir"),
+        ]
+
+    if det["codex"]:
+        links += [
+            (CODEX_DIR / "AGENTS.md", INSTRUCTIONS / "codex-AGENTS.md", "file"),
+        ]
+
+    if det["gemini"]:
+        links += [
+            (GEMINI_DIR / "GEMINI.md", INSTRUCTIONS / "GEMINI.md", "file"),
+            (GEMINI_DIR / "skills",    SKILLS,                     "dir"),
+        ]
+
+    if det["copilot_intellij"] and IS_WIN and COPILOT_INTELLIJ:
+        links += [
+            (COPILOT_INTELLIJ / "global-copilot-instructions.md",
+             INSTRUCTIONS / "COPILOT.md",   "file"),
+            (COPILOT_INTELLIJ / "global-agents-instructions.md",
+             AGENTS_MD,                      "file"),
+            (COPILOT_INTELLIJ / "global-git-commit-instructions.md",
+             INSTRUCTIONS / "GIT_COMMIT.md", "file"),
         ]
 
     return links
 
-# ── RTK installer ─────────────────────────────────────────────────────────────
+# ── VS Code global settings ───────────────────────────────────────────────────
 
-# Maps tool_key → rtk init command args
-_RTK_CMDS = {
-    "claude":   ["rtk", "init", "--global"],
-    "cursor":   ["rtk", "init", "--global", "--agent", "cursor"],
-    "copilot":  ["rtk", "init", "--global", "--copilot"],
-    "gemini":   ["rtk", "init", "--global", "--gemini"],
-    "opencode": ["rtk", "init", "--global", "--opencode"],
-    "codex":    None,   # Codex is prompt-level; RTK block is in codex-AGENTS.md wrapper
-}
-
-def install_rtk(detected: dict, dry: bool) -> None:
-    if not detected.get("rtk"):
-        warn("rtk not found — install from https://www.rtk-ai.app and re-run with --rtk")
+def wire_vscode(det):
+    if not det["copilot_vscode"]:
         return
-
-    bold("Installing RTK token-reduction hooks...")
-    for tool, cmd in _RTK_CMDS.items():
-        if not detected.get(tool):
-            continue
-        if cmd is None:
-            info(f"rtk/{tool}: prompt-level integration — included in wrapper AGENTS.md")
-            continue
-        if dry:
-            info(f"would run: {' '.join(cmd)}")
-            continue
+    bold("Wiring VS Code Copilot...")
+    settings = {}
+    if VSCODE_SETTINGS.exists():
         try:
-            subprocess.run(cmd, check=True)
-            ok(f"rtk/{tool}")
-        except subprocess.CalledProcessError as exc:
-            warn(f"rtk/{tool} failed: {exc}")
-        except FileNotFoundError:
-            warn(f"rtk not found on PATH")
-            break
+            raw = VSCODE_SETTINGS.read_text(encoding="utf-8")
+            clean = []
+            in_string = False
+            escape = False
+            i = 0
+            while i < len(raw):
+                ch = raw[i]
+                if ch == '\\' and not escape:
+                    escape = True
+                    clean.append(ch)
+                    i += 1
+                    continue
+                if ch == '"' and not escape:
+                    in_string = not in_string
+                    clean.append(ch)
+                    i += 1
+                    continue
+                escape = False
+                if not in_string and ch == '/' and i + 1 < len(raw):
+                    nxt = raw[i + 1]
+                    if nxt == '/':
+                        i = raw.find('\n', i + 2)
+                        if i == -1:
+                            break
+                        clean.append('\n')
+                        continue
+                    if nxt == '*':
+                        j = raw.find('*/', i + 2)
+                        i = j + 2 if j != -1 else len(raw)
+                        continue
+                clean.append(ch)
+                i += 1
+            settings = json.loads(''.join(clean))
+        except Exception as exc:
+            warn(f"Could not parse settings.json: {exc} — skipping VS Code wiring")
+            return
+    else:
+        VSCODE_SETTINGS.parent.mkdir(parents=True, exist_ok=True)
 
-# ── Git hooks installer ───────────────────────────────────────────────────────
+    settings["github.copilot.chat.codeGeneration.instructions"] = [
+        {"file": str(AGENTS_MD)},
+        {"file": str(INSTRUCTIONS / "COPILOT.md")},
+        {"file": str(INSTRUCTIONS / "VSCODE.md")},
+    ]
+    settings["github.copilot.chat.commitMessageGeneration.instructions"] = [
+        {"file": str(INSTRUCTIONS / "GIT_COMMIT.md")},
+    ]
+    VSCODE_SETTINGS.write_text(json.dumps(settings, indent=2, ensure_ascii=False), encoding="utf-8")
+    ok(str(VSCODE_SETTINGS))
 
-def install_git_hooks(dry: bool) -> None:
-    hook_script = REPO / ".opencode" / "verification" / "scripts" / "install-hooks.sh"
-    git_dir     = Path.cwd() / ".git"
-    if not hook_script.exists():
-        warn("Git hooks script not found: .opencode/verification/scripts/install-hooks.sh")
-        return
-    if not git_dir.exists():
-        warn(f"No .git directory in {Path.cwd()} — run from inside a git repo")
-        return
-    if dry:
-        info(f"would run: bash {hook_script.relative_to(REPO)}"); return
+# ── RTK auto-install ──────────────────────────────────────────────────────────
+
+def install_rtk():
+    bold("Setting up RTK...")
+    # Already installed?
+    existing = shutil.which("rtk") or (str(RTK_EXE) if RTK_EXE.exists() else None)
+    if existing:
+        try:
+            r = subprocess.run([existing, "--version"], capture_output=True, text=True)
+            if r.returncode == 0:
+                ok(f"RTK already installed: {r.stdout.strip()}")
+                return existing
+        except Exception:
+            pass
+        info("rtk exists but failed — reinstalling")
+
+    url    = RTK_URLS.get(platform.system())
+    is_zip = platform.system() == "Windows"
+    if not url:
+        warn(f"RTK auto-install not supported on {platform.system()}")
+        info("Install manually: https://github.com/rtk-ai/rtk/releases")
+        return None
+
+    RTK_BIN_DIR.mkdir(parents=True, exist_ok=True)
+    tmp = str(RTK_BIN_DIR / ("dl.zip" if is_zip else "dl.tar.gz"))
     try:
-        subprocess.run(["bash", str(hook_script)], check=True, cwd=Path.cwd())
-        ok("Git hooks installed")
-    except subprocess.CalledProcessError as exc:
-        warn(f"Git hooks install failed: {exc}")
-    except FileNotFoundError:
-        warn("bash not found — cannot install git hooks on this platform")
+        info("Downloading RTK from GitHub releases...")
+        urllib.request.urlretrieve(url, tmp)
+        if is_zip:
+            with zipfile.ZipFile(tmp, "r") as z:
+                z.extractall(str(RTK_BIN_DIR))
+        else:
+            subprocess.run(["tar", "-xzf", tmp, "-C", str(RTK_BIN_DIR)], check=True)
+        Path(tmp).unlink(missing_ok=True)
+        if not IS_WIN:
+            RTK_EXE.chmod(0o755)
+        r = subprocess.run([str(RTK_EXE), "--version"], capture_output=True, text=True)
+        if r.returncode == 0:
+            ok(f"RTK installed: {r.stdout.strip()}")
+            if not shutil.which("rtk"):
+                warn(f"Add {RTK_BIN_DIR} to your PATH:")
+                if IS_WIN:
+                    info(f'  setx PATH "%PATH%;{RTK_BIN_DIR}"')
+                else:
+                    info(f'  echo \'export PATH="{RTK_BIN_DIR}:$PATH"\' >> ~/.bashrc')
+            return str(RTK_EXE)
+    except Exception as exc:
+        warn(f"RTK download failed: {exc}")
+        info("Install manually: https://github.com/rtk-ai/rtk/releases")
+    return None
 
-# ── Symlink / copy helpers ────────────────────────────────────────────────────
 
-def _remove_existing(path: Path) -> None:
-    if not path.exists() and not path.is_symlink(): return
-    if path.is_symlink() or (IS_WIN and _is_junction(path)):
-        path.unlink(missing_ok=True); return
-    backup = path.with_suffix(path.suffix + ".bak")
-    info(f"backing up {path.name} → {backup.name}")
-    if backup.exists():
-        shutil.rmtree(backup) if backup.is_dir() else backup.unlink()
-    path.rename(backup)
+def wire_rtk(rtk_path, det):
+    if not rtk_path:
+        return
+    bold("Wiring RTK hooks...")
+    cmds = []
+    if det["opencode"]: cmds.append((["--opencode", "--auto-patch"], "opencode"))
+    if det["claude"]:   cmds.append((["--auto-patch"],               "claude"))
+    if det["gemini"]:   cmds.append((["--gemini", "--auto-patch"],   "gemini"))
+    if det["codex"]:
+        info("rtk/codex: prompt-level — already in instructions/codex-AGENTS.md")
+    for flags, label in cmds:
+        try:
+            subprocess.run([rtk_path, "init", "-g"] + flags, check=True)
+            ok(f"rtk/{label}")
+        except (subprocess.CalledProcessError, FileNotFoundError) as exc:
+            warn(f"rtk/{label} failed: {exc}")
+    # Disable telemetry
+    try:
+        subprocess.run([rtk_path, "telemetry", "disable"], check=True, capture_output=True)
+        ok("rtk telemetry disabled")
+    except Exception:
+        pass
 
-def _is_junction(path: Path) -> bool:
+# ── Symlink helpers ───────────────────────────────────────────────────────────
+
+def remove_existing(path):
+    if not path.exists() and not path.is_symlink():
+        return
+    if path.is_symlink() or (IS_WIN and is_junction(path)):
+        path.unlink(missing_ok=True)
+        return
+    bak = path.with_suffix(path.suffix + ".bak")
+    info(f"backup {path.name} -> {bak.name}")
+    if bak.exists():
+        shutil.rmtree(bak) if bak.is_dir() else bak.unlink()
+    path.rename(bak)
+
+def is_junction(path):
     try:
         import ctypes
         return bool(ctypes.windll.kernel32.GetFileAttributesW(str(path)) & 0x400)
-    except Exception: return False
+    except Exception:
+        return False
 
-def _make_symlink(link: Path, target: Path, kind: str) -> None:
+def make_link(link, target, kind):
     link.parent.mkdir(parents=True, exist_ok=True)
-    _remove_existing(link)
+    remove_existing(link)
     if IS_WIN and kind == "dir":
         subprocess.run(["cmd", "/c", "mklink", "/J", str(link), str(target)],
                        check=True, capture_output=True)
     else:
         link.symlink_to(target, target_is_directory=(kind == "dir"))
 
-def _make_copy(link: Path, target: Path, kind: str) -> None:
-    link.parent.mkdir(parents=True, exist_ok=True)
-    _remove_existing(link)
-    shutil.copytree(target, link) if kind == "dir" else shutil.copy2(target, link)
+def apply_links(links):
+    done = skipped = 0
+    for link, target, kind in links:
+        if not target.exists():
+            warn(f"SKIP {link.name} (source missing: {target.relative_to(REPO)})")
+            skipped += 1
+            continue
+        try:
+            label = Path("~") / link.relative_to(HOME)
+        except ValueError:
+            label = link
+        try:
+            make_link(link, target, kind)
+            ok(str(label))
+            done += 1
+        except Exception as exc:
+            warn(f"FAIL {label} ({exc})")
+            skipped += 1
+    return done, skipped
+
+# ── Git hooks (install per-repo via PATH lookup) ──────────────────────────────
+
+def add_git_template():
+    """Wire hooks/ as git's global init.templateDir so every new clone gets them."""
+    hooks_src = REPO / "hooks"
+    if not hooks_src.exists():
+        return
+    template_dir = REPO / "git-template"
+    try:
+        template_dir.mkdir(parents=True, exist_ok=True)
+        (template_dir / "hooks").mkdir(parents=True, exist_ok=True)
+        subprocess.run(
+            ["git", "config", "--global", "init.templateDir", str(template_dir)],
+            check=True, capture_output=True
+        )
+        ok(f"git init.templateDir -> {template_dir}")
+        info("Git hooks will be installed in every new clone automatically")
+        info("For existing repos: cd your-repo && git init  (safe, just refreshes hooks)")
+    except Exception as exc:
+        warn(f"Could not set git templateDir: {exc}")
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
-def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Wire ai-framework into all AI tools on this machine.",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=__doc__,
-    )
-    parser.add_argument("--copy",          action="store_true", help="Copy instead of symlink")
-    parser.add_argument("--check",         action="store_true", help="Dry-run: show what would happen")
-    parser.add_argument("--install-hooks", action="store_true", help="Install git hooks into .git/hooks/")
-    parser.add_argument("--rtk",           action="store_true", help="Run rtk init for each detected tool")
-    args = parser.parse_args()
-
-    mode = "copy" if args.copy else "symlink"
-    dry  = args.check
-
+def main():
     print()
     bold("ai-framework setup")
-    bold("=" * 40)
-    info(f"repo:   {REPO}")
-    info(f"mode:   {'dry-run (--check)' if dry else mode}")
+    bold("=" * 44)
+    info(f"repo: {REPO}")
     print()
 
-    detected = _detect_installed_tools()
+    det = detect()
     bold("Detected tools:")
-    for tool, found in detected.items():
-        status = _c("0;32", "✔ found") if found else _c("0;90", "– not found (will skip)")
-        print(f"     {tool:<12} {status}")
+    labels = {
+        "opencode":         "OpenCode          [PRIMARY]",
+        "claude":           "Claude Code",
+        "codex":            "Codex CLI",
+        "gemini":           "Gemini CLI",
+        "copilot_intellij": "Copilot IntelliJ  (Windows)",
+        "copilot_vscode":   "Copilot VS Code",
+        "rtk":              "RTK",
+    }
+    for key, label in labels.items():
+        found  = det.get(key, False)
+        status = _c("0;32", "found") if found else _c("0;90", "not found")
+        print(f"     {label:<34} {status}")
     print()
 
-    links, skipped, done = build_link_map(detected), [], []
-
-    for link, target, kind, tool_key in links:
-        if tool_key and not detected.get(tool_key, False): continue
-        if not target.exists():
-            skipped.append((link, target))
-            try: rel = target.relative_to(REPO)
-            except ValueError: rel = target
-            warn(f"SKIP  {link.name}  (source not found: {rel})")
-            continue
-        try: rel_link = Path("~") / link.relative_to(HOME)
-        except ValueError: rel_link = link
-
-        if dry:
-            try: rel_tgt = target.relative_to(REPO)
-            except ValueError: rel_tgt = target
-            info(f"would {'link' if mode == 'symlink' else 'copy'}  {rel_link}  →  {rel_tgt}")
-            done.append(link); continue
-
-        try:
-            (_make_symlink if mode == "symlink" else _make_copy)(link, target, kind)
-            ok(f"{rel_link}")
-            done.append(link)
-        except Exception as exc:
-            warn(f"FAIL  {rel_link}  ({exc})")
-            skipped.append((link, target))
-
-    if args.install_hooks:
-        print(); bold("Installing git hooks..."); install_git_hooks(dry)
-
-    if args.rtk:
-        print(); install_rtk(detected, dry)
-
+    # 1. Symlinks
+    bold("Wiring symlinks...")
+    links = build_links(det)
+    done, skipped = apply_links(links)
     print()
-    bold("─" * 40)
-    if dry:
-        bold(f"Dry run complete — {len(done)} entries would be processed.")
+
+    # 2. VS Code global settings
+    wire_vscode(det)
+    print()
+
+    # 3. Git hooks via templateDir
+    bold("Configuring git hooks...")
+    add_git_template()
+    print()
+
+    # 4. RTK
+    rtk_path = shutil.which("rtk") or (str(RTK_EXE) if RTK_EXE.exists() and det["rtk"] else None)
+    if not det["rtk"]:
+        rtk_path = install_rtk()
     else:
-        bold(f"Done — {len(done)} entries {'linked' if mode == 'symlink' else 'copied'}, "
-             f"{len(skipped)} skipped.")
-
-    if skipped:
-        print()
-        warn("Skipped (source not found):")
-        for link, target in skipped:
-            try: rel = target.relative_to(REPO)
-            except ValueError: rel = target
-            info(f"  {link.name}  ←  {rel}")
-
-    if not dry:
-        print()
-        bold("Next steps:")
-        info("  1. Open your workspace root in the AI tool of your choice")
-        info("  2. First-run analysis will execute automatically")
-        info("  3. Confirm the detected stack and conventions")
-        info("  4. Review docs/refactoring-plan.md if generated")
-        info("  5. To update later: git pull  (symlinks update instantly)")
-        if not args.install_hooks:
-            info("  6. To install git hooks: python setup.py --install-hooks")
-        if not args.rtk:
-            info("  7. To enable RTK token reduction: python setup.py --rtk")
-        print()
-        info("Read workflow-guide.md for day-to-day usage.")
+        ok("RTK already installed")
+    wire_rtk(rtk_path, det)
     print()
 
+    bold("=" * 44)
+    bold(f"Done — {done} links wired, {skipped} skipped.")
+    print()
+    bold("Open any project folder in OpenCode or VS Code — framework is active.")
+    info("To update: cd ai-framework && git pull")
+    print()
 
 if __name__ == "__main__":
     main()

@@ -1,147 +1,255 @@
 # ai-framework
 
-Agentic development framework for teams using AI coding tools.
-Single source of truth for instructions, skills, agents, and workflow rules —
-works across all major LLM tools with zero drift.
+An agentic development framework that makes AI coding tools behave like a senior
+developer — safe git practices, clean code enforcement, agile vertical PRs, and
+no risky actions without your explicit approval.
 
-**Constraints:** no MCP, isolated environment (no external network calls).
+Install once. Open any project folder. Framework is active.
 
 ---
 
 ## Supported tools
 
-| Tool | Instructions file wired |
+| Tool | How it's wired |
 |---|---|
-| **Claude Code** | `~/.claude/CLAUDE.md` + skills + agents |
-| **OpenCode** | `~/.config/opencode/AGENTS.md` |
-| **Codex CLI** | `~/.codex/AGENTS.md` |
-| **Gemini CLI** | `~/.gemini/GEMINI.md` + skills |
-| **Cursor** | `~/.cursor/rules/shared.mdc` |
-| **Windsurf** | `~/.codeium/windsurf/memories/global-rules.md` |
-| **VS Code Copilot** | `.github/copilot-instructions.md` (project-level) |
-| **Copilot IntelliJ** | `global-copilot-instructions.md` + agents + git commit (Windows) |
-
-All tools derive from `instructions/SHARED.md` as the single source of truth.
-Tool-specific files layer additions on top. Codex and OpenCode use wrapper files
-that import SHARED.md, so RTK can safely append its block without breaking wiring.
+| **OpenCode** ← primary | `~/.config/opencode/` — global, works in every folder |
+| **Claude Code** | `~/.claude/` — global, works in every folder |
+| **GitHub Copilot (VS Code)** | `~/.../Code/User/settings.json` — global settings |
+| **GitHub Copilot (IntelliJ/WebStorm)** | `%LOCALAPPDATA%/github-copilot/` — global (Windows) |
+| **Gemini CLI** | `~/.gemini/` — global |
+| **Codex CLI** | `~/.codex/` — global |
 
 ---
 
-## Prerequisites
+## Install
 
-- Python 3.8+ (stdlib only — no pip install needed)
-- **Windows only:** Enable Developer Mode for symlinks (`Settings → Developer Mode → On`),
-  or run with `--copy`
+### Prerequisites
+
+**Python 3.8+**
+```bash
+python --version    # must show 3.x.x
+```
+Download if needed: https://python.org/downloads
+
+**Git**
+```bash
+git --version
+```
+Download if needed: https://git-scm.com/downloads
+
+**At least one AI tool** — see options below.
 
 ---
 
-## Setup (new machine)
-
-**1. Clone the repo**
+### Step 1 — Clone the framework
 
 ```bash
 # Mac / Linux
-git clone https://azuredevops.rafael.co.il/Almagor_V2_Collection/C2Apps/_git/AI-Team ~/ai-framework
+git clone https://github.com/b-asaf/ai-framework.git ~/ai-framework
 
-# Windows (PowerShell)
-git clone https://azuredevops.rafael.co.il/Almagor_V2_Collection/C2Apps/_git/AI-Team "$env:USERPROFILE\ai-framework"
+# Windows (run CMD as administrator)
+git clone https://github.com/b-asaf/ai-framework.git "%USERPROFILE%\ai-framework"
 ```
 
-**2. Run setup**
+### Step 2 — Run setup
 
 ```bash
+# Mac / Linux
+cd ~/ai-framework
+python setup.py
+
+# Windows (run CMD as administrator)
+cd "%USERPROFILE%\ai-framework"
 python setup.py
 ```
 
-The script detects which tools are installed and wires only those.
-Re-run any time to repair broken links.
+That's it. The script detects which tools are installed and wires everything
+automatically — symlinks, VS Code settings, git hooks, and RTK.
 
-**Options**
-
+**Expected output:**
 ```
-python setup.py                  # symlink everything (default, recommended)
-python setup.py --copy           # copy instead of symlink (CI / restricted envs)
-python setup.py --check          # dry-run: show what would happen without changing anything
-python setup.py --install-hooks  # also install git hooks into .git/hooks/
-python setup.py --rtk            # also run rtk init for each detected tool
-python setup.py --help
+ai-framework setup
+============================================
+repo: /home/you/ai-framework
+
+Detected tools:
+     OpenCode          [PRIMARY]          found
+     Claude Code                          not found
+     Copilot VS Code                      found
+     RTK                                  not found
+
+Wiring symlinks...
+  OK   ~/.config/opencode/opencode.json
+  OK   ~/.config/opencode/AGENTS.md
+  OK   ~/.config/opencode/agents
+  OK   ~/.config/opencode/skills
+  OK   ~/.config/opencode/commands
+  OK   ~/.config/opencode/hooks
+
+Wiring VS Code Copilot...
+  OK   ~/.../Code/User/settings.json
+
+Configuring git hooks...
+  OK   git init.templateDir -> /home/you/ai-framework/hooks
+
+Setting up RTK...
+  OK   RTK installed: rtk 1.x.x
+
+Done — 6 links wired, 0 skipped.
+
+Open any project folder in OpenCode or VS Code — framework is active.
 ```
 
-**3. Optional: install RTK for token reduction**
-
-RTK intercepts shell tool calls and filters their output before the LLM sees it —
-up to 90% fewer tokens from command output, no change to your workflow, no MCP.
+### Step 3 — Open any project
 
 ```bash
-# Install RTK first (see https://www.rtk-ai.app)
-python setup.py --rtk
+cd ~/your-project
+opencode          # or open VS Code in this folder
 ```
 
-RTK is optional. The framework works fully without it.
+The framework activates automatically. No project-level setup needed.
 
-**4. Keep up to date**
+---
+
+## Install AI tools
+
+Install whichever tools you want. Re-run `python setup.py` after installing
+any new tool — it will detect and wire it automatically.
+
+### OpenCode (recommended — works with any AI provider)
+```bash
+curl -fsSL https://opencode.ai/install | bash
+```
+https://opencode.ai
+
+### GitHub Copilot
+Enable at https://github.com/settings/copilot, then install the extension:
+- **VS Code:** `Ctrl+Shift+X` → search "GitHub Copilot" → Install
+- **IntelliJ/WebStorm:** `File → Settings → Plugins` → search "GitHub Copilot" → Install
+
+### Claude Code
+```bash
+# Mac / Linux
+curl -fsSL https://claude.ai/install.sh | sh
+
+# Windows (PowerShell as admin)
+irm https://claude.ai/install.ps1 | iex
+```
+Requires a paid Claude subscription (Pro $20/mo or higher).
+
+### Gemini CLI
+```bash
+npm install -g @google/gemini-cli    # requires Node.js 18+
+```
+Free tier available. https://nodejs.org for Node.js.
+
+### Codex CLI (OpenAI)
+```bash
+# Mac / Linux
+curl -fsSL https://chatgpt.com/codex/install.sh | sh
+
+# Windows (PowerShell as admin)
+powershell -ExecutionPolicy ByPass -c "irm https://chatgpt.com/codex/install.ps1 | iex"
+```
+Requires ChatGPT Plus/Pro or an OpenAI API key.
+
+---
+
+## Keep up to date
 
 ```bash
+cd ~/ai-framework    # or %USERPROFILE%\ai-framework on Windows
 git pull
 ```
 
-Symlinks update instantly. If you used `--copy`, re-run `setup.py` after pulling.
+Symlinks update automatically — no need to re-run setup after pulling.
+
+---
+
+## Is it working? — 5 checks
+
+Run these after setup to confirm the framework is active.
+
+**Check 1 — Wiring looks correct**
+
+Re-run setup to verify:
+```bash
+python setup.py
+```
+All installed tools should show `OK` lines. No `FAIL` lines.
+
+**Check 2 — Tool reads the instructions**
+
+Open OpenCode (or Copilot Chat in VS Code) in any project folder and ask:
+> "Read your instructions and tell me what Check 1 and Check 2 are."
+
+✅ Pass: it describes the first-run project scan and the branch guard.
+❌ Fail: it says it has no instructions — re-run `python setup.py` and restart the tool.
+
+**Check 3 — First-run fires on a new project**
+
+Open a project that has never used this framework and say:
+> "Start a new task."
+
+✅ Pass: the tool asks to run a first-time project scan before doing anything.
+❌ Fail: it skips straight to the task — skills are not wired correctly.
+
+**Check 4 — Branch guard fires**
+
+Ask your tool:
+> "Add a new endpoint to the API."
+
+✅ Pass: it proposes a branch name and waits for your confirmation.
+❌ Fail: it starts writing files without asking.
+
+**Check 5 — Skills loading**
+
+Ask your tool:
+> "Which skills did you load for this task and why?"
+
+✅ Pass: it lists specific skills (`pattern-enforcement`, `code-standards`, `tdd`, etc.).
+❌ Fail: it says it has no skills — verify the skills symlink exists.
 
 ---
 
 ## Repo structure
 
 ```
-instructions/
-  SHARED.md             ← rules only (~120 lines) — global, loaded every session
-  SHARED-reference.md   ← agent roles, task flow, routing — loaded on-demand
-  CLAUDE.md             ← Claude Code additions
-  GEMINI.md             ← Gemini CLI wrapper (@imports SHARED.md)
-  CURSOR.md             ← Cursor additions
-  WINDSURF.md           ← Windsurf additions
-  VSCODE.md             ← VS Code Copilot (project-level)
-  COPILOT.md            ← Copilot IntelliJ additions
-  GIT_COMMIT.md         ← commit message guidelines
-  wrappers/
-    codex-AGENTS.md     ← Codex wrapper (@imports SHARED.md + skills block)
-    opencode-AGENTS.md  ← OpenCode wrapper (@imports SHARED.md)
+AGENTS.md                   ← behavior rules — read by every tool, every session
+opencode.json               ← OpenCode global config (model, permissions)
 
-.opencode/
-  agents/               ← 16 agent definitions
-  skills/               ← 36 skill folders + skill-routing/skill-rules.json
-  verification/scripts/ ← git hooks
+agents/                     ← 16 AI agent role definitions
+skills/                     ← 36 skill folders
+commands/                   ← slash commands (/task, /review, /first-run, /handoff)
+hooks/                      ← git hooks (pre-commit, pre-push, commit-msg)
+
+instructions/
+  AGENTS-reference.md       ← agent roles, task flow — loaded on-demand
+  CLAUDE.md                 ← Claude Code additions
+  COPILOT.md                ← GitHub Copilot instructions
+  GEMINI.md                 ← Gemini CLI wrapper
+  VSCODE.md                 ← VS Code Copilot additions
+  GIT_COMMIT.md             ← commit message guidelines
+  codex-AGENTS.md           ← Codex CLI wrapper (adds skills block)
 
 docs/
-  session-summary.md    ← load at start of new session to restore context
+  session-summary.md        ← load at start of a new session to restore context
   refactoring-plan.md
 
-_opencode.json          ← OpenCode workspace config (model, permissions)
-setup.py                ← one-command setup for all tools
-workflow-guide.md       ← day-to-day developer guide
+setup.py                    ← run once per machine
+workflow-guide.md           ← day-to-day usage guide
 ```
-
----
-
-## Key structural rules
-
-- `SHARED.md` is **rules only** — checks, git permissions, non-negotiables. ~120 lines.
-- `SHARED-reference.md` has agent roles and routing — loaded by orchestrator only, not globally.
-- `project-overview/SKILL.md` is a thin entrypoint. Agents load sub-files selectively:
-  - `sub/stack.md` — every agent, every task
-  - `sub/patterns.md` — implementation agents + reviewers
-  - `sub/topology.md` — orchestrator + architect only
-  - `sub/tooling.md` — linter + first-run only
-  - `sub/localization.md` — only when UI text is involved
 
 ---
 
 ## Troubleshooting
 
-| Problem | Solution |
+| Problem | Fix |
 |---|---|
-| `Permission denied` on symlink | Enable Windows Developer Mode, or `python setup.py --copy` |
-| Tool not picking up instructions | `python setup.py --check` to verify links |
-| Gemini skills not loading | Verify `~/.gemini/skills/` exists — re-run `python setup.py` |
-| RTK not intercepting | Run `python setup.py --rtk`, then restart the tool |
-| Copilot IntelliJ skipped | Expected on Mac/Linux — Windows only |
-| Want to preview changes | `python setup.py --check` |
+| `python: command not found` | Try `python3 setup.py` instead |
+| `Permission denied` on symlink (Windows) | Run CMD as administrator, or enable Developer Mode in Windows Settings |
+| Tool shows "not found" but is installed | Restart your terminal (PATH needs to refresh), then re-run setup |
+| VS Code Copilot has no instructions | Re-run `python setup.py` — it updates `settings.json` automatically |
+| Skills not loading | Verify `~/.config/opencode/skills` or `~/.claude/skills` exists |
+| RTK download failed | Install manually: https://github.com/rtk-ai/rtk/releases |
+| Git hooks not firing | Run `git init` in your existing repo to apply the template |
