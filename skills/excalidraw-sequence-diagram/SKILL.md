@@ -1,7 +1,19 @@
 ---
 name: excalidraw-sequence-diagram
-description: Use when creating or extending Excalidraw sequence diagrams for service flows, including lifelines, message arrows, flow group containers, note boxes, and color-coded swim lanes. Produces valid Excalidraw JSON that renders correctly — arrows visible, z-order correct, labels bound.
+description: User-invoked. Creates Excalidraw JSON sequence diagrams for service flows. Invoke when the developer explicitly asks for a sequence diagram.
+disable-model-invocation: true
 ---
+
+## Quick reference
+
+- **Z-order:** arrows (`e0`+) must have higher `index` than lifeline bars (`b0`+) — or they're invisible
+- **Lifeline:** two elements per participant: bar rectangle + label text (never label only)
+- **Arrow label:** always set `containerId` on label + `boundElements` on arrow
+- **Required values:** `fillStyle:"solid"`, arrows `strokeWidth:2`, `roughness:1`, `fontFamily:5`, `opacity:100`
+- **Self-loop:** `elbowed:true` with 4-point path
+- **Spacing:** lifelines 190px apart, rows 40px, min 80px gap between blocks
+- **Return arrow:** starts at far participant, `points:[[0,0],[-width,0]]`
+- **Planning step:** output diagram plan before writing any JSON
 
 # Excalidraw Sequence Diagram
 

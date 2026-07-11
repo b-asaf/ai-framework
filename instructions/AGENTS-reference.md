@@ -1,4 +1,4 @@
-# SHARED-reference.md
+# AGENTS-reference.md
 > Reference material loaded on-demand by the orchestrator when making routing decisions.
 > NOT loaded globally — loaded once at task start by the orchestrator.
 

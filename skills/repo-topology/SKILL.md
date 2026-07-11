@@ -1,8 +1,15 @@
 ---
 name: repo-topology
-description: Detects and handles the workspace topology — single repo, monorepo, multi-repo microservices, or hybrid. Defines routing rules, shared code ownership, and cross-service task sequencing. Loaded by first-run-analysis, orchestrator, and architect.
+description: Runs automatically during first-run analysis and on any cross-service task (loaded by orchestrator). Also manually invokable when the developer explicitly asks about project structure.
 ---
 
+## Quick reference
+
+- **Detect:** monorepo (nx.json, turbo.json, pnpm-workspace.yaml, packages/ dir) vs multi-repo (multiple .git dirs, docker-compose) vs single repo
+- **Always confirm with developer** before recording topology
+- **Shared code rules:** breaking changes update all consumers in same PR sequence; shared code = PR 1, consumers follow
+- **Config templates:** `references/monorepo-config.md` or `references/microservices-config.md`
+- **Cross-service sequencing:** `references/cross-service-tasks.md`
 # Repo Topology
 
 ## Step 1 — Detect topology

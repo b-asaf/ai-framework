@@ -11,21 +11,8 @@
 
 ### Tool permissions
 
-Gemini CLI has no declarative permission config. Enforce these boundaries
-through instruction compliance in addition to the rules in SHARED.md:
-
-| Command pattern     | Behaviour                                                                  |
-| ------------------- | -------------------------------------------------------------------------- |
-| `git status`        | allowed                                                                    |
-| `git log`           | allowed                                                                    |
-| `git diff`          | allowed                                                                    |
-| `git branch`        | allowed                                                                    |
-| `git checkout -b *` | only after developer confirms proposed branch name — see Check 2           |
-| `git commit *`      | never                                                                      |
-| `git push *`        | never                                                                      |
-| `git merge *`       | never                                                                      |
-| `git rebase *`      | never                                                                      |
-| `git reset *`       | never                                                                      |
+Gemini CLI has no declarative permission config. The git permissions defined
+in AGENTS.md Rule 1 apply — enforce through instruction compliance.
 
 ### Skills
 

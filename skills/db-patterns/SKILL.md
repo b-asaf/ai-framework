@@ -3,6 +3,13 @@ name: db-patterns
 description: Database schema design, migration strategy, repository patterns, and query conventions. Loaded by the DB agent and architect.
 ---
 
+## Quick reference
+
+- **Repository pattern:** only place that touches DB. Services never query directly.
+- **Schema:** UUID PKs for API-exposed IDs, `created_at`/`updated_at` on every table, index every FK and WHERE/JOIN/ORDER BY column
+- **Migrations:** one concern each, always additive first. Multi-step for breaking changes: add nullable → backfill → add NOT NULL → drop old (separate PR)
+- **Queries:** never `SELECT *`, paginate all list queries, use DB constraints not just app validation
+- **ORM:** JPA = `fetch=LAZY` by default, avoid N+1 with `@EntityGraph`
 # Database Patterns
 
 ## Repository pattern

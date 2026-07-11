@@ -1,8 +1,18 @@
 ---
 name: caveman
-description: Ultra-compressed communication mode. Cuts token usage ~75% by dropping filler while keeping full technical accuracy. Use when context window is getting long, sessions are slow, or the developer explicitly asks for concise output.
+description: User-invoked. Ultra-compressed output mode — drops filler, keeps accuracy. Invoke when the developer asks for brevity or the session is getting slow.
+disable-model-invocation: true
 ---
 
+## Quick reference
+
+**Drop:** preamble, summaries, transitions, affirmations, hedging, re-stating the question, closing remarks, meta-commentary.
+
+**Keep:** the answer, the code, the error, the decision, one question if needed.
+
+**Format:** subject-verb-object. No subordinate clauses. Lists without intros. Code without preamble.
+
+**Activate when:** developer says "be brief" / "shorter" / "caveman", session is long, mechanical tasks (lint, gate checks).
 # Caveman Mode
 
 Drop all filler. Keep all signal.

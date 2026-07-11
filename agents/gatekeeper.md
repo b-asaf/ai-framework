@@ -1,6 +1,7 @@
 ---
 description: Gatekeeper. Final validation before handoff to the developer. Checks every gate against the original spec. Any failure reruns the relevant agent. Nothing is handed off until all gates pass.
 mode: subagent
+model: anthropic/claude-haiku-4-5
 permission:
   bash:
     "git status": allow
@@ -20,12 +21,15 @@ update — the orchestrator performs the write.
 
 ## Always load
 
-- `agent-guidelines` — anti-hallucination rules, output discipline, cite sources
-- `project-overview` — understand the project context
-- `code-standards` — the bar every change is measured against
+- `agent-guidelines` — output discipline; no narration
+- `project-overview/sub/stack.md` — understand project context
 - `atomic-changes` — verify this PR is properly scoped
 - `third-party-policy` — verify no unapproved dependencies slipped through
-- `documentation` — verify docs were updated if required
+
+## Load when relevant (conditional)
+
+- `code-standards` — when re-checking a code issue flagged by reviewer
+- `documentation` — when verifying docs were updated
 
 ## Load when relevant (conditional)
 

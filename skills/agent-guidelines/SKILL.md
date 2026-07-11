@@ -1,176 +1,109 @@
 ---
 name: agent-guidelines
-description: Behavioral rules that every agent must follow to avoid hallucination, manage context effectively, and produce reliable output. Loaded by all agents at the start of every session.
+description: Use in every agent's always-load. Output discipline: conclusions first, no routine narration, proportional length, scope limited to the task. Skill loading via skill-rules.json.
 ---
 
+## Quick reference
+
+- **Output:** conclusions first, no narration of tool calls, proportional length
+- **Code output:** output code or diff only — do not explain code unless explicitly asked
+- **Scope:** only what the task requires — mention issues outside scope, never fix silently
+- **Reading files:** prefer type definitions, interfaces, and function signatures over full implementations. Only read full implementations when the logic itself is what needs to change.
+- **Skill loading:** read `skill-rules.json` at task start, load `critical`+`high` matches
+- **Context order:** AGENTS.md → skills → agent def → project-overview → task/conversation (static before dynamic — required for prompt caching)
+- **Compaction:** > 8 agent responses OR > 3k token response → load `handoff` + `caveman`
 # Agent Guidelines
 
-## Anti-hallucination rules
+## Output discipline (always applies)
 
-These rules apply to every agent on every task — no exceptions.
+- Lead with the result. Conclusions first, reasoning after if needed.
+- Use structured output (tables, checklists, code blocks) over prose.
+- Do not re-summarise what previous agents already reported.
+- No routine narration of tool calls. Never say "reading file…" or "running tests…".
+  Report only when you start a new major phase or discover something that changes the plan.
+  Every update must include a concrete outcome: "Found X", "Confirmed Y", "Fixed Z".
 
-### Never assume — always verify
-- Never assume a file, class, function, or pattern exists without reading the codebase first.
-- Never assume a decision was made without finding it explicitly in the conversation or in `project-overview`.
-- Never generate code for an API, schema, or interface without reading the actual definition first.
-- If you cannot find the source, say so and ask — do not fill the gap with a plausible guess.
+## Scope discipline (always applies)
 
-### Cite your source
-Every structural decision must be traceable. When following a pattern, naming convention, or architectural choice, reference where it was found:
+Only do what the current task requires:
+- Do not refactor code outside the current PR scope
+- Do not "improve" patterns that were not part of the task
+- Do not add features not in the spec
+- If something problematic is spotted outside scope — note it, never fix it silently
 
-> ✅ "Following the co-located test pattern found in `src/hooks/useUser.test.ts`"
-> ❌ "The project uses co-located tests" (no source cited)
+## Skill loading
 
-> ✅ "Using `@ControllerAdvice` for error handling, matching `GlobalExceptionHandler.java`"
-> ❌ "Spring projects typically use a global exception handler"
-
-If you cannot cite a file or an explicit developer decision, you do not know — treat it as missing and trigger the appropriate discovery or clarification flow.
-
-### Investigate before answering (anti-hallucination — mandatory)
-
-<investigate_before_answering>
-Never speculate about code you have not opened. If the developer references a specific
-file, read it before answering. Investigate and read relevant files BEFORE answering
-questions about the codebase. Never make any claims about code before investigating
-unless you are certain — give grounded, hallucination-free answers.
-</investigate_before_answering>
-
-When working in a project, always read the relevant existing files before generating
-anything. Your training knowledge of a framework or library is a starting point —
-the project's actual code is the source of truth. Patterns in the codebase override
-general best practice.
-
-### Ask when uncertain
-If a requirement, decision, or pattern is ambiguous, ask the developer before proceeding. A short clarifying question is always better than confident wrong output. Use this format:
-
-```
-❓ Clarification needed before proceeding:
-[Specific question]
-[Why it matters for the current task]
-```
-
-### Scope discipline
-Only do what the current task requires. Do not:
-- Refactor code outside the current PR scope
-- "Improve" patterns that weren't part of the task
-- Add features that weren't in the spec
-- Fix unrelated issues noticed while working
-
-If something problematic is spotted outside scope, note it in the output as an observation for the developer — do not fix it silently.
+At task start, read `skills/skill-routing/skill-rules.json`.
+Match the developer's message against `keywords` and `intentPatterns`.
+Load all matching skills with priority `critical` or `high`.
+Tell the developer which skills were loaded and why — one line each.
 
 ---
 
-## Context management
+## Reference sections (load on demand)
 
-Long agentic sessions accumulate context. The orchestrator manages this actively — all other agents contribute by keeping their output compact and structured.
+The sections below are loaded only when the orchestrator or a specific agent needs them.
+Do not load all of them upfront — load only the section relevant to the current step.
 
-### For all agents — output discipline
-- Lead with the result, not the reasoning. Put conclusions first.
-- Use structured output (tables, checklists, code blocks) over prose where possible.
-- Do not re-summarise what previous agents already reported unless directly relevant.
-- Keep explanations proportional to complexity — simple tasks get simple responses.
+### [ref: anti-hallucination] Additional verification rules
 
-### Skill loading — use skill-rules.json
-At the start of every task, read `skills/skill-routing/skill-rules.json` before choosing
-which skills to load. This is the authoritative routing table — do not rely on memory or
-the task classification table in SHARED-reference.md alone.
+Beyond Check 3 in AGENTS.md, when working inside a project:
+- Never assume a file, class, function, or pattern exists without reading the codebase first.
+- Never generate code for an API, schema, or interface without reading the actual definition first.
+- Every structural decision must cite its source:
+  > ✅ "Following the co-located test pattern found in `src/hooks/useUser.test.ts`"
+  > ❌ "The project uses co-located tests" (no source cited)
+- If you cannot cite a file or explicit developer decision — treat it as missing, ask.
+- When uncertain: use this format before proceeding:
+  ```
+  ❓ Clarification needed:
+  [Specific question]
+  [Why it matters for the current task]
+  ```
 
-Match the developer's message against `keywords` and `intentPatterns` in each rule.
-Load all matching skills with priority `critical` or `high` before starting work.
-Tell the developer which skills were loaded and why.
+### [ref: context-ordering] Prompt caching order
 
-### Context ordering — for prompt caching
+Assemble context in this order to maximise cache hit rate:
+1. AGENTS.md / AGENTS-reference.md (rules — static across all sessions)
+2. Skill content (static across all sessions and projects)
+3. Agent definition (static across all sessions)
+4. project-overview/sub/*.md (project-specific)
+5. Task and conversation (changes every turn)
 
-<context_ordering>
-The order content is loaded determines whether prompt caching can apply. Cache
-matching is prefix-based: one different token early in the context invalidates the
-cache for everything after it. Always assemble context in this order:
+Never place project-specific content before framework content — breaks the cache prefix.
 
-1. **SHARED.md / SHARED-reference.md** (rules — identical across all sessions and projects)
-2. **Skill content** — `.opencode/skills/*/SKILL.md` for all loaded skills (identical
-   across all sessions of all projects — same framework, same skills)
-3. **Agent definition** — `.opencode/agents/<agent>.md` (identical across all sessions
-   of all projects using this agent)
-4. **project-overview/sub/*.md** — project-specific, changes per-repo
-5. **Task description and conversation** — changes every turn
+### [ref: context-budget] Session compaction trigger
 
-Never place project-specific content (`project-overview`, `docs/`, file contents)
-before framework content (rules, skills, agent definitions) in the assembled context.
-Doing so breaks caching for the entire framework block on every session.
+When either fires, load `handoff` before the next step:
+- Orchestrator has produced more than 8 agent responses this session
+- Any single response exceeds ~3,000 tokens
 
-This costs nothing to follow and compounds: steps 1-3 become a stable cached prefix
-shared across every session, every project, and every developer using this framework.
-</context_ordering>
+Trigger proactively. Do not wait for the session to feel slow.
 
-### Context budget — proactive compaction
-Monitor session length. When either trigger fires, load `handoff` before the next step
-and propose compacting the session:
+### [ref: checkpoint-format] Orchestrator checkpoint summary
 
-- **Response count:** orchestrator has produced **more than 8 agent responses** this session
-- **Token volume:** any single response contains more than **~3,000 tokens** of output
+After each agent completes, produce this before routing forward:
 
-Do not wait for the session to feel slow. Trigger proactively at the threshold.
-
-### For the orchestrator — checkpoint summaries
-After each agent completes a step, the orchestrator produces a compact **checkpoint summary** before routing to the next agent. This replaces the full conversation context with a structured state snapshot.
-
-**Checkpoint summary format:**
 ```
 ## Checkpoint: [step name] — [COMPLETE / BLOCKED]
-
-### Task
-[One line — what the developer asked for]
-
-### Agreed solution
-[One line — which option was chosen and why]
-
-### PR breakdown
-[Current PR number and what it contains]
-
-### Completed this step
-- [What the agent did, in bullet points, max 5]
-
-### Decisions made
-- [Any developer approvals, pattern choices, or scope changes — each with source]
-
-### Blockers resolved
-- [Any issues that were found and fixed]
-
-### Handoff to: @[next-agent]
-- [What the next agent needs to know, specifically]
-- [Files it should read before starting]
+### Task: [one line]
+### Agreed solution: [one line]
+### PR: [current PR number and what it contains]
+### Completed: [bullets, max 5]
+### Decisions: [developer approvals, pattern choices — each with source]
+### Handoff to @[next-agent]: [what it needs, files to read first]
 ```
 
-This summary is what gets passed forward — not the full raw agent output. It keeps each agent's working context lean and prevents earlier instructions from being diluted.
+### [ref: final-summary-format] Orchestrator final task summary
 
-### For the orchestrator — final task summary
-Before routing to `@gatekeeper`, produce a **final task summary**:
+Before routing to @gatekeeper:
 
 ```
 ## Final Task Summary
-
-### Original request
-[Developer's original words]
-
-### Spec (confirmed by developer)
-[Acceptance criteria, one line each]
-
-### Solution implemented
-[What was built, which files changed]
-
-### PR breakdown
-| PR | Branch | Status |
-|---|---|---|
-| 1 | feat/... | ready to commit |
-
-### Decisions and approvals
-| Decision | Chosen | Approved by |
-|---|---|---|
-| Pattern for X | co-located tests | developer (step 3) |
-| New dependency Y | approved | developer (step 4) |
-
-### Open observations (out of scope, for developer awareness)
-- [Anything spotted but not fixed]
+### Original request: [developer's words]
+### Spec: [acceptance criteria, one line each]
+### Solution: [what was built, which files changed]
+### PR breakdown: | PR | Branch | Status |
+### Decisions: | Decision | Chosen | Approved by |
+### Open observations: [out of scope items noted for developer]
 ```
-
-This summary is what the gatekeeper uses to verify all gates — it is the contractual record of the task.

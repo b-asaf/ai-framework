@@ -3,6 +3,13 @@ name: linting-tools
 description: How to detect, run, and interpret linting and formatting tools. All tools run only if already configured in the project — never add or suggest a tool not already present. Loaded by the linter agent.
 ---
 
+## Quick reference
+
+- **Run only configured tools** — never install or suggest a new one
+- **Run order:** formatter → linter → static analysis → IDE static analysis → SonarQube → JFrog Xray
+- **Auto-fix first**, then report only violations auto-fix cannot resolve
+- **If tool unreachable** (SonarQube, Klocwork): report and skip, do not fail pipeline
+- **Details:** frontend tools → `references/frontend-tools.md`, backend tools → `references/backend-tools.md`
 # Linting Tools
 
 ## Core rule

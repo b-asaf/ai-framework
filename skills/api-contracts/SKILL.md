@@ -3,6 +3,13 @@ name: api-contracts
 description: API contract design, versioning, breaking change rules, and 3rd party integration patterns. Loaded by the API agent and architect.
 ---
 
+## Quick reference
+
+- **Contract-first:** define the contract before writing implementation code
+- **Breaking changes** (remove field, rename, type change, optional→required) → need architect approval + versioning
+- **Non-breaking** (add optional field, add endpoint) → no approval needed
+- **3rd party:** error handling + timeout + retry + circuit breaker (if critical) + env var secrets
+- **GraphQL breaking change:** use `@deprecated` for at least one release before removal
 # API Contracts
 
 ## Contract-first principle

@@ -3,6 +3,13 @@ name: capacitor-bridge
 description: Capacitor plugin architecture, web/Android parity rules, and build commands. Loaded by architect, frontend, and code-reviewer when the project uses Capacitor.
 ---
 
+## Quick reference
+
+- **Stack:** React → Capacitor JS interface → Native Kotlin/Java → Android APIs
+- **Every plugin needs 3 parts:** JS interface, web fallback (always), native implementation
+- **Before native:** check community plugins first (`@capacitor/*`, `@capacitor-community/*`)
+- **Web fallback:** must always exist, even if it just throws a user-facing error
+- **Build:** `npm run build && npx cap sync android` before testing on device
 # Capacitor Bridge
 
 ## Stack overview

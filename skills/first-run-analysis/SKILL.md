@@ -1,8 +1,17 @@
 ---
 name: first-run-analysis
-description: Full first-run analysis flow. Runs when project-overview is empty or contains [XXX]. Detects topology, repo state, languages, tools, conventions, and violations. Updates _opencode.json, project-overview, workflow-guide.md, Manual.md, and CONTEXT.md. Generates refactoring-plan.md if issues found.
+description: Runs automatically when project-overview is empty or contains [XXX] (via AGENTS.md Check 1 and Rule 4). Also manually invokable when the developer wants to refresh the project scan.
 ---
 
+## Quick reference
+
+**7 steps in order:** topology detection → repo state → language/tool detection → zoom-out per repo → convention detection → refactoring-plan.md (if issues) → update all files (project-overview, CONTEXT.md, opencode.json, workflow-guide.md)
+
+**Trigger:** `project-overview` contains `[XXX]` or is empty.
+
+**Confirm with developer** at each decision point before proceeding.
+
+**Completion message** includes: project name, architecture type, repos, stack, files updated.
 # First-Run Analysis
 
 Run all 7 steps in order. Do not skip or abbreviate. Confirm with the developer at each decision point before proceeding.

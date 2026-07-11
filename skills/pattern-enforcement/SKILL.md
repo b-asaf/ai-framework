@@ -1,7 +1,20 @@
 ---
 name: pattern-enforcement
-description: Discovers, enforces, and evolves project patterns. Run before writing any file in a domain. Re-runs whenever a new technology, protocol, or module type is encountered — not just on first run. Loaded by all implementation agents, architect, code-reviewer, and qa.
+description: Use before writing any file in a new domain, module, or technology. Discovers the established pattern first — check project-overview/sub/patterns.md, then scan the codebase, then enforce or propose.
 ---
+
+## Quick reference
+
+**Core rule:** Before writing any file, know the established pattern for that domain. Check `project-overview/sub/patterns.md` first. If no entry exists, scan the codebase.
+
+**Three outcomes:**
+1. Pattern found + good → follow it exactly
+2. No pattern found → notify developer, propose approach, wait for approval
+3. Pattern found but violates SOLID → notify developer, propose replacement, wait for choice
+
+**Discovery triggers:** first run, new protocol, new file type, new module, unfamiliar folder, missing registry entry.
+
+**Status values:** `following` / `approved-new` / `accepted-deviation` / `pending`
 
 # Pattern Enforcement
 

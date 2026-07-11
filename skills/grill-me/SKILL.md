@@ -1,8 +1,19 @@
 ---
 name: grill-me
-description: Interview the developer relentlessly about a plan or design until reaching shared understanding, resolving each branch of the decision tree. Use when the developer wants to stress-test a plan, think through a design, or before writing any spec or HLD. If a question can be answered by exploring the codebase, explore it instead of asking.
+description: Use when requirements or design are ambiguous, unconfirmed, or untested. Grills the developer one question at a time to resolve every branch of the decision tree before any spec or HLD is written.
 ---
 
+## Quick reference
+
+**Before grill:** six-rung necessity check — does this need to exist? stdlib? native platform? installed dep? one line? Only then: grill.
+
+**Grill rules:** one question at a time, provide recommended answer, explore codebase before asking.
+
+**Domain hygiene:** challenge terminology vs CONTEXT.md, update CONTEXT.md inline as terms crystallise.
+
+**ADR gate:** offer ADR only when all three true — hard to reverse + surprising without context + real trade-off.
+
+**Output:** confirmed spec or HLD only after every branch resolved and developer confirms.
 # Grill Me
 
 Interview the developer relentlessly about every aspect of this plan until we reach a shared understanding. Walk down each branch of the design tree, resolving dependencies between decisions one by one.
@@ -78,6 +89,16 @@ If any of the three is missing, skip the ADR. When all three apply, say:
 > "This decision meets the ADR bar — hard to reverse, non-obvious, and a real trade-off. Want me to record it in `docs/adr/`?"
 
 ADR location: `docs/adr/NNNN-short-title.md`. Create `docs/adr/` if it doesn't exist. Only create the file after the developer confirms.
+
+## Completion criterion
+
+The grill is complete when **every** of the following is true:
+- Every branch of the decision tree has a confirmed answer (developer said yes/approved/confirmed)
+- No question remains unanswered or marked "to be decided later"
+- The domain model (`CONTEXT.md`) is consistent with all confirmed decisions
+- Any ADR decisions meeting the three-criteria bar have been offered and either written or declined
+
+Only then: produce the confirmed spec or HLD.
 
 ## Output
 

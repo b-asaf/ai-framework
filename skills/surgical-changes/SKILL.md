@@ -1,6 +1,6 @@
 ---
 name: surgical-changes
-description: Touch only what you must. Clean up only your own mess. Every changed line must trace directly to the user's request. Loaded by backend, frontend, ui, db, api agents as an always-load.
+description: Use in every implementation agent's always-load. Touch only what the task requires. Every changed line must trace directly to the request.
 ---
 
 # Surgical Changes
@@ -16,7 +16,6 @@ If a line cannot be justified by the task → revert it.
 
 - Do not "improve" adjacent code, comments, or formatting
 - Do not refactor things that aren't broken
-- Do not add docstrings, type hints, or logging that wasn't asked for
 - Do not change code style or formatting — match what's already there, even if you'd do it differently
 - Do not rename variables or methods outside the scope of the task
 - If you notice unrelated dead code or a bug → **mention it, don't fix it**:
@@ -30,6 +29,16 @@ You **must** clean up what your changes made unused:
 - Functions only called by code you removed
 
 You must **not** remove pre-existing dead code unless explicitly asked.
+
+## Reading before writing
+
+Before reading any file for context, ask: "Do I need the full implementation or just the interface?"
+
+- **Prefer:** type definitions, interfaces, function signatures, exports — these give structure without noise
+- **Avoid:** reading 500-line implementation files when only the public API matters
+- **Only read full implementations** when the logic itself is what needs to change
+
+This applies to gathering context, not to files you are actively editing.
 
 ## Scope check before writing
 

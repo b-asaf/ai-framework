@@ -1,7 +1,19 @@
 ---
 name: tdd
-description: Test-driven development with a strict red-green-refactor loop. Use when building a feature or fixing a bug. The Iron Law applies without exception. Loaded by backend, frontend, and qa agents.
+description: Use when writing code for a new feature or bug fix. Enforces the Iron Law — no production code without a failing test first. Red-green-refactor discipline, vertical slices, tests as the design tool.
 ---
+
+## Quick reference
+
+**The Iron Law:** No production code without a failing test first. No exceptions.
+
+**Cycle:** RED (write failing test) → GREEN (minimum code to pass) → CHECK (full suite) → REFACTOR (clean up) → REPEAT
+
+**Good test:** one behaviour, fast, isolated, no network/db/filesystem, AAA structure, named after behaviour not implementation.
+
+**Bad test:** tests implementation details, multiple assertions on different behaviours, skipped red phase.
+
+**Vertical slices:** thinnest end-to-end path first. Don't build entire layers — build one thin slice completely.
 
 # Test-Driven Development
 
@@ -30,6 +42,16 @@ REPEAT
 Never skip the RED phase. A test that passes before you write production code is not a test — it's a lie. Verify the test fails, and verify it fails **for the right reason** (the behaviour you're about to implement is missing, not a compile error or wrong assertion).
 
 ---
+
+## Completion criterion
+
+Each TDD cycle is complete when:
+- The failing test exists and describes one specific behaviour
+- The minimum production code makes it pass
+- The full suite passes (no regressions introduced)
+- The code is refactored clean (no duplication, names reveal intent)
+
+The task is complete when all acceptance criteria have a passing test and the suite is green.
 
 ## Vertical slices
 

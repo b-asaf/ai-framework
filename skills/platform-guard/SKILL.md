@@ -3,6 +3,19 @@ name: platform-guard
 description: Decision framework for React-vs-native choices in a Capacitor project. Enforces the React-first rule. Loaded by architect before any implementation decision, and by code-reviewer to catch unjustified native code.
 ---
 
+## Quick reference
+
+**Rule:** React first. Native only when React physically cannot do it.
+
+**Decision order:**
+1. Web API covers it? → use it
+2. Capacitor community plugin exists? → use it (subject to third-party-policy)
+3. Limitation real and documented? → write native code with justification
+
+**Required before any native code:** document in HLD (web API checked, plugin checked, limitation confirmed, web fallback defined) + update `docs/architecture.md`
+
+**Pre-approved native patterns:** background services, FCM push, deep links, app lifecycle events, Keystore.
+
 # Platform Guard
 
 ## The rule

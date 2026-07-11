@@ -3,6 +3,19 @@ name: readability-cognitive-load
 description: Use when writing or reviewing code to measure and reduce the mental effort required to read it. Evaluates nesting depth, boolean complexity, working memory load, abstraction consistency, and surprise factor. Load alongside code-standards on every implementation and review task.
 ---
 
+## Quick reference
+
+| Dimension | Threshold | Severity |
+|---|---|---|
+| Nesting depth | Max 2 levels | BLOCKING > 3 |
+| Boolean operands | Max 3 `&&`/`||` | BLOCKING > 4 |
+| Live mutable variables | Max 5 per function | NON-BLOCKING |
+| Temporal coupling | Function not self-contained | BLOCKING |
+| Surprise factor | Does what name implies | BLOCKING |
+| Line length | Max 120 chars | NON-BLOCKING |
+| Method chain | Max 4 calls | NON-BLOCKING |
+
+**Cite format:** `[READABILITY/<dimension>] file:line — what was found`
 # Readability & Cognitive Load
 
 Cognitive load is the total mental effort required to read, understand, and reason about code. High cognitive load increases defect rate and slows maintenance. This skill measures the reader's burden — not correctness, not architecture — purely: *how hard is this to understand in one focused pass?*

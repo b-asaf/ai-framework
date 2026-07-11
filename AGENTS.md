@@ -1,4 +1,4 @@
-# SHARED.md
+# AGENTS.md
 > Single source of truth for AI behavior rules.
 > Symlinked into every tool's global config location by `setup.py`.
 > Every rule below applies to every agent, every session, without exception.
@@ -44,6 +44,31 @@ answering questions about the codebase. Never make claims about code before
 investigating — give grounded, hallucination-free answers.
 </check>
 
+<check id="4" name="commit-push-pr-guard">
+Before running `git add`, `git commit`, `git push`, or `gh pr create` — stop completely and show the developer:
+
+```
+📦 Ready to commit and push. Please review:
+
+Branch:     <current branch>
+Files:      <list of changed files>
+Commit msg: <type(scope): description>
+PR title:   <title>
+PR body:    <first 3 lines of body>
+Base branch: main
+
+Type 'yes' to proceed, edit the message to change it, or 'cancel' to stop.
+```
+
+Rules:
+- Never run any of these commands without completing this approval step first
+- If the developer edits the commit message, use the edited version exactly
+- If the developer says 'cancel' at any point, stop and do not proceed
+- `git push --force` is permanently forbidden — not guarded, never allowed
+- Run in this exact sequence after approval: `git add .` → `git commit -m "..."` → `git push` → `gh pr create`
+- If `gh` is not installed, stop after `git push` and tell the developer to open the PR manually
+</check>
+
 </checks>
 
 ---
@@ -53,11 +78,15 @@ investigating — give grounded, hallucination-free answers.
 ## Non-negotiable rules
 
 <rule id="1" name="git-permissions">
-**Allowed:** `git status`, `git log`, `git diff`, `git branch`,
+**Allowed (run freely):**
+`git status`, `git log`, `git diff`, `git branch`,
 `git checkout -b` (only after developer confirms — see Check 2)
 
-**Never run:** `git commit`, `git push`, `git merge`,
-`git rebase`, `git reset`, `git push --force`
+**Guarded (require explicit developer approval before every run — see Check 4):**
+`git add`, `git commit`, `git push`, `gh pr create`
+
+**Never run under any circumstances:**
+`git merge`, `git rebase`, `git reset`, `git push --force`
 </rule>
 
 <rule id="2" name="branch-before-write">
@@ -119,6 +148,27 @@ Operate only within the current repository directory. Do not reach outside the
 repo boundary: no HTTP requests, no external API calls, no cloud service calls,
 no writes outside the working directory. The environment is intentionally isolated.
 If a task requires external access, stop and flag it to the developer.
+</rule>
+
+<rule id="13" name="no-routine-narration">
+Do not narrate routine actions. Never say "reading file…", "running tests…",
+"checking the codebase…". Report only when starting a new major phase or when
+something changes the plan. Every update must state a concrete outcome:
+"Found X", "Confirmed Y", "Fixed Z". Silence between tool calls is correct.
+</rule>
+
+<rule id="14" name="context-budget-auto-triggers">
+Monitor session length. When either threshold is reached, auto-trigger both
+`caveman` and `handoff` before the next step — do not wait for the developer:
+
+- Orchestrator has produced **more than 8 agent responses** this session, OR
+- Any single response exceeds **~3,000 tokens**
+
+Load `caveman` first (all subsequent output uses compressed mode).
+Then load `handoff` and produce the session compact before continuing.
+Announce to the developer:
+> "Context budget reached. Switching to compact mode and saving a handoff.
+> Continuing from: [one-line summary of current step]."
 </rule>
 
 </rules>

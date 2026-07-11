@@ -1,32 +1,12 @@
 ---
 name: branching-policy
-description: Git branching rules for all agents. Defines branch prefixes, who runs git commands, and what must happen before any file is written.
+description: Git branching rules, branch naming conventions, and PR handoff format. Git permission rules (what agents can and cannot run) are defined in AGENTS.md Rule 1 — do not duplicate them here.
 ---
 
 # Branching Policy
 
-## Core rule
-**Agents never run git write commands.** The developer handles all git write operations.
-
-Agents may run:
-- `git status` — check current branch
-- `git log --oneline -10` — review recent history
-- `git diff` — inspect changes
-
-Agents must never run:
-- `git checkout -b`, `git commit`, `git push`, `git merge`, `git rebase`, `git reset`, `git push --force`
-
-## Branch-before-code rule
-No file may be created or modified until the developer confirms a feature branch is open.
-
-**Write guard:** Before calling the `write` or `edit` tool, the agent MUST check whether branch confirmation was obtained from the developer in this conversation. If not confirmed:
-
-1. Halt immediately — do not proceed with any write or edit operation
-2. Ask the developer: "Please run: `git checkout -b <prefix>/<task-name>`"
-3. Wait for explicit confirmation before continuing
-
-The orchestrator tells the developer exactly what to run:
-> "Please run: `git checkout -b feat/your-task-name`"
+> Git permission rules (allowed/forbidden commands) are in AGENTS.md Rule 1.
+> This skill covers naming, conventions, and handoff format only.
 
 ## Branch naming
 
@@ -40,7 +20,7 @@ The orchestrator tells the developer exactly what to run:
 | Release | `release/` | `release/v2.1.0` |
 | Hotfix | `hotfix/` | `hotfix/critical-auth-bypass` |
 
-Branch names should be lowercase, hyphen-separated, and descriptive enough to understand the purpose without reading the PR.
+Branch names: lowercase, hyphen-separated, descriptive enough to understand without reading the PR.
 
 ## PR rules
 - `main` / `master` is only updated via PR — never directly.

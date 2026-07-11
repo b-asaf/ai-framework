@@ -1,7 +1,20 @@
 ---
 name: improve-codebase-architecture
-description: Find deepening opportunities in the codebase — refactors that turn shallow modules into deep ones. Run every few days or after a surge of development. The aim is testability and AI-navigability. Loaded by architect when triggered explicitly by the developer.
+description: User-invoked. Finds architectural deepening opportunities — shallow-to-deep module refactors. Invoke when the developer explicitly requests an architecture review.
+disable-model-invocation: true
 ---
+
+## Quick reference
+
+**Core vocab:** Deep module = small interface, large implementation. Shallow module = interface nearly as complex as the implementation. Seam = boundary where you can change one side without touching the other.
+
+**How to find candidates:** explore for friction — bouncing between many small modules, untestable through current interface, leaking across seams. Apply deletion test: deleting this module — does it concentrate complexity or just move it?
+
+**Screaming Architecture:** folder names reveal business capabilities, not frameworks. Feature-first, layer-second.
+
+**Swap Test:** can I swap the DB for in-memory by changing only infrastructure files? If no, boundary is wrong.
+
+**Output:** numbered candidate list with problem, opportunity, test impact, effort. Then grill on chosen candidate.
 
 # Improve Codebase Architecture
 

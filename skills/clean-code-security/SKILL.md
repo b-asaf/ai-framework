@@ -3,6 +3,18 @@ name: clean-code-security
 description: Use when reviewing or implementing code that handles external input, authentication, persistence, or external services — applies OWASP Top 10 checklist. All security findings are BLOCKING.
 ---
 
+## Quick reference
+
+**All security findings are BLOCKING.**
+
+- **A01 Access Control:** every endpoint/action gated server-side, no client-controlled auth
+- **A02 Crypto:** no plaintext passwords/tokens/PII, use bcrypt/argon2/scrypt, no hardcoded secrets
+- **A03 Injection:** parameterised queries always, no user input in SQL/shell/template/path
+- **A05 Misconfiguration:** no debug endpoints, no stack traces to client, no `CORS: *` on private APIs
+- **A07 Auth:** validate JWT signature+expiry+audience on every request, regenerate session after login
+- **A10 SSRF:** URL from user input must validate against allowlist
+
+`[SECURITY/<category>] file:line — vulnerability description`
 # Clean Code — Security (OWASP Top 10)
 
 Security findings are always **BLOCKING**. There is no such thing as a non-blocking security issue in production code.
