@@ -3,6 +3,13 @@ name: static-code-analysis
 description: Run a static code analysis gate using lizard (cyclomatic complexity) and jscpd (duplication) on changed files. Used by linter agent as a pre-review gate and by code-reviewer as a precheck before reading any code.
 ---
 
+## Quick reference
+
+- **Tools:** `lizard --warnings_only --CCN 10 <path>` (complexity) + `jscpd --threshold 10 <path>` (duplication)
+- **Thresholds:** CCN ≤ 10 per function, duplication ≤ 10%, changed-line coverage ≥ 90%
+- **Scope:** enforce only on changed lines — legacy violations are context, not blockers
+- **Missing tool:** stop and report install command (`pip install lizard` / `npm install -g jscpd`)
+- **For code-reviewer:** run as precheck before reading any code — reject immediately if fails
 # Static Code Analysis
 
 ## Purpose

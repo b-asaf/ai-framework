@@ -3,6 +3,12 @@ name: git-hooks
 description: Git hook setup and enforcement. Detects hook managers (husky, lefthook, pre-commit), installs hooks, or falls back to plain shell scripts. Loaded by orchestrator during first-run analysis.
 ---
 
+## Quick reference
+
+- **Three hooks:** `pre-commit` (not on protected branch), `commit-msg` (conventional commits), `pre-push` (cannot push to main/master/develop)
+- **Detection order:** husky → lefthook → pre-commit → plain shell scripts
+- **After detecting:** tell developer which manager and how to install (see `references/manager-installation.md`)
+- **If not installed:** warn on every task handoff
 # Git Hooks
 
 ## What to install

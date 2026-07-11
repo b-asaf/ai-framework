@@ -1,8 +1,19 @@
 ---
 name: diagnose
-description: Structured 4-phase debugging loop for finding root causes. Use when facing a bug, unexpected behaviour, or a failing test with an unclear cause. Loaded by backend, frontend, and orchestrator when task type is a bug fix.
+description: Use when a bug, error, crash, or failing test needs systematic root-cause analysis. Runs a 4-phase loop: reproducible signal first, then ranked hypotheses, then targeted probing, then root-cause fix.
 ---
 
+## Quick reference
+
+**Phase 1 — Signal first (most important):** find a fast, deterministic, agent-runnable pass/fail test reproducing the bug. Unit test → integration test → HTTP/curl → CLI.
+
+**Phase 2 — Hypothesis list:** rank by likelihood, show developer before probing.
+
+**Phase 3 — Probe:** one variable at a time. Prefer debugger > targeted logs > binary bisection > mutation. Tag debug logs `[DEBUG-xxxx]`.
+
+**Phase 4 — Fix at root, not symptom.** Write test first, apply fix, run full suite, remove all debug instrumentation, verify end-to-end.
+
+**Anti-patterns:** changing code before signal, logging everything, fixing symptom, multiple variables at once.
 # Diagnose
 
 Debugging without a signal is guessing. This skill is about finding the signal first, then using it to drive to the root cause systematically. Everything else is mechanical.
@@ -86,6 +97,22 @@ Once the root cause is confirmed:
 6. **Verify the fix end-to-end** — reproduce the original scenario that triggered the bug. Confirm it no longer occurs.
 
 ---
+
+## Completion criterion
+
+The diagnosis is complete when **every** of the following is true:
+- A reproducible, agent-runnable signal exists (test, command, or curl that reliably fails)
+- The root cause is identified at the code level (file:line), not at the symptom level
+- A fix is applied at the root, not the symptom
+- The full test suite passes after the fix
+- All debug instrumentation (`[DEBUG-xxxx]` logs, temporary patches) is removed
+- The original signal now passes
+
+Do not declare done after applying the fix without running the full suite.
+
+**Never generate a fix attempt without first citing the root cause (file:line).**
+"Try again" without a cited root cause is always wrong — it is guessing, not diagnosing.
+If the root cause is not yet identified, go back to Phase 2 (hypotheses) not Phase 4 (fix).
 
 ## Anti-patterns to avoid
 

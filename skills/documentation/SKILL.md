@@ -3,6 +3,18 @@ name: documentation
 description: When and how to update project documentation, maintain architecture diagrams (JSON + SVG), and write prose that humans will actually read. Every agent checks this after completing work. Create docs/ if it does not exist.
 ---
 
+## Quick reference
+
+**Update docs when:** new user flow, new/modified API endpoint or schema, new architectural layer, new 3rd party integration, new env var, changed startup/config behaviour.
+
+**Do NOT update for:** bug fixes with no behaviour change, test additions, pure refactors, style/lint changes.
+
+**Primary file:** `docs/architecture.md`
+
+**Architecture diagrams:** JSON-first workflow — update `docs/architecture.json` before touching `docs/architecture.svg`. Status: `observed` / `inferred` / `unknown`.
+
+**Writing quality:** active voice, positive form, concrete language, omit needless words, emphatic word at end.
+
 # Documentation Policy
 
 ## When to update docs

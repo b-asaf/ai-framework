@@ -2,7 +2,7 @@
 > VS Code GitHub Copilot specific instructions.
 > Wired to `.github/copilot-instructions.md` at the project root by `setup.py`.
 > This is a PROJECT-LEVEL file — run `python setup.py` from inside each project repo.
-> All rules from SHARED.md apply. This file adds VS Code Copilot-specific behaviour only.
+> All rules from AGENTS.md apply. This file adds VS Code Copilot-specific behaviour only.
 
 ---
 
@@ -21,21 +21,8 @@ This creates `.github/copilot-instructions.md` in your project pointing to this 
 
 ## Tool permissions
 
-VS Code Copilot does not have a declarative permission config.
-Enforce git boundaries through instruction compliance:
+Git permissions are defined in AGENTS.md Rule 1 — applies here without duplication.
 
-| Command pattern     | Behaviour                                                          |
-| ------------------- | ------------------------------------------------------------------ |
-| `git status`        | allowed                                                            |
-| `git log`           | allowed                                                            |
-| `git diff`          | allowed                                                            |
-| `git branch`        | allowed                                                            |
-| `git checkout -b *` | only after developer confirms proposed branch name — see SHARED.md Check 2 |
-| `git commit *`      | never                                                              |
-| `git push *`        | never                                                              |
-| `git merge *`       | never                                                              |
-| `git rebase *`      | never                                                              |
-| `git reset *`       | never                                                              |
 
 ## Path-scoped instructions (VS Code feature)
 

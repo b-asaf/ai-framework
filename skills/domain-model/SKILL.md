@@ -3,6 +3,14 @@ name: domain-model
 description: Establishes and maintains a shared domain vocabulary (CONTEXT.md) between developers and agents. Loaded during first-run analysis and whenever an agent encounters unfamiliar domain terminology. Prevents agents from using 20 words where 1 precise term will do.
 ---
 
+## Quick reference
+
+- **CONTEXT.md:** glossary of domain terms. One precise definition per term. No implementation details.
+- **Before naming anything:** check CONTEXT.md. Use canonical terms.
+- **Before domain assumption:** if term not in CONTEXT.md, ask before proceeding.
+- **Update lazily:** one term at a time during normal work, not as a separate task.
+- **Triggers:** new unknown term, fuzzy definition revealed, code-vs-CONTEXT.md mismatch.
+- **Multi-repo:** one shared CONTEXT.md at workspace root, or per-repo if domains are genuinely distinct.
 # Domain Model
 
 ## The problem this solves

@@ -3,6 +3,16 @@ name: localization
 description: i18n detection, setup, string management, and RTL/LTR layout support for web and Android APK (Capacitor). Loaded by architect, frontend, ui, and code-reviewer when a task involves UI text, language support, or directional layout.
 ---
 
+## Quick reference
+
+- **Default language:** `en` always. Every string must exist in English first.
+- **Detect setup:** scan for `i18next`/`react-i18next`/`react-intl` in `package.json`, or `i18n/`/`locales/` in `src/`
+- **CSS rule:** logical properties always (`margin-inline-start` not `margin-left`; `text-align: start` not `text-align: left`)
+- **Tailwind:** `ms-*`/`me-*` not `ml-*`/`mr-*`; `ps-*`/`pe-*` not `pl-*`/`pr-*`; `text-start`/`text-end` not `text-left`/`text-right`
+- **Direction:** set `dir` on `<html>` only — never on a container div
+- **RTL icons:** directional icons (arrows, chevrons) use `scaleX(-1)` or `rtl:scale-x-[-1]`; non-directional icons never mirror
+- **Test RTL:** add `dir="rtl"` to `<html>` in DevTools without changing language
+
 # Localization
 
 ## Default language

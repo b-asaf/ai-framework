@@ -1,8 +1,16 @@
 ---
 name: zoom-out
-description: Lightweight orientation skill. Load at the start of any session on a mature or unfamiliar codebase before writing any code. Builds a mental map of the module structure, entry points, and key boundaries. Takes 2 minutes and prevents 30 minutes of wrong assumptions.
+description: Orientation map for an unfamiliar or mature codebase. Auto-triggered by the orchestrator at the start of the first session on a project (after first-run analysis completes) and after long gaps between sessions. Also manually invokable at any time.
+disable-model-invocation: true
 ---
 
+## Quick reference
+
+- **When:** first session on new/unfamiliar codebase, long gap, unfamiliar module mid-task, before `improve-codebase-architecture`
+- **Read sequence:** root structure → entry points → module boundaries (2-3 levels deep, names only) → CONTEXT.md → task location
+- **Output:** orientation map with shape, entry points, module boundaries, domain terms, task location, surprises/gaps
+- **Show to developer** before proceeding — they often correct the surprises row instantly
+- **One zoom-out per session** — do not re-run if already oriented
 # Zoom Out
 
 Before touching anything, understand the shape of what you're working in.

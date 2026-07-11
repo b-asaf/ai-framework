@@ -1,5 +1,5 @@
 {
-  "$comment": "Authoritative skill routing table. Read by the orchestrator at task start. Replaces the ad-hoc routing table in SHARED.md so the orchestrator always has a machine-readable source. intentPatterns are matched against the developer's message. priority: critical > high > medium > low.",
+  "$comment": "Authoritative skill routing table. Read by the orchestrator at task start. Replaces the ad-hoc routing table in AGENTS.md so the orchestrator always has a machine-readable source. intentPatterns are matched against the developer's message. priority: critical > high > medium > low.",
   "rules": [
     {
       "skill": "diagnose",

@@ -1,8 +1,15 @@
 ---
 name: third-party-policy
-description: Rules for handling 3rd party dependency changes. Any addition, removal, or version update requires explicit developer approval before being applied.
+description: Use when any dependency is being added, removed, or updated. Gates the change — no dependency modification without explicit developer approval and a CVE scan.
 ---
 
+## Quick reference
+
+- **No dependency change without developer approval** — add, remove, or update
+- **Before requesting approval:** run `jf audit` (or manual CVE check). If CVSS ≥ 8 found → propose clean version instead
+- **Approval request format:** Action, Package, Version, Reason, Alternatives, Xray scan result
+- **Separate PR rule:** dep change = PR 1 (chore:), feature using it = PR 2
+- **Auto-flag:** CVSS ≥ 8, no clean version exists, changes build output, adds runtime network dep, last commit > 2 years
 # Third-Party Dependency Policy
 
 ## The rule

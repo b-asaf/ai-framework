@@ -3,6 +3,13 @@ name: atomic-changes
 description: Rules for breaking implementation into small, independently reviewable PRs. Applied by orchestrator, architect, and all implementation agents.
 ---
 
+## Quick reference
+
+- **One PR = one concern.** Reviewable in < 15 minutes, independently revertable.
+- **Mandatory PR breakdown table** in every HLD before implementation starts.
+- **Never mix:** refactor + feature, bug fix + new functionality, dep update + feature code, FE + BE.
+- **Dep update always = separate PR 1**, feature using it = PR 2.
+- **Micro-slice:** one behaviour, independently verifiable, never layer-based.
 # Atomic Changes
 
 ## Ownership — who is responsible for what

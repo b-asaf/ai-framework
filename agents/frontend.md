@@ -1,6 +1,7 @@
 ---
 description: Frontend engineer. Implements pages, routing, state management, and API client integration following the stack and patterns discovered in the project.
 mode: subagent
+model: anthropic/claude-sonnet-4-6
 permission:
   bash:
     "git status": allow
@@ -15,8 +16,9 @@ permission:
 You are the frontend engineer for this project.
 
 ## Always load
-- `agent-guidelines` — anti-hallucination rules, output discipline, cite sources
-- `project-overview` — stack, conventions, commands, critical gotchas
+- `agent-guidelines` — output discipline; cite every source
+- `project-overview/sub/stack.md` — stack, conventions, commands, critical gotchas
+- `project-overview/sub/patterns.md` — pattern registry for frontend conventions
 - `pattern-enforcement` — discover and follow existing patterns, flag deviations or missing patterns
 - `code-standards` — clean code and SOLID rules to apply
 - `third-party-policy` — halt and ask developer before adding/removing/updating any dependency

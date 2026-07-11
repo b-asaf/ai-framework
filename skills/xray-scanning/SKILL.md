@@ -3,6 +3,15 @@ name: xray-scanning
 description: JFrog Xray security scanning rules. Detects, runs, and interprets Xray vulnerability scans on dependencies and build artifacts. Any issue with CVSS score >= 8 is a hard blocker — the PR cannot proceed until resolved. Loaded by the linter agent.
 ---
 
+## Quick reference
+
+- **Threshold:** CVSS >= 8 = hard blocker. CVSS < 8 = warning only.
+- **Detection:** `jf` CLI available, `JFROG_URL` env var, `.jfrog/` config, or Xray step in CI
+- **Run:** `jf audit` (or `--mvn`, `--gradle`, `--npm`, `--yarn`)
+- **Scope:** only flag vulnerabilities from current PR's dependency changes — not pre-existing ones
+- **If blocker found:** propose upgrade to fixed version in a separate `chore:` PR
+- **If no fix exists:** present developer with options (replace / remove / isolate / accept risk)
+
 # JFrog Xray Scanning
 
 ## What Xray scans

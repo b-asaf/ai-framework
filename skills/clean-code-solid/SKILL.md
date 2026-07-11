@@ -3,6 +3,20 @@ name: clean-code-solid
 description: Use when writing, modifying, refactoring, designing, or reviewing code and architecture to apply the five SOLID principles at every scale — function, class, module, service.
 ---
 
+## Quick reference
+
+| Principle | One-line test |
+|---|---|
+| **SRP** | Does this unit have exactly one reason to change? |
+| **OCP** | Can I add a new variant without editing this code? |
+| **LSP** | Can every subclass be dropped in without callers noticing? |
+| **ISP** | Does every consumer use everything the interface exposes? |
+| **DIP** | Does this unit depend on a concrete infrastructure type? |
+
+**All SOLID violations are BLOCKING.**
+
+`[SOLID/SRP] file:line — two responsibilities: A and B`
+`[SOLID/DIP] file:line — instantiates ConcreteInfrastructure directly`
 # Clean Code — SOLID Principles
 
 SOLID principles apply at every scale. The same question asked of a 10-line function and a 10-service system: does each unit have one reason to change? Can you add behaviour without editing existing code? Are dependencies on abstractions, not concretions?

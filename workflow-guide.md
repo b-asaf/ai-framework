@@ -20,7 +20,7 @@ The orchestrator runs a full first-run analysis automatically when you open a ne
 4. Discover the conventions already in use
 5. Flag any violations of Clean Code, SOLID, KISS, or YAGNI
 6. Generate `docs/refactoring-plan.md` if issues are found
-7. Update `_opencode.json`, `project-overview`, and this guide with project-specific notes
+7. Update `opencode.json`, `project-overview`, and this guide with project-specific notes
 
 **You will be asked two questions during first-run:**
 - Confirm or correct the architecture topology (monolith / microservices)
@@ -28,7 +28,7 @@ The orchestrator runs a full first-run analysis automatically when you open a ne
 
 Do not start feature work until first-run is complete. If a refactoring plan was generated, review it before beginning.
 
-> See `Manual.md` for a full breakdown of first-run outputs.
+> See `docs/session-summary.md` for current framework state.
 
 ---
 
@@ -129,7 +129,7 @@ If a second issue comes up mid-session, note it and start a fresh session for it
 ## Maintain project-overview and docs/
 
 After every 3-4 tasks, spend 2 minutes reviewing:
-- `.opencode/skills/project-overview/SKILL.md` — patterns and stack details still accurate?
+- `skills/project-overview/SKILL.md` — patterns and stack details still accurate?
 - `docs/architecture.md` — reflects recent changes?
 
 Agents update these, but they can drift. Stale context leads to bad agent decisions.

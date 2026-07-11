@@ -27,8 +27,6 @@ Each dimension is defined in detail in its own skill file. Load the relevant one
 
 ## Quick reference — always applies
 
-**Names** reveal intent. No abbreviations unless universal (`url`, `id`, `dto`).
-Classes: noun. Functions: verb. Booleans: `is`/`has`/`can` prefix.
 
 **Functions** do one thing. Under 20 lines. Max 3 parameters. Return early. No side effects unless the name makes them obvious.
 

@@ -2,7 +2,7 @@
 > GitHub Copilot instructions — default tool for this framework.
 > Works with VS Code (wired to `.github/copilot-instructions.md`)
 > and IntelliJ / WebStorm / JetBrains IDEs (wired globally on Windows).
-> All rules from SHARED.md apply. This file adds Copilot-specific behaviour on top.
+> All rules from AGENTS.md apply. This file adds Copilot-specific behaviour on top.
 
 ---
 

@@ -1,8 +1,18 @@
 ---
 name: handoff
-description: Compact the current conversation into a handoff document so a fresh agent can continue the work without losing context. Use when a session is getting long, switching agents, or ending a work session mid-task.
+description: User-invoked. Compacts the current session into a handoff document and appends to docs/session-summary.md. Invoke when a session is getting long, switching context, or ending work mid-task.
+disable-model-invocation: true
 ---
 
+## Quick reference
+
+**Two outputs:** `.handoff-[task-slug]-[date].md` (detailed, for next message) + entry in `docs/session-summary.md` (5-10 lines, for future sessions).
+
+**Handoff sections:** current state, original task, confirmed decisions (each cited), work completed, work remaining, open questions, skills to load next, files to read first, do not.
+
+**session-summary entry:** what changed (1-3 bullets), decisions made, pending (one line).
+
+**Activate when:** session getting long, switching agents mid-task, ending with unfinished work.
 # Handoff
 
 When a session grows long, context degrades. Earlier decisions get diluted. A fresh agent starting mid-task without context makes wrong assumptions. The handoff document fixes this — it's a structured snapshot that lets any agent (or the same agent in a new session) pick up exactly where things left off.
