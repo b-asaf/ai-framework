@@ -1,6 +1,6 @@
 ---
 name: xray-scanning
-description: JFrog Xray security scanning rules. Detects, runs, and interprets Xray vulnerability scans on dependencies and build artifacts. Any issue with CVSS score >= 8 is a hard blocker — the PR cannot proceed until resolved. Loaded by the linter agent.
+description: JFrog Xray security scanning rules. Detects, runs, and interprets Xray vulnerability scans on dependencies and build artifacts. Any issue with CVSS score >= 8 is a hard blocker — the PR cannot proceed until resolved. Loaded by the code-reviewer agent.
 ---
 
 ## Quick reference
@@ -119,7 +119,7 @@ For each vulnerability found:
 
 ## Remediation paths
 
-When a blocker is found, the linter agent must propose one of:
+When a blocker is found, the code-reviewer agent must propose one of:
 
 | Path | When to use |
 |---|---|

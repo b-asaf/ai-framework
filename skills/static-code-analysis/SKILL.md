@@ -1,6 +1,6 @@
 ---
 name: static-code-analysis
-description: Run a static code analysis gate using lizard (cyclomatic complexity) and jscpd (duplication) on changed files. Used by linter agent as a pre-review gate and by code-reviewer as a precheck before reading any code.
+description: Run a static code analysis gate using lizard (cyclomatic complexity) and jscpd (duplication) on changed files. Used by code-reviewer as Stage 1 (lint/scan) and again as a precheck before Stage 2 review.
 ---
 
 ## Quick reference
@@ -104,7 +104,7 @@ Run whole-file tools, but enforce thresholds only for findings that intersect th
 
 ## Usage by agent
 
-**`@linter`:** Runs static analysis as step 3 in the run order (after formatter and linter, before SonarQube and Xray). Reports results in the lint report.
+**`@code-reviewer`:** Runs static analysis as step 3 of its Stage 1 lint/scan run order (after formatter and linter, before SonarQube and Xray). Reports results in the lint report.
 
 **`@code-reviewer`:** Runs static analysis as a **precheck before reading any code**. If static analysis fails or cannot run on the changed paths, issue an immediate rejection without reading the implementation. Do not inspect implementation details until this check passes.
 

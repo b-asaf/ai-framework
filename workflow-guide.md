@@ -148,7 +148,7 @@ architect grills you on the solution → you engage → PR breakdown agreed (5 m
 orchestrator: "Please run: git checkout -b fix/csv-export-click-handler"
     ↓
 frontend implements → shows diff → you approve
-linter passes → code-reviewer finds one issue → frontend fixes → reruns → approved
+code-reviewer lints/scans, finds one issue → frontend fixes → reruns → approved
 qa writes 2 tests → both pass → gatekeeper: all gates PASS
     ↓
 orchestrator: "Ready. Suggested commit: fix(users): resolve CSV export click handler"

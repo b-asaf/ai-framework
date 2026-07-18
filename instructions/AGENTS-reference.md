@@ -18,8 +18,7 @@
 | `ui`                     | Subagent | Components, styling, design system               |
 | `db`                     | Subagent | Persistence layer                                |
 | `api`                    | Subagent | API contracts, 3rd-party integrations            |
-| `linter`                 | Subagent | Linting tools, reports violations                |
-| `code-reviewer`          | Subagent | Reviews diffs, no mercy                          |
+| `code-reviewer`          | Subagent | Lints, scans, reviews diffs — no mercy           |
 | `qa`                     | Subagent | Writes and runs tests                            |
 | `gatekeeper`             | Subagent | Final validation before handoff                  |
 | `frontend-error-fixer`   | Subagent | JS/TS build and runtime error diagnosis          |
@@ -27,18 +26,14 @@
 
 ---
 
-## Skill routing table
+## Skill routing
 
-| Task type               | Skills to load                                                              |
-| ----------------------- | --------------------------------------------------------------------------- |
-| Bug fix                 | `diagnose`, `tdd`, `zoom-out` (if unfamiliar), `pattern-enforcement`        |
-| New feature             | `tdd`, `pattern-enforcement`, `code-standards`, `zoom-out` (if unfamiliar)  |
-| Refactor                | `refactor-planner`, `improve-codebase-architecture`, `pattern-enforcement`  |
-| Chore / deps            | `third-party-policy`                                                        |
-| Docs change             | `documentation`                                                             |
-| Architecture review     | `improve-codebase-architecture`, `zoom-out`, `pattern-enforcement`          |
-| Frontend error          | `diagnose`, `frontend-error-fixer`, `clean-code-error-handling`             |
-| Unknown 3rd-party issue | `web-research-specialist` only when offline-safe internal research is insufficient; otherwise route to an offline-safe knowledge subagent |
+Handled by `skill-rules.json` (ad-hoc/off-flow requests, keyword+intent matched,
+priority-ordered, capped) and by each agent's own "Always load"/"Load when
+relevant" list (inside the structured task flow — see Rule 8 in `AGENTS.md`).
+This file intentionally does not duplicate that table anymore — keeping the
+routing logic in one place per scope avoids the two mechanisms drifting apart
+and double-loading skills.
 
 ---
 
@@ -56,7 +51,7 @@ CHECK 2: working branch mismatch?           → propose → confirm → git chec
     ↓ approved
 implementation agents → one PR at a time
     ↓
-@linter → @code-reviewer → @qa → @gatekeeper
+@code-reviewer (lint + scan + review) → @qa → @gatekeeper
     ↓ all PASS (gatekeeper also persists any newly discovered facts to project-overview)
 "Ready. Please commit and push your branch."
 ```

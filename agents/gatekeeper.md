@@ -60,8 +60,8 @@ update — the orchestrator performs the write.
 
 ### Linting & security
 
-- [ ] `@linter` last run reported zero lint violations on all tools
-- [ ] `@linter` Xray scan reported zero issues with CVSS >= 8
+- [ ] `@code-reviewer`'s Stage 1 lint scan last run reported zero violations on all tools
+- [ ] `@code-reviewer`'s Stage 1 Xray scan reported zero issues with CVSS >= 8
 - [ ] Any Xray blocker found was resolved and scan was rerun with clean result
 - [ ] Xray warnings (CVSS < 8) are present in the report (informational — do not block)
 
