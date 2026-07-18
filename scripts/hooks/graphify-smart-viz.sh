@@ -33,7 +33,7 @@ if ! command -v graphify >/dev/null 2>&1; then
 fi
 
 echo "graphify: extracting (no-viz) for $TARGET ..."
-graphify "$TARGET" --no-viz $EXTRA_ARGS
+graphify extract "$TARGET" $EXTRA_ARGS
 
 GRAPH_JSON="graphify-out/graph.json"
 if [ ! -f "$GRAPH_JSON" ]; then
@@ -70,7 +70,7 @@ echo "graphify: $NODE_COUNT nodes"
 
 if [ "$NODE_COUNT" -le "$NODE_LIMIT" ]; then
   echo "graphify: under limit ($NODE_LIMIT) — generating HTML visualization"
-  graphify "$TARGET" --cluster-only
+  graphify cluster-only "$TARGET" $EXTRA_ARGS
 else
   echo "graphify: $NODE_COUNT nodes exceeds limit ($NODE_LIMIT) — skipping HTML, use the CLI/JSON instead"
   echo "  graphify query \"...\"   graphify path \"A\" \"B\"   graphify explain \"X\""

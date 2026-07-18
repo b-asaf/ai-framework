@@ -8,7 +8,7 @@ description: How to use the graphify code knowledge graph instead of grepping or
 - **Detection:** `graphify-out/graph.json` present in repo root, or `graphify --version` succeeds
 - **Prefer over Read/Glob/grep** for: "what calls X", "what does X depend on", "how do A and B connect", "what does X do"
 - **Commands:** `graphify query "<question>"` · `graphify path "A" "B"` · `graphify explain "X"`
-- **Stale graph:** if `graphify-out/graph.json` is older than the last commit touching source files, run `graphify ./raw --update` first
+- **Stale graph:** if `graphify-out/graph.json` is older than the last commit touching source files, run `graphify . --update` first
 - **Visualization:** never open `graph.html` directly for large repos — use `scripts/hooks/graphify-smart-viz.sh` (auto-skips HTML past ~5000 nodes)
 - **Not a replacement for reading the actual diff** — use the graph for orientation and cross-file reasoning, still read the specific file before editing it
 - **Zero LLM cost for code parsing** — this is a structural/AST layer, not a judgment layer; see "Relationship to other skills" below for what it doesn't replace
@@ -19,11 +19,11 @@ Graphify turns the codebase into a queryable knowledge graph (tree-sitter AST, n
 
 ## When to use it instead of Read/Glob/grep
 
-| Question shape | Command |
-|---|---|
-| "What calls / uses / depends on X?" | `graphify explain "X"` |
-| "How does A relate to B?" | `graphify path "A" "B"` |
-| "Where does concept X live and what does it touch?" | `graphify query "X"` |
+| Question shape                                                  | Command                                                      |
+| --------------------------------------------------------------- | ------------------------------------------------------------ |
+| "What calls / uses / depends on X?"                             | `graphify explain "X"`                                       |
+| "How does A relate to B?"                                       | `graphify path "A" "B"`                                      |
+| "Where does concept X live and what does it touch?"             | `graphify query "X"`                                         |
 | "What are the most central/most-connected pieces of this repo?" | Read the God nodes section of `graphify-out/GRAPH_REPORT.md` |
 
 If graphify is not installed or `graphify-out/graph.json` doesn't exist, fall back to the normal `zoom-out` read sequence — do not block the task on installing it.

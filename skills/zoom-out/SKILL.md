@@ -11,6 +11,7 @@ disable-model-invocation: true
 - **Output:** orientation map with shape, entry points, module boundaries, domain terms, task location, surprises/gaps
 - **Show to developer** before proceeding — they often correct the surprises row instantly
 - **One zoom-out per session** — do not re-run if already oriented
+
 # Zoom Out
 
 Before touching anything, understand the shape of what you're working in.
@@ -35,16 +36,19 @@ Do **not** run this if you've already orientated in this session. One zoom-out p
 
 Work through these in order. Stop when you have enough orientation — don't read everything.
 
-If the `graphify` skill is available and `graphify-out/graph.json` exists, answer Steps 1–3 from `graphify-out/GRAPH_REPORT.md` (God nodes, communities) and `graphify explain "<entry point>"` first — it's a scoped answer instead of a multi-file read. Fall back to the manual sequence below for anything the graph doesn't cover, and always still do Step 5 (reading the actual task files) manually.
+If the `graphify` skill is available and both `graphify-out/graph.json` and `graphify-out/GRAPH_REPORT.md` exist, answer Steps 1–3 from `graphify-out/GRAPH_REPORT.md` (God nodes, communities) and `graphify explain "<entry point>"` first — it's a scoped answer instead of a multi-file read. Otherwise, fall back to the manual sequence below for anything the graph doesn't cover, and always still do Step 5 (reading the actual task files) manually.
 
 ### 1. Start at the root
+
 ```
 List the top-level directories and files.
 What is the overall shape? (monolith, services, packages, layers)
 ```
 
 ### 2. Find the entry points
+
 For each repo:
+
 - **Backend:** `main()`, `Application.java`, `app.py`, `server.ts`, `cmd/`, `main.go`
 - **Frontend:** `main.tsx`, `index.ts`, `App.tsx`, `_app.tsx`, `routes/`
 - **Config:** `package.json`, `pom.xml`, `build.gradle`, `pyproject.toml`, `go.mod`
@@ -52,7 +56,9 @@ For each repo:
 Read the entry point file. Understand what it wires together.
 
 ### 3. Identify module boundaries
+
 Scan the directory structure for 2-3 levels deep. Look for:
+
 - Package names / folder names that reveal domain concepts
 - Repeated structural patterns (e.g. `controller/service/repository` or `features/X/index`)
 - Anything that looks like a public interface between modules
@@ -60,9 +66,11 @@ Scan the directory structure for 2-3 levels deep. Look for:
 Do not read every file — read the names and infer.
 
 ### 4. Check CONTEXT.md
+
 If `CONTEXT.md` exists at the workspace or repo root, read it. Confirm the domain terms match what you're seeing in the code. Flag any mismatch.
 
 ### 5. Find where the task lives
+
 Based on the task description, locate the 2-4 files most likely to be relevant. Read their signatures (function/method names, class names) — not the full bodies yet.
 
 ---
@@ -106,7 +114,9 @@ Show this to the developer before proceeding. They often correct the surprises r
 The orientation map becomes the working context for the session. Reference it when making naming and placement decisions. If the task touches something outside the mapped area, run a targeted zoom-out on that module before proceeding — not a full re-run.
 
 If `CONTEXT.md` is missing or outdated, flag it:
+
 > "CONTEXT.md not found / term X missing. Want me to add it after this session?"
 
 If `project-overview` doesn't match what you're seeing in the code, flag it:
+
 > "project-overview says [X] but the code shows [Y]. Which is current?"

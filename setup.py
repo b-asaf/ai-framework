@@ -669,14 +669,23 @@ def install_graphify():
         )
         return False
     try:
-        if installer.endswith("uv"):
+        installer_name = Path(installer).name.lower()
+        if installer_name in ("uv", "uv.exe"):
             subprocess.run([installer, "tool", "install", "graphifyy"],
                            check=True, capture_output=True)
         else:
             subprocess.run([installer, "install", "graphifyy"],
                            check=True, capture_output=True)
-        ok("Graphify installed")
-        return True
+
+        if shutil.which("graphify"):
+            r = subprocess.run(["graphify", "--version"],
+                               check=False, capture_output=True, text=True)
+            if r.returncode == 0:
+                ok("Graphify installed")
+                return True
+
+        warn("Graphify installed but could not run after installation")
+        return False
     except subprocess.CalledProcessError as exc:
         warn(f"Graphify install failed: {exc}")
         _need_action(
@@ -686,11 +695,8 @@ def install_graphify():
         return False
 
 def wire_graphify(det):
-    """Registers the graphify skill with each detected tool and wires the
-    post-commit hook that keeps graphify-out/graph.json current. The
-    skills/graphify/SKILL.md file itself already reaches every tool through
-    the normal skills/ symlink in build_links() — this step is for graphify's
-    own CLI-side registration (e.g. OpenCode tool hooks), which is separate."""
+    """Registers Graphify assistants globally. Hook installation is per-project,
+    not wired here, so each opened project receives its own rebuild hook."""
     if not shutil.which("graphify"):
         return
     bold("Wiring Graphify...")
@@ -705,7 +711,7 @@ def wire_graphify(det):
         if not det.get(tool):
             continue
         try:
-            cmd = ["graphify", "install", "--project"]
+            cmd = ["graphify", "install"]
             if flag:
                 cmd += ["--platform", flag]
             subprocess.run(cmd, check=True, capture_output=True, cwd=str(REPO))
@@ -715,12 +721,9 @@ def wire_graphify(det):
             warn(f"graphify/{tool} failed: {exc}")
     if not installed_any:
         return
-    try:
-        subprocess.run(["graphify", "hook", "install"], check=True,
-                       capture_output=True, cwd=str(REPO))
-        ok("graphify hook (auto-rebuild graph.json on commit)")
-    except (subprocess.CalledProcessError, FileNotFoundError) as exc:
-        warn(f"graphify hook install failed: {exc}")
+    info("Graphify CLI registration complete.")
+    info("Install the per-project rebuild hook inside each opened repo:")
+    info("  cd <project> && graphify hook install")
     info("Large repos: use scripts/hooks/graphify-smart-viz.sh instead of raw")
     info("`graphify` when HTML output matters — auto-skips viz past ~5000 nodes.")
 
