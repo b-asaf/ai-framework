@@ -186,24 +186,33 @@ The framework activates automatically. No project-level setup needed.
 
 ## Token usage reduction
 
-`setup.py` auto-installs two complementary tools that each cut waste at a
-different layer. They don't overlap — running both together is the intended
-setup, not redundant.
+`setup.py` auto-installs three complementary tools that each cut waste at a
+different layer. They don't overlap — running all three together is the
+intended setup, not redundant.
 
 | Tool | Layer | What it does |
 |---|---|---|
 | **RTK** | Shell output | Filters verbose command output (test runs, builds, git logs) before the LLM reads it |
 | **Token Optimizer** | Structural + behavioral audit | Finds bloated configs, unused skills, stale memory, model misrouting; checkpoints session state so compression survives auto-compaction |
+| **Graphify** | Codebase exploration | Pre-builds a local, deterministic call/import graph (tree-sitter, zero LLM cost). Agents query it (`graphify explain`, `graphify path`) instead of reading files one by one to figure out structure — see `skills/graphify/SKILL.md` |
 
-Both install automatically during `python setup.py` if their prerequisites
-(git) are available. If a tool fails to install, setup continues — neither
-is required for the framework to work.
+All three install automatically during `python setup.py` if their prerequisites
+(git, uv/pipx) are available. If a tool fails to install, setup continues —
+none is required for the framework to work.
 
 **Token Optimizer note:** licensed under PolyForm Noncommercial 1.0.0 — free
 for personal, research, and educational use. Commercial use requires a
 separate license from the author. After install, run the one-time audit
 yourself inside Claude Code with `/token-optimizer` — it presents diffs for
 approval before changing anything, it does not run automatically.
+
+**Graphify note:** the graph is meant to be committed (`graphify-out/`) so
+the whole team starts oriented and every session skips re-deriving structure
+from scratch. `graphify hook install` (wired automatically) keeps it current
+on every commit at no LLM cost. For repos large enough that `graph.html`
+becomes unwieldy (~5000+ nodes), use `scripts/hooks/graphify-smart-viz.sh`
+instead of calling `graphify` directly — it extracts with `--no-viz` first,
+checks the node count, and only generates HTML under the threshold.
 
 ---
 
@@ -336,9 +345,10 @@ AGENTS.md                   ← behavior rules (13 rules, XML-tagged) — every 
 opencode.json               ← OpenCode global config (model: sonnet-4-6, permissions)
 
 agents/                     ← 16 agent definitions (each has model: field for cost tiering)
-skills/                     ← 39 skill folders (each has ## Quick reference section)
+skills/                     ← 41 skill folders (each has ## Quick reference section)
 commands/                   ← slash commands (/task, /review, /first-run, /handoff)
 hooks/                      ← git hooks + session-end.js (auto session summary)
+scripts/hooks/              ← graphify-smart-viz.sh (node-count-aware graph visualization)
 
 instructions/
   AGENTS-reference.md       ← agent roles, task flow, skill routing — loaded on-demand
@@ -413,6 +423,7 @@ action from you — just open a project and start a task.
 | `first-run-analysis` | `project-overview` is empty or contains `[XXX]` |
 | `zoom-out` | First session on a project (after first-run) or long gap between sessions |
 | `repo-topology` | During first-run analysis or any cross-service task |
+| `graphify` | Loaded by `zoom-out`, `first-run-analysis`, `pattern-enforcement` whenever `graphify-out/graph.json` exists; also fires directly on "what calls X" / "what depends on X" style questions |
 | `diagnose` | Task type is a bug fix |
 | `tdd` | Writing code for a feature or fix |
 | `grill-me` | Requirements or design are ambiguous |
@@ -462,6 +473,7 @@ or by telling the orchestrator directly:
 | `zoom-out` | "Zoom out" / "orient me" | Orientation map — also fires automatically on first session |
 | `first-run-analysis` | "Re-scan the project" | Manual refresh of project-overview (auto-fires on `[XXX]`) |
 | `repo-topology` | "Detect the topology" | Manual topology re-detection (auto-fires during first-run) |
+| `graphify` | "What calls X?" / "How does A connect to B?" | Queries the code knowledge graph instead of grepping — see `skills/graphify/SKILL.md` |
 
 ---
 
@@ -479,4 +491,6 @@ or by telling the orchestrator directly:
 | Skills not loading | Verify `~/.config/opencode/skills` or `~/.claude/skills` exists |
 | RTK download failed | Install manually: https://github.com/rtk-ai/rtk/releases |
 | Token Optimizer not installing | See "Token usage reduction" section above |
+| Graphify not installing | Install manually: `uv tool install graphifyy` (or `pipx install graphifyy`), then re-run `python setup.py` |
+| `graph.html` too large / slow to open | Use `scripts/hooks/graphify-smart-viz.sh` instead of raw `graphify` — it skips HTML generation past ~5000 nodes automatically |
 | Git hooks not firing | Run `git init` in your existing repo to apply the template |

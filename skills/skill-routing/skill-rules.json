@@ -27,6 +27,13 @@
       "intentPatterns": ["(explore|understand|orient|map) .+", "what does .+ do", "how (is|does) .+ work"]
     },
     {
+      "skill": "graphify",
+      "priority": "medium",
+      "enforcement": "suggest",
+      "keywords": ["calls", "depends on", "dependency graph", "connects to", "who uses", "what uses", "call graph", "impact of changing"],
+      "intentPatterns": ["what calls .+", "what depends on .+", "how (do|does) .+ (connect|relate) to .+", "what (uses|calls|imports) .+", "trace .+ to .+"]
+    },
+    {
       "skill": "pattern-enforcement",
       "priority": "high",
       "enforcement": "suggest",

@@ -32,7 +32,9 @@ Record all findings in `project-overview`.
 Run `zoom-out` on each repo. Output feeds into Step 4 (knowing where to look) and Step 7 (CONTEXT.md vocabulary).
 
 ## Step 4 — Convention detection
-Scan 10-20 representative files per repo. Detect:
+If the `graphify` skill is available and `graphify-out/graph.json` exists (or can be built), use `graphify query`/`graphify explain` against the real `calls`/`imports`/`inherits` edges to identify where patterns repeat across the whole repo, not just a sample — then confirm against the specific files found. Otherwise, scan 10-20 representative files per repo.
+
+Detect:
 - Test file placement (co-located / `__tests__/` / mirror package / mixed)
 - Component structure, import style, naming conventions
 - Error handling pattern, DTO usage, dependency injection style

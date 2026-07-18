@@ -642,6 +642,88 @@ def install_ccusage(det):
     info("  Try: npx ccusage@latest daily   (works without any install)")
     return True
 
+# ── Graphify ───────────────────────────────────────────────────────────────────
+# Code knowledge graph (tree-sitter AST, zero LLM cost for code) — agents query
+# it instead of Read/Glob/grep-ing files to figure out structure. See
+# skills/graphify/SKILL.md for the query commands and how it composes with
+# zoom-out / first-run-analysis / pattern-enforcement.
+
+def install_graphify():
+    bold("Setting up Graphify...")
+    if shutil.which("graphify"):
+        try:
+            r = subprocess.run(["graphify", "--version"], capture_output=True, text=True)
+            if r.returncode == 0:
+                ok(f"Graphify already installed: {r.stdout.strip()}")
+                return True
+        except Exception:
+            pass
+    installer = shutil.which("uv") or shutil.which("pipx")
+    if not installer:
+        warn("Neither uv nor pipx found — cannot install Graphify")
+        _need_action(
+            "Graphify not installed",
+            "Graphify needs uv or pipx. Install one, then run:",
+            "  uv tool install graphifyy   (recommended)",
+            "  pipx install graphifyy",
+        )
+        return False
+    try:
+        if installer.endswith("uv"):
+            subprocess.run([installer, "tool", "install", "graphifyy"],
+                           check=True, capture_output=True)
+        else:
+            subprocess.run([installer, "install", "graphifyy"],
+                           check=True, capture_output=True)
+        ok("Graphify installed")
+        return True
+    except subprocess.CalledProcessError as exc:
+        warn(f"Graphify install failed: {exc}")
+        _need_action(
+            "Graphify not installed",
+            "Install manually: uv tool install graphifyy",
+        )
+        return False
+
+def wire_graphify(det):
+    """Registers the graphify skill with each detected tool and wires the
+    post-commit hook that keeps graphify-out/graph.json current. The
+    skills/graphify/SKILL.md file itself already reaches every tool through
+    the normal skills/ symlink in build_links() — this step is for graphify's
+    own CLI-side registration (e.g. OpenCode tool hooks), which is separate."""
+    if not shutil.which("graphify"):
+        return
+    bold("Wiring Graphify...")
+    platform_flag = {
+        "opencode": "opencode",
+        "claude":   None,   # bare `graphify install` targets Claude Code by default
+        "codex":    "codex",
+        "gemini":   "gemini",
+    }
+    installed_any = False
+    for tool, flag in platform_flag.items():
+        if not det.get(tool):
+            continue
+        try:
+            cmd = ["graphify", "install", "--project"]
+            if flag:
+                cmd += ["--platform", flag]
+            subprocess.run(cmd, check=True, capture_output=True, cwd=str(REPO))
+            ok(f"graphify/{tool}")
+            installed_any = True
+        except (subprocess.CalledProcessError, FileNotFoundError) as exc:
+            warn(f"graphify/{tool} failed: {exc}")
+    if not installed_any:
+        return
+    try:
+        subprocess.run(["graphify", "hook", "install"], check=True,
+                       capture_output=True, cwd=str(REPO))
+        ok("graphify hook (auto-rebuild graph.json on commit)")
+    except (subprocess.CalledProcessError, FileNotFoundError) as exc:
+        warn(f"graphify hook install failed: {exc}")
+    info("Large repos: use scripts/hooks/graphify-smart-viz.sh instead of raw")
+    info("`graphify` when HTML output matters — auto-skips viz past ~5000 nodes.")
+
 # ── GitHub CLI ─────────────────────────────────────────────────────────────────
 
 def check_gh():
@@ -768,13 +850,18 @@ def main():
     audit_token_optimizer(det)
     print()
 
-    # 6. Token monitoring — cross-tool dashboard + OpenCode policy-check data
+    # 6. Graphify — code knowledge graph (see skills/graphify/SKILL.md)
+    if install_graphify():
+        wire_graphify(det)
+    print()
+
+    # 7. Token monitoring — cross-tool dashboard + OpenCode policy-check data
     install_ccusage(det)
     print()
     install_opencode_usage(det)
     print()
 
-    # 7. GitHub CLI (detect only — see check_gh docstring)
+    # 8. GitHub CLI (detect only — see check_gh docstring)
     check_gh()
     print()
 
