@@ -1,5 +1,5 @@
 # Project Overview — Tooling
-> Load when: linter agent, first-run analysis.
+> Load when: code-reviewer agent, first-run analysis.
 
 ## Git hooks
 - [XXX]-be: [husky / lefthook / plain scripts / not installed]

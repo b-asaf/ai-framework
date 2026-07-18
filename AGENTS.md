@@ -115,14 +115,22 @@ One PR = one concern.
 </rule>
 
 <rule id="8" name="skill-loading">
-Classify the task, then load matching skills from `skill-rules.json`.
-Tell the developer which skills were loaded before starting.
+Inside the structured task flow (Steps 1–10 in `orchestrator.md`), skill loading is
+handled entirely by each agent's own "Always load" / "Load when relevant" list in
+its agent file. Do not additionally consult `skill-rules.json` for these steps —
+it would double-load skills the agent already loads deterministically.
+
+Outside that flow — a freeform question or ad-hoc request that hasn't entered the
+task flow yet — classify the request and load matching skills from
+`skill-rules.json`, highest priority first, capped at `maxMatchesPerRequest`
+(see the file's `$config`). Tell the developer which skills were loaded before
+starting.
 </rule>
 
 <rule id="9" name="post-implementation-pipeline">
 After the last file write, before saying "done", run in order:
-linter → code-reviewer → qa → gatekeeper
-If any step fails → rework and re-run from linter.
+code-reviewer (lint + security scan + review) → qa → gatekeeper
+If any step fails → rework and re-run from code-reviewer.
 </rule>
 
 <rule id="10" name="surgical-changes">

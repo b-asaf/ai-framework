@@ -10,6 +10,7 @@ Re-run anytime — stale links are cleaned, broken links are fixed, new tools ar
 No flags needed. The script detects installed tools automatically.
 """
 
+import hashlib
 import json
 import os
 import platform
@@ -202,85 +203,19 @@ def _can_symlink_files():
         test_src.unlink(missing_ok=True)
         test_lnk.unlink(missing_ok=True)
 
-def _enable_developer_mode_windows():
-    """Enable Windows Developer Mode via helper .ps1 + UAC elevation.
-    Allows file symlinks without running setup.py as admin permanently.
-    """
-    if not IS_WIN:
-        return True
+ACTION_REQUIRED = []  # (title, [detail lines]) — collected during the run, printed once at the end
 
-    import winreg
-    _REG = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\AppModelUnlock"
-    _KEY = "AllowDevelopmentWithoutDevLicense"
-
-    def _read():
-        try:
-            k = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, _REG)
-            v, _ = winreg.QueryValueEx(k, _KEY)
-            winreg.CloseKey(k)
-            return v == 1
-        except Exception:
-            return False
-
-    def _write_direct():
-        k = winreg.OpenKey(
-            winreg.HKEY_LOCAL_MACHINE, _REG, 0, winreg.KEY_SET_VALUE)
-        winreg.SetValueEx(k, _KEY, 0, winreg.REG_DWORD, 1)
-        winreg.CloseKey(k)
-
-    if _read():
-        ok("Windows Developer Mode already enabled")
-        return True
-
-    bold("Enabling Windows Developer Mode (required for file symlinks)...")
-
-    # Attempt 1: direct write (works if already running as admin)
-    try:
-        _write_direct()
-        if _read():
-            ok("Developer Mode enabled")
-            return True
-    except PermissionError:
-        pass
-    except Exception as exc:
-        warn(f"Direct registry write failed: {exc}")
-
-    # Attempt 2: run helper .ps1 via UAC elevation
-    helper = str(REPO / "enable-dev-mode.ps1")
-    info("Requesting UAC elevation to enable Developer Mode...")
-    info("A UAC prompt will appear — click Yes to continue.")
-    try:
-        # Build the PowerShell RunAs command from parts to avoid escaping issues
-        ps_file_arg = "-NoProfile -ExecutionPolicy Bypass -File " + helper
-        ps_command  = " ".join([
-            "Start-Process powershell",
-            "-Verb RunAs",
-            "-Wait",
-            "-ArgumentList",
-            "'" + ps_file_arg + "'",
-        ])
-        subprocess.run(
-            ["powershell", "-NoProfile", "-Command", ps_command],
-            capture_output=True, text=True, timeout=60
-        )
-        if _read():
-            ok("Developer Mode enabled via UAC elevation")
-            return True
-        warn("UAC ran but Developer Mode is still not enabled")
-        warn("Enable manually: Settings -> System -> For developers -> Developer Mode -> ON")
-        warn("Then re-run setup.py")
-        return False
-    except subprocess.TimeoutExpired:
-        warn("UAC prompt timed out")
-        warn("Enable manually: Settings -> System -> For developers -> Developer Mode -> ON")
-        return False
-    except Exception as exc:
-        warn(f"Elevation failed: {exc}")
-        warn("Enable manually: Settings -> System -> For developers -> Developer Mode -> ON")
-        return False
-
+def _need_action(title, *detail_lines):
+    ACTION_REQUIRED.append((title, list(detail_lines)))
 
 _FILE_SYMLINK_OK = None  # cached after first check
+_copy_drift_found = [False]  # mutable cell so apply_links can flag it for the Action Required summary
+
+def _file_hash(path):
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError:
+        return None
 
 def make_link(link, target, kind):
     global _FILE_SYMLINK_OK
@@ -294,14 +229,14 @@ def make_link(link, target, kind):
         return
 
     if IS_WIN and kind == "file":
-        # File symlinks need Developer Mode or admin — test once and fallback if not available
+        # File symlinks need Developer Mode or admin — test once and fallback if not available.
+        # We don't attempt to enable it ourselves; see the Action Required summary at the end.
         if _FILE_SYMLINK_OK is None:
             _FILE_SYMLINK_OK = _can_symlink_files()
         if not _FILE_SYMLINK_OK:
             # Fallback: copy the file instead
             shutil.copy2(target, link)
             info(f"copied (no symlink privilege): {link.name}")
-            info("  To use symlinks: Settings -> System -> For developers -> Developer Mode -> ON")
             return
 
     link.symlink_to(target, target_is_directory=(kind == "dir"))
@@ -364,12 +299,11 @@ def apply_links(links):
         elif link.exists():
             # Copied file (fallback on Windows without symlink privilege) — verify content matches
             if kind == "file":
-                src_size  = target.stat().st_size  if target.exists() else -1
-                link_size = link.stat().st_size
-                if src_size != link_size:
-                    msg = f"copied file size mismatch: {label} ({link_size}B vs source {src_size}B)"
+                if target.exists() and _file_hash(target) != _file_hash(link):
+                    msg = f"copied file out of date: {label}"
                     warnings.append(msg)
-                    warn(f"SIZE MISMATCH {label} — re-run setup.py to refresh")
+                    warn(f"OUT OF DATE {label} — re-run setup.py to refresh")
+                    _copy_drift_found[0] = True
                 else:
                     ok(f"verified (copy): {label}")
             else:
@@ -404,6 +338,23 @@ def print_verification_summary(errors, warnings):
             warn(f"  {w}")
 
     return len(errors) == 0
+
+def print_action_required():
+    """Print anything the developer needs to do themselves, in one place they can't miss.
+    Nothing here blocks setup from finishing — the framework degrades gracefully
+    without any of these; this just makes the tradeoff visible instead of silent."""
+    print()
+    bold("=" * 44)
+    if not ACTION_REQUIRED:
+        bold(_c("0;32", "Action required — none. Everything checked out."))
+        return
+    bold(_c("1;33", f"Action required — {len(ACTION_REQUIRED)} item(s)"))
+    bold("=" * 44)
+    for title, details in ACTION_REQUIRED:
+        print()
+        warn(title)
+        for d in details:
+            info(f"  {d}")
 
 # ── RTK config ─────────────────────────────────────────────────────────────────
 
@@ -586,44 +537,6 @@ def add_git_template():
     except Exception as exc:
         warn(f"Could not set git templateDir: {exc}")
 
-# ── Headroom ───────────────────────────────────────────────────────────────────
-
-def install_headroom():
-    bold("Setting up Headroom...")
-    if shutil.which("headroom"):
-        try:
-            r = subprocess.run(["headroom", "--version"], capture_output=True, text=True)
-            if r.returncode == 0:
-                ok(f"Headroom already installed: {r.stdout.strip()}")
-                return True
-        except Exception:
-            pass
-    pip = shutil.which("pip3") or shutil.which("pip")
-    if not pip:
-        warn("pip not found — cannot install Headroom")
-        info("Install manually: pip install headroom-ai")
-        return False
-    try:
-        subprocess.run([pip, "install", "headroom-ai", "--quiet"], check=True)
-        ok("Headroom installed")
-        return True
-    except Exception as exc:
-        warn(f"Headroom install failed: {exc}")
-        return False
-
-def wire_headroom(det):
-    if not shutil.which("headroom"):
-        return
-    bold("Wiring Headroom...")
-    for tool in ["opencode", "claude", "gemini", "codex"]:
-        if not det.get(tool):
-            continue
-        try:
-            subprocess.run(["headroom", "wrap", tool], check=True)
-            ok(f"headroom/{tool}")
-        except (subprocess.CalledProcessError, FileNotFoundError) as exc:
-            warn(f"headroom/{tool} failed: {exc}")
-
 # ── Token Optimizer ────────────────────────────────────────────────────────────
 
 TOKEN_OPTIMIZER_REPO = "https://github.com/alexgreensh/token-optimizer.git"
@@ -664,44 +577,139 @@ def audit_token_optimizer(det):
     info("Token Optimizer installed. Run the one-time audit yourself:")
     info("  In Claude Code: /token-optimizer")
 
+# ── Token monitoring ─────────────────────────────────────────────────────────
+# Two tools, two different jobs — see monitoring/README.md for the full
+# distinction. ccusage covers cross-tool token/cost dashboards; opencode-usage
+# is what monitoring/model-policy-check.js reads for OpenCode-subagent-level
+# policy checks that ccusage's schema doesn't have data for.
+
+def install_opencode_usage(det):
+    if not det.get("opencode"):
+        return
+    bold("Setting up per-agent policy data (opencode-usage)...")
+    if shutil.which("opencode-usage"):
+        ok("opencode-usage already installed")
+        return True
+    installer = shutil.which("uv") or shutil.which("pip3") or shutil.which("pip")
+    if not installer:
+        warn("Neither uv nor pip found — cannot install opencode-usage")
+        _need_action(
+            "Model-policy checking not installed",
+            "opencode-usage needs uv or pip. Install one, then run:",
+            "  uv tool install opencode-usage   (recommended)",
+            "  pip install opencode-usage",
+        )
+        return False
+    try:
+        if installer.endswith("uv"):
+            subprocess.run([installer, "tool", "install", "opencode-usage"],
+                           check=True, capture_output=True)
+        else:
+            subprocess.run([installer, "install", "--user", "opencode-usage"],
+                           check=True, capture_output=True)
+        ok("opencode-usage installed")
+        info("  Used by monitoring/model-policy-check.js — see monitoring/README.md")
+        return True
+    except subprocess.CalledProcessError as exc:
+        warn(f"opencode-usage install failed: {exc}")
+        _need_action(
+            "Model-policy checking not installed",
+            "Install manually: uv tool install opencode-usage",
+        )
+        return False
+
+def install_ccusage(det):
+    """Cross-tool token/cost dashboard — Claude Code, Codex, OpenCode, Gemini CLI,
+    Copilot CLI, all in one command. Complements opencode-usage (above), which
+    stays for the OpenCode-subagent-level policy check that ccusage's schema
+    doesn't cover — see monitoring/README.md for the distinction."""
+    bold("Checking token/cost dashboard (ccusage)...")
+    if shutil.which("ccusage"):
+        ok("ccusage already installed")
+        return True
+    npm = shutil.which("npm")
+    if npm:
+        try:
+            subprocess.run([npm, "install", "-g", "ccusage"],
+                           check=True, capture_output=True, timeout=60)
+            ok("ccusage installed globally")
+            info("  Try: ccusage daily   /   ccusage session   /   ccusage weekly")
+            return True
+        except Exception as exc:
+            warn(f"Global install failed ({exc}) — falls back to npx, no action needed")
+    else:
+        info("npm not found — that's fine, ccusage runs zero-install via npx")
+    info("  Try: npx ccusage@latest daily   (works without any install)")
+    return True
+
 # ── GitHub CLI ─────────────────────────────────────────────────────────────────
 
-def install_gh():
-    bold("Setting up GitHub CLI (gh)...")
+def check_gh():
+    """Detect gh only — we don't attempt to install it (package managers may be
+    unavailable or restricted). If missing, the framework still works: AGENTS.md
+    Check 4 falls back to 'push, then open the PR manually' when gh isn't found."""
+    bold("Checking GitHub CLI (gh)...")
     if shutil.which("gh"):
         try:
             r = subprocess.run(["gh", "--version"], capture_output=True, text=True)
             if r.returncode == 0:
-                ok(f"gh already installed: {r.stdout.splitlines()[0]}")
+                ok(f"gh found: {r.stdout.splitlines()[0]}")
                 return True
         except Exception:
             pass
-    system = platform.system()
-    if system == "Darwin" and shutil.which("brew"):
-        try:
-            subprocess.run(["brew", "install", "gh"], check=True)
-            ok("gh installed via Homebrew")
-            return True
-        except Exception as exc:
-            warn(f"brew install gh failed: {exc}")
-    elif system == "Windows" and shutil.which("winget"):
-        try:
-            result = subprocess.run(
-                ["winget", "install", "--id", "GitHub.cli", "--silent",
-                 "--accept-package-agreements", "--accept-source-agreements"],
-                capture_output=True, text=True)
-            if result.returncode in (0, -1978335189):
-                ok("gh installed via winget — restart terminal for PATH")
-                return True
-        except Exception as exc:
-            warn(f"winget install gh failed: {exc}")
-    warn("gh not found — install manually: https://cli.github.com")
-    info("Required for the commit/push/PR flow (Check 4 in AGENTS.md)")
+    warn("gh not found")
+    _need_action(
+        "GitHub CLI (gh) not found",
+        "Needed to auto-open PRs at the end of a task.",
+        "Without it: the framework still pushes your branch and tells you",
+        "to open the PR manually (Check 4 in AGENTS.md) — not blocked, just manual.",
+        "Install: https://cli.github.com",
+        "Then run: gh auth login",
+        "Re-check anytime: python setup.py --verify",
+    )
     return False
+
+# ── --verify (read-only) ────────────────────────────────────────────────────────
+
+def verify_only():
+    """Read-only health check: no files are written, no links are touched.
+    Lets a dev re-check status anytime (e.g. after installing gh, or after IT
+    enables Developer Mode) without re-running the full install."""
+    print()
+    bold("ai-framework verify")
+    bold("=" * 44)
+    print()
+
+    det = detect()
+    links = build_links(det)
+
+    bold("Symlink/copy status:")
+    for link, target, kind in links:
+        if not link.exists() and not link.is_symlink():
+            warn(f"missing: {link.name} — run 'python setup.py' to install")
+            continue
+        if link.is_symlink() or (IS_WIN and kind == "dir"):
+            ok(f"linked: {link.name}")
+        elif kind == "file" and target.exists():
+            if _file_hash(target) == _file_hash(link):
+                ok(f"copy up to date: {link.name}")
+            else:
+                warn(f"copy out of date: {link.name} — run 'python setup.py' to refresh")
+    print()
+
+    check_gh()
+    print()
+
+    print_action_required()
+    print()
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 def main():
+    if "--verify" in sys.argv:
+        verify_only()
+        return
+
     print()
     bold("ai-framework setup")
     bold("=" * 44)
@@ -727,11 +735,6 @@ def main():
 
     # Build the full link table first (needed for both cleanup and wiring)
     links = build_links(det)
-
-    # 0a. Windows: ensure Developer Mode is enabled so file symlinks work
-    if IS_WIN:
-        _enable_developer_mode_windows()
-        print()
 
     # 0. Clean stale links from previous installs
     cleanup_stale(links)
@@ -760,36 +763,51 @@ def main():
     wire_rtk(rtk_path, det)
     print()
 
-    # 5. Headroom
-    headroom_ok = install_headroom()
-    if headroom_ok:
-        wire_headroom(det)
-    print()
-
-    # 6. Token Optimizer
+    # 5. Token Optimizer
     install_token_optimizer(det)
     audit_token_optimizer(det)
     print()
 
-    # 7. GitHub CLI
-    install_gh()
+    # 6. Token monitoring — cross-tool dashboard + OpenCode policy-check data
+    install_ccusage(det)
     print()
+    install_opencode_usage(det)
+    print()
+
+    # 7. GitHub CLI (detect only — see check_gh docstring)
+    check_gh()
+    print()
+
+    # Collect the remaining action items that only make sense after wiring
+    if IS_WIN and _FILE_SYMLINK_OK is False:
+        _need_action(
+            "File symlinks not available on this machine",
+            "Root config files were copied instead of linked — this is safe,",
+            "but they won't auto-update on 'git pull' like the rest of the framework does.",
+            "After every 'git pull': re-run 'python setup.py' to refresh them.",
+            "To get live-linked files instead: ask IT to enable Developer Mode",
+            "(Settings -> System -> For developers), then re-run setup.py.",
+        )
+    if _copy_drift_found[0]:
+        _need_action(
+            "Some copied files are out of date",
+            "Re-run 'python setup.py' to refresh them (see OUT OF DATE lines above).",
+        )
 
     # Final summary
     bold("=" * 44)
     if all_ok:
         bold(_c("0;32", f"Setup complete — {done} links wired and verified."))
-        if IS_WIN and _FILE_SYMLINK_OK is False:
-            print()
-            warn("File symlinks not available — files were copied instead of linked.")
-            warn("After 'git pull', re-run setup.py to refresh copied files.")
-            info("To use symlinks permanently: Settings -> System -> For developers -> Developer Mode -> ON")
     else:
         bold(_c("0;31", f"Setup completed with {len(errors)} error(s) — see above."))
         bold(_c("0;31", "Fix the errors and re-run setup.py"))
     print()
     bold("Open any project folder in OpenCode or VS Code — framework is active.")
     info("To update: cd ai-framework && git pull && python setup.py")
+    info("To re-check tool status without changing anything: python setup.py --verify")
+
+    print_action_required()
+
     if not all_ok:
         sys.exit(1)
     print()

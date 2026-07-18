@@ -1,6 +1,6 @@
 ---
 name: linting-tools
-description: How to detect, run, and interpret linting and formatting tools. All tools run only if already configured in the project — never add or suggest a tool not already present. Loaded by the linter agent.
+description: How to detect, run, and interpret linting and formatting tools. All tools run only if already configured in the project — never add or suggest a tool not already present. Loaded by the code-reviewer agent (Stage 1).
 ---
 
 ## Quick reference

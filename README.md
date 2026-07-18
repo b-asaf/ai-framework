@@ -63,7 +63,7 @@ You switch tools; the framework follows.
 **OpenCode as primary — why:**
 
 OpenCode is the only tool that natively supports per-agent model overrides
-(so `architect` uses Opus while `linter` uses Haiku), global skill discovery,
+(so `architect` uses Opus while `gatekeeper` uses Haiku), global skill discovery,
 slash commands (`/task`, `/review`), and lifecycle hooks. Claude Code supports
 most of these too. VS Code Copilot and IntelliJ support instructions only —
 no per-agent models, no slash commands, no hooks. For the full framework
@@ -99,7 +99,7 @@ Download if needed: https://git-scm.com/downloads
 # Mac / Linux
 git clone https://github.com/b-asaf/ai-framework.git ~/ai-framework
 
-# Windows (run CMD as administrator)
+# Windows
 git clone https://github.com/b-asaf/ai-framework.git "%USERPROFILE%\ai-framework"
 ```
 
@@ -110,14 +110,17 @@ git clone https://github.com/b-asaf/ai-framework.git "%USERPROFILE%\ai-framework
 cd ~/ai-framework
 python setup.py
 
-# Windows (run CMD as administrator)
+# Windows — no admin rights needed
 cd "%USERPROFILE%\ai-framework"
 python setup.py
 ```
 
-That's it. The script detects which tools are installed and wires everything
-automatically — symlinks, VS Code settings, git hooks, and token-reduction tools
-(RTK, Headroom, Token Optimizer).
+That's it. No admin rights required. The script detects which tools are
+installed and wires everything automatically — symlinks (or file copies,
+if your machine can't symlink — see below), VS Code settings, git hooks,
+and token-reduction tools (RTK, Token Optimizer). Anything it can't do
+itself (like installing `gh`) is listed clearly at the end under
+"Action required," with exact steps to fix it.
 
 **Expected output:**
 ```
@@ -148,16 +151,27 @@ Configuring git hooks...
 Setting up RTK...
   OK   RTK installed: rtk 1.x.x
 
-Setting up Headroom...
-  OK   Headroom installed: headroom 1.x.x
-
 Setting up Token Optimizer...
   OK   token-optimizer/claude installed
 
-Done — 6 links wired, 0 skipped.
+Checking GitHub CLI (gh)...
+  OK   gh found: gh version 2.x.x
+
+Setup complete — 6 links wired and verified.
 
 Open any project folder in OpenCode or VS Code — framework is active.
+To update: cd ai-framework && git pull && python setup.py
+To re-check tool status without changing anything: python setup.py --verify
+
+============================================
+Action required — none. Everything checked out.
 ```
+
+If something needs your attention (e.g. `gh` isn't installed, or your
+machine can't create file symlinks), it's collected into a single
+"Action required" block at the end instead of being buried mid-log —
+each item includes exactly what to run or click. Re-check status anytime
+without touching any files: `python setup.py --verify`.
 
 ### Step 3 — Open any project
 
@@ -172,19 +186,18 @@ The framework activates automatically. No project-level setup needed.
 
 ## Token usage reduction
 
-`setup.py` auto-installs three complementary tools that each cut waste at a
-different layer. They don't overlap — running all three together is the
-intended setup, not redundant.
+`setup.py` auto-installs two complementary tools that each cut waste at a
+different layer. They don't overlap — running both together is the intended
+setup, not redundant.
 
 | Tool | Layer | What it does |
 |---|---|---|
 | **RTK** | Shell output | Filters verbose command output (test runs, builds, git logs) before the LLM reads it |
-| **Headroom** | Context compression | Compresses files, conversation history, and tool output entering the context window |
 | **Token Optimizer** | Structural + behavioral audit | Finds bloated configs, unused skills, stale memory, model misrouting; checkpoints session state so compression survives auto-compaction |
 
-All three install automatically during `python setup.py` if their prerequisites
-(git, pip) are available. If a tool fails to install, setup continues — none
-of them are required for the framework to work.
+Both install automatically during `python setup.py` if their prerequisites
+(git) are available. If a tool fails to install, setup continues — neither
+is required for the framework to work.
 
 **Token Optimizer note:** licensed under PolyForm Noncommercial 1.0.0 — free
 for personal, research, and educational use. Commercial use requires a
@@ -350,7 +363,14 @@ workflow-guide.md           ← day-to-day developer guide
 |---|---|---|
 | HIGH | `anthropic/claude-opus-4-8` | architect, plan-reviewer, refactor-planner |
 | MID | `anthropic/claude-sonnet-4-6` | orchestrator, product-manager, backend, frontend, ui, db, api, code-reviewer, frontend-error-fixer |
-| LOW | `anthropic/claude-haiku-4-5` | linter, qa, gatekeeper, web-research-specialist |
+| LOW | `anthropic/claude-haiku-4-5` | qa, gatekeeper, web-research-specialist |
+
+> **Note:** lint/security scanning used to run on a separate Haiku-tier `linter`
+> agent; it's now Stage 1 of `code-reviewer` (Sonnet-tier), since the two were
+> already duplicating the static-analysis step. Net effect: one fewer agent
+> hop and one fewer LLM call per PR, at the cost of running the lint stage on
+> the pricier model. For most PRs this is a net win; if lint-tool cost becomes
+> a concern, splitting lint back out to a Haiku-tier agent is a one-file change.
 
 ---
 
@@ -369,8 +389,7 @@ action from you — just open a project and start a task.
 | `architect` | **Automatic** | After spec is confirmed by developer |
 | `plan-reviewer` | **Automatic** | After every HLD — before any implementation |
 | `backend` / `frontend` / `ui` / `db` / `api` | **Automatic** | Orchestrator routes based on task scope |
-| `linter` | **Automatic** | After every implementation step |
-| `code-reviewer` | **Automatic** | After linter passes |
+| `code-reviewer` | **Automatic** | After every implementation step (lints, scans, then reviews) |
 | `qa` | **Automatic** | After code review passes |
 | `gatekeeper` | **Automatic** | Final gate before every handoff |
 | `frontend-error-fixer` | **Automatic** (conditional) | Only when a frontend error is present |
@@ -451,13 +470,13 @@ or by telling the orchestrator directly:
 | Problem | Fix |
 |---|---|
 | `python: command not found` | Try `python3 setup.py` instead |
-| `WinError 1314` on file symlinks (Windows) | Enable Developer Mode: `Settings → System → For developers → Developer Mode → ON` then re-run. Or just re-run — setup now auto-falls back to file copies when symlinks aren't available |
-| `Permission denied` on symlink (Windows) | Same as above — enable Developer Mode |
-| After `git pull` files seem stale (Windows copy mode) | Re-run `python setup.py` — copies don't auto-update like symlinks. Permanently fix by enabling Developer Mode |
+| `WinError 1314` / `Permission denied` on file symlinks (Windows) | Setup doesn't need admin rights or Developer Mode — it auto-falls back to copying those files instead. This just means they won't auto-update on `git pull`; re-run `python setup.py` after pulling, or ask IT to enable Developer Mode (`Settings → System → For developers`) for live-linked files instead |
+| After `git pull` files seem stale (Windows copy mode) | Re-run `python setup.py` — copies don't auto-update like symlinks. Run `python setup.py --verify` anytime to check without changing anything |
+| `gh` not found | Not required — the framework still pushes your branch and tells you to open the PR manually. Install later from https://cli.github.com if you want the auto-open behavior, then `python setup.py --verify` to confirm it's picked up |
+| Not sure what still needs attention | Run `python setup.py --verify` — prints a read-only "Action required" summary, nothing is changed |
 | Tool shows "not found" but is installed | Restart your terminal (PATH needs to refresh), then re-run setup |
 | VS Code Copilot has no instructions | Re-run `python setup.py` — it updates `settings.json` automatically |
 | Skills not loading | Verify `~/.config/opencode/skills` or `~/.claude/skills` exists |
 | RTK download failed | Install manually: https://github.com/rtk-ai/rtk/releases |
-| Headroom install failed | Install manually: `pip install headroom-ai` |
-| Token Optimizer not installing | Each tool has its own install path — see "Token usage reduction" section above |
+| Token Optimizer not installing | See "Token usage reduction" section above |
 | Git hooks not firing | Run `git init` in your existing repo to apply the template |

@@ -70,7 +70,7 @@ Drop all filler. Keep all signal.
 - Developer says "be brief", "shorter", "concise", "caveman"
 - Session context is getting long (responses are slow)
 - Mechanical tasks: lint reports, gate checks, test results
-- The gatekeeper and linter agents should default to caveman output
+- The gatekeeper and code-reviewer agents should default to caveman output
 
 ## When NOT to use
 

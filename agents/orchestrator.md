@@ -108,22 +108,19 @@ Before routing, confirm the agent's scope matches exactly what is in the current
 
 Monitor for 3rd party dependency changes — halt and ask developer approval if any agent proposes one.
 
-### Step 6 — Lint
-Route to `@linter`. Must pass before review.
+### Step 6 — Lint & Review
+Route to `@code-reviewer` (lints, scans, then reviews in one pass). If issues found, route back to the relevant implementation agent to fix, then re-route to `@code-reviewer`.
 
-### Step 7 — Review
-Route to `@code-reviewer`. If issues found, route back to the relevant implementation agent to fix, then re-route to `@linter`, then re-route to `@code-reviewer`.
-
-### Step 8 — Test
+### Step 7 — Test
 Route to `@qa`. If failures found, route back to the relevant implementation agent to fix, then repeat from Step 6.
 
-### Step 9 — Final task summary
+### Step 8 — Final task summary
 Before routing to `@gatekeeper`, produce a final task summary. See `agent-guidelines` [ref: checkpoint-format]. This is the contractual record the gatekeeper validates against.
 
-### Step 10 — Gate
+### Step 9 — Gate
 Route to `@gatekeeper`. If any check fails, rerun the relevant agent and recheck. Do not proceed until all gates pass.
 
-### Step 11 — Handoff
+### Step 10 — Handoff
 Once gatekeeper reports all PASS:
 1. Confirm whether `docs/` needs updating — if yes, update before handoff.
 2. Tell the developer:

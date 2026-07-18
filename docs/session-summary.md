@@ -79,7 +79,7 @@ ai-framework/
 |---|---|---|
 | HIGH | `anthropic/claude-opus-4-8` | architect, plan-reviewer, refactor-planner |
 | MID | `anthropic/claude-sonnet-4-6` | orchestrator, product-manager, backend, frontend, ui, db, api, code-reviewer, frontend-error-fixer |
-| LOW | `anthropic/claude-haiku-4-5` | linter, qa, gatekeeper, web-research-specialist |
+| LOW | `anthropic/claude-haiku-4-5` | qa, gatekeeper, web-research-specialist |
 
 Global default (opencode.json): `anthropic/claude-sonnet-4-6`
 
@@ -104,7 +104,7 @@ Global default (opencode.json): `anthropic/claude-sonnet-4-6`
 - Rule 6: Clean Code + SOLID + KISS + YAGNI
 - Rule 7: atomic changes (one PR = one concern)
 - Rule 8: skill loading via skill-rules.json
-- Rule 9: post-implementation pipeline (linter → code-reviewer → qa → gatekeeper)
+- Rule 9: post-implementation pipeline (code-reviewer [lint+scan+review] → qa → gatekeeper)
 - Rule 10: surgical changes (no over-engineering)
 - Rule 11: no MCP
 - Rule 12: isolated environment
@@ -122,7 +122,7 @@ Global default (opencode.json): `anthropic/claude-sonnet-4-6`
 - `sub/stack.md` — every agent, every task
 - `sub/patterns.md` — implementation agents + reviewers
 - `sub/topology.md` — orchestrator + architect only
-- `sub/tooling.md` — linter + first-run only
+- `sub/tooling.md` — code-reviewer + first-run only
 - `sub/localization.md` — only when UI text is involved
 
 ---
@@ -132,8 +132,9 @@ Global default (opencode.json): `anthropic/claude-sonnet-4-6`
 | Tool | Layer | Status |
 |---|---|---|
 | RTK | Shell output filtering | Auto-installed by setup.py |
-| Headroom | Context compression | Auto-installed by setup.py (pip) |
 | Token Optimizer | Structural audit + compaction survival | Auto-installed by setup.py (git clone) |
+| ccusage | Cross-tool token/cost monitoring | Auto-installed by setup.py (npm, or zero-install via npx) |
+| opencode-usage | OpenCode per-agent policy data | Auto-installed by setup.py (uv/pip) |
 | session-end.js hook | Auto session-summary at session end | Wired via ~/.claude/hooks/ |
 
 Plus framework-level optimisations already built in:

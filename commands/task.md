@@ -11,4 +11,4 @@ Start a new development task. Follow this sequence exactly:
 5. Route to `@architect` for HLD and PR breakdown.
 6. Route to `@plan-reviewer` to validate the plan.
 7. On approval, implement one PR at a time.
-8. After each PR: linter → code-reviewer → qa → gatekeeper.
+8. After each PR: code-reviewer (lint+scan+review) → qa → gatekeeper.
