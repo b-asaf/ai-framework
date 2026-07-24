@@ -5,37 +5,15 @@ description: Git hook setup and enforcement. Detects hook managers (husky, lefth
 
 ## Quick reference
 
-- **Three hooks:** `pre-commit` (not on protected branch), `commit-msg` (conventional commits), `pre-push` (cannot push to main/master/develop)
+- **Three hooks:** `pre-commit` (not on protected branch), `commit-msg` (conventional commits), `pre-push` (cannot push to main/master/develop) — applies to both repos (`[XXX]-be` and `[XXX]-fe`)
 - **Detection order:** husky → lefthook → pre-commit → plain shell scripts
-- **After detecting:** tell developer which manager and how to install (see `references/manager-installation.md`)
-- **If not installed:** warn on every task handoff
-# Git Hooks
-
-## What to install
-Three hooks in both repos (`[XXX]-be` and `[XXX]-fe`):
-
-| Hook | Enforces |
-|---|---|
-| `pre-commit` | Not on a protected branch (`main`, `master`, `develop`) |
-| `commit-msg` | Conventional commits format |
-| `pre-push` | Cannot push to `main`, `master`, or `develop` |
-
-Hook scripts are in `scripts/` in this skill folder.
-
-## Detection order
-1. `.husky/` directory or `"husky"` in `package.json` → **Husky**
-2. `lefthook.yml` or `"lefthook"` in `package.json` → **Lefthook**
-3. `.pre-commit-config.yaml` → **pre-commit**
-4. None found → **plain shell scripts**
-
-## After detecting
-Tell the developer which manager was found and instruct them to install.
-For installation commands: read `references/manager-installation.md`
+- **Plain-script fallback:** scripts live in ai-framework's own `hooks/` folder, not a copy in this skill. If `setup.py` has been run on this machine, they're already wired automatically via git's `init.templateDir` — nothing to do. Otherwise, one-off: `bash <ai-framework>/hooks/install-hooks.sh`
+- **After detecting:** tell developer which manager was found and how to install (see `references/manager-installation.md`)
+- **If not installed:** warn on every task handoff — "⚠️ Git hooks not installed in [repo]. Branch and commit rules enforced by convention only."
 
 ## Orchestrator responsibilities
-1. Detect hook manager per repo
-2. Instruct developer to install using the right method
-3. Instruct developer to run verification steps (in `references/manager-installation.md`)
+1. Detect hook manager per repo (see Detection order above)
+2. Instruct developer to install using the right method (`references/manager-installation.md`)
+3. Instruct developer to run verification steps (same file)
 4. Record in `project-overview` under `## Git hooks`
-5. If not installed, warn on every task handoff:
-   > ⚠️ Git hooks not installed in [repo]. Branch and commit rules enforced by convention only.
+5. If not installed, warn on every task handoff (see Quick reference)

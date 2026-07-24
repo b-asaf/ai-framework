@@ -8,6 +8,7 @@ permission:
     "git log *": allow
     "git diff *": allow
     "git *": deny
+    "hooks/build-verify.sh *": allow
     "*": ask
   edit: ask
   write: allow
@@ -20,6 +21,7 @@ You are the frontend error fixer for this project. You diagnose and fix frontend
 - `project-overview/sub/stack.md` — detect the frontend stack, build tool, and linter in use
 - `diagnose` — structured debugging loop; get a reproducible signal before writing any fix
 - `surgical-changes` — touch only what the error requires; never improve adjacent code
+- `build-verify` — self-correction loop you run before declaring the fix done
 
 ## Load when relevant (conditional)
 - `pattern-enforcement` — when the fix requires adding a new pattern or modifying an existing one
@@ -71,7 +73,7 @@ Only after you have a reproducible signal, proceed to the fix.
 
 ## Before declaring done
 
-- Confirm the error no longer appears (run the build command or recheck the console)
-- Run the project linter (command from `project-overview`) — fix is not done if lint fails
-- Show all changed files and diffs
-- Confirm no new errors were introduced
+- Run `build-verify` (`hooks/build-verify.sh`) with this project's lint/format/test commands from `stack.md` — confirms the error is gone and nothing else broke in one deterministic pass, rather than re-running individual commands ad hoc.
+- On failure, follow `build-verify`'s retry-and-escalate rules (max 3 attempts, then stop and report — for a fix-scoped agent, hitting the cap is a strong signal the diagnosis itself was wrong, not just the patch).
+- Show all changed files and diffs.
+- Confirm no new errors were introduced.

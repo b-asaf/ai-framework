@@ -1,5 +1,10 @@
 # ai-framework
 
+**Version 1.8.0** — see [`CHANGELOG.md`](CHANGELOG.md) for what changed. The
+same version prints at the top of every `python setup.py` / `python setup.py
+--verify` run, so your installed copy and this README never disagree about
+which version you're on.
+
 An agentic development framework that makes AI coding tools behave like a senior
 developer — safe git practices, clean code enforcement, agile vertical PRs, and
 no risky actions without your explicit approval.
@@ -99,10 +104,10 @@ Download if needed: https://git-scm.com/downloads
 
 ```bash
 # Mac / Linux
-git clone https://github.com/b-asaf/ai-framework.git ~/ai-framework
+git clone https://azuredevops.rafael.co.il/Almagor_V2_Collection/C2Apps/_git/AI-Team ~/ai-framework
 
-# Windows
-git clone https://github.com/b-asaf/ai-framework.git "%USERPROFILE%\ai-framework"
+# Windows (run CMD as administrator)
+git clone https://azuredevops.rafael.co.il/Almagor_V2_Collection/C2Apps/_git/AI-Team "%USERPROFILE%\ai-framework"
 ```
 
 ### Step 2 — Run setup
@@ -214,7 +219,7 @@ the whole team starts oriented and every session skips re-deriving structure
 from scratch. `python setup.py` registers Graphify assistants globally, but the
 repo-specific rebuild hook should be installed inside each opened project with
 `cd <project> && graphify hook install`. For repos large enough that `graph.html`
-becomes unwieldy (~5000+ nodes), use `scripts/hooks/graphify-smart-viz.sh`
+becomes unwieldy (~5000+ nodes), use `scripts/graphify-smart-viz.sh`
 instead of calling `graphify` directly — it extracts with `--no-viz` first,
 checks the node count, and only generates HTML under the threshold.
 
@@ -308,7 +313,7 @@ Symlinks update automatically — no need to re-run setup after pulling.
 
 ---
 
-## Is it working? — 5 checks
+## Is it working? — 6 checks
 
 Run these after setup to confirm the framework is active.
 
@@ -358,6 +363,79 @@ Ask your tool:
 ✅ Pass: it lists specific skills (`pattern-enforcement`, `code-standards`, `tdd`, etc.).
 ❌ Fail: it says it has no skills — verify the skills symlink exists.
 
+**Check 6 — The push gate is actually enforced, not just instructed**
+
+This is the one check that doesn't involve the AI tool at all — it confirms `build-verify` is a real git hook, not just an instruction an agent could skip.
+
+```bash
+cat .git/hooks/pre-push   # should contain build-verify.sh logic, not just branch protection
+cat .ai-framework.json    # should exist after first-run analysis, with real lint/format/test commands
+```
+
+Then try pushing a commit that deliberately fails lint (or temporarily set `"test": "exit 1"` in `.ai-framework.json`) and run `git push`.
+
+✅ Pass: the push is blocked with `❌ build-verify failed — push blocked.`, independent of whether any agent is even running.
+❌ Fail: the push succeeds — `.git/hooks/pre-push` is stale. Run `git init` in the project (safe, just refreshes hooks) or re-run `python setup.py` from the ai-framework folder first.
+
+---
+
+## Everything you can trigger manually
+
+Most of the framework runs automatically (see [Agent and skill trigger
+reference](#agent-and-skill-trigger-reference) below for the full automatic
+list). This section is the opposite view: everything **you** have to ask for
+by name, in one place, so nothing manual gets lost in the automatic tables.
+
+**Slash commands** (type `/` in OpenCode/Claude Code, or ask in plain English):
+
+| Command      | What it does                                                                                         |
+| ------------ | ---------------------------------------------------------------------------------------------------- |
+| `/task`      | Start a new task — runs Check 1/2, then product-manager → architect → plan-reviewer → implementation |
+| `/review`    | Full post-implementation pipeline on the current branch — code-reviewer, qa, gatekeeper              |
+| `/first-run` | Manually re-run first-run analysis (project-overview is stale or has `[XXX]`)                        |
+| `/handoff`   | Compact the session — saves a handoff doc, appends to `docs/session-summary.md`                      |
+
+**Running `/review` — no arguments, no separate setup:**
+
+1. `git checkout` your **feature branch** (the source branch — not `main`/`develop`). The command reviews "the current branch," so it needs to be the one with your changes checked out.
+2. Commit locally first, even if you haven't pushed. `code-reviewer` reads the diff via `git diff`, and an uncommitted working tree is not a reliable diff source.
+3. Type `/review` — no branch names, no flags. It diffs your current branch against the repo's protected base (`main`/`master`/`develop`) automatically.
+4. Same session as your implementation or a brand-new one both work — git state lives on disk, not in the conversation. For a long/noisy implementation session, a fresh session (or `/handoff` first) keeps the review's context cleaner and cheaper.
+5. Read the verdict: **PASS** or **FAIL**. Findings are grouped **by file, then by line** — read it like inline PR comments rather than a flat list.
+
+Runs entirely on your existing Claude Code/OpenCode session — no API key, no CI, no separate account.
+
+**Want the findings as real inline GitHub PR comments**, not just in chat? `code-reviewer` stays read-only by default — ask for it explicitly after `/review` finishes (e.g. "post these as inline PR comments"). Requires an open PR and `gh` authenticated; you'll get a confirmation prompt before anything is posted.
+
+**Reviewing someone else's pushed branch:** works the same way — pull it locally first, then run `/review` exactly as above. It doesn't matter whose branch it is; the diff is always taken against the protected base, not against your own history.
+
+```bash
+git fetch origin
+git checkout -b their-branch origin/their-branch   # or: git checkout their-branch, if already tracked
+/review
+```
+
+Make sure your own working tree is clean first so nothing of yours leaks into their diff.
+
+**Agents you trigger** (say what you want — no slash command needed):
+
+| Agent                     | Say                    | What it does                                                                                |
+| ------------------------- | ---------------------- | ------------------------------------------------------------------------------------------- |
+| `refactor-planner`        | "Plan a refactor of X" | Safe incremental refactor plan before any code changes                                      |
+| `web-research-specialist` | "Search the web for X" | External research — Rule 12 means it never fires on its own, always needs your confirmation |
+
+**Skills you trigger:** see the [human-invoked skills table](#skills--you-trigger-human-invoked) — `excalidraw-sequence-diagram`, `improve-codebase-architecture`, `caveman`, `handoff`, `zoom-out`, `first-run-analysis`, `repo-topology`, `graphify`.
+
+**Standalone CLI tools** (run from your terminal, not through the agent):
+
+| Tool                       | Run                                                                                | What it does                                                                                              |
+| -------------------------- | ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Token Optimizer audit      | `/token-optimizer` inside Claude Code                                              | One-time audit for bloated configs/unused skills — presents diffs for approval, doesn't run automatically |
+| Graphify always-on install | `graphify <platform> install` (e.g. `graphify opencode install`), once per project | Makes the agent auto-prefer the graph over Read/Glob — not wired by `setup.py` since it's per-project     |
+| Graphify rebuild hook      | `graphify hook install`, once per project                                          | Keeps `graphify-out/graph.json` current on every commit                                                   |
+| Graphify large-repo viz    | `scripts/graphify-smart-viz.sh <path>`                                             | Safe graph visualization — auto-skips HTML past ~5000 nodes                                               |
+| Setup health check         | `python setup.py --verify`                                                         | Read-only — prints what still needs attention without changing anything                                   |
+
 ---
 
 ## Repo structure
@@ -369,8 +447,8 @@ opencode.json               ← OpenCode global config (model: sonnet-4-6, permi
 agents/                     ← 16 agent definitions (each has model: field for cost tiering)
 skills/                     ← 41 skill folders (each has ## Quick reference section)
 commands/                   ← slash commands (/task, /review, /first-run, /handoff)
-hooks/                      ← git hooks + session-end.js (auto session summary)
-scripts/hooks/              ← graphify-smart-viz.sh (node-count-aware graph visualization)
+hooks/                      ← two unrelated kinds, same folder: git hooks (pre-commit, commit-msg, pre-push,     build-verify.sh, install-hooks.sh — wired via git init.templateDir, fire on git events) + session-end.js (Claude Code's own Stop-event hook, wired via ~/.claude/hooks/, fires on session end)
+scripts/                    ← graphify-smart-viz.sh (node-count-aware graph visualization)
 
 instructions/
   AGENTS-reference.md       ← agent roles, task flow, skill routing — loaded on-demand
@@ -446,6 +524,7 @@ action from you — just open a project and start a task.
 | `zoom-out`                   | First session on a project (after first-run) or long gap between sessions                                                                                                                |
 | `repo-topology`              | During first-run analysis or any cross-service task                                                                                                                                      |
 | `graphify`                   | Loaded by `zoom-out`, `first-run-analysis`, `pattern-enforcement` whenever `graphify-out/graph.json` exists; also fires directly on "what calls X" / "what depends on X" style questions |
+| `build-verify`               | Loaded by `backend`, `frontend`, `frontend-error-fixer`, `api`, `db`, `ui` — always runs before any of them declares work done, not conditional                                          |
 | `diagnose`                   | Task type is a bug fix                                                                                                                                                                   |
 | `tdd`                        | Writing code for a feature or fix                                                                                                                                                        |
 | `grill-me`                   | Requirements or design are ambiguous                                                                                                                                                     |
@@ -512,5 +591,5 @@ or by telling the orchestrator directly:
 | RTK download failed                                              | Install manually: https://github.com/rtk-ai/rtk/releases                                                                                                                                                                                                                                                     |
 | Token Optimizer not installing                                   | See "Token usage reduction" section above                                                                                                                                                                                                                                                                    |
 | Graphify not installing                                          | Install manually: `uv tool install graphifyy` (or `pipx install graphifyy`), then re-run `python setup.py`                                                                                                                                                                                                   |
-| `graph.html` too large / slow to open                            | Use `scripts/hooks/graphify-smart-viz.sh` instead of raw `graphify` — it skips HTML generation past ~5000 nodes automatically                                                                                                                                                                                |
+| `graph.html` too large / slow to open                            | Use `scripts/graphify-smart-viz.sh` instead of raw `graphify` — it skips HTML generation past ~5000 nodes automatically                                                                                                                                                                                      |
 | Git hooks not firing                                             | Run `git init` in your existing repo to apply the template                                                                                                                                                                                                                                                   |

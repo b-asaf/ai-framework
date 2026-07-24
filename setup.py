@@ -37,6 +37,10 @@ def fail(msg):  print(_c("0;31", f"  FAIL {msg}")); return False
 REPO = Path(__file__).resolve().parent
 HOME = Path.home()
 
+# Single source of truth for the framework version. Bump this and add a
+# matching CHANGELOG.md entry together — README and --verify both read this.
+FRAMEWORK_VERSION = "1.8.0"
+
 OPENCODE_DIR     = HOME / ".config" / "opencode"
 CLAUDE_DIR       = HOME / ".claude"
 CODEX_DIR        = HOME / ".codex"
@@ -525,13 +529,35 @@ def add_git_template():
         return
     template_dir = REPO / "git-template"
     try:
-        template_dir.mkdir(parents=True, exist_ok=True)
-        (template_dir / "hooks").mkdir(parents=True, exist_ok=True)
+        template_hooks = template_dir / "hooks"
+        template_hooks.mkdir(parents=True, exist_ok=True)
+        # Symlink each hook into the template dir — NOT a copy. git's
+        # init.templateDir preserves symlinks when it populates a new
+        # repo's .git/hooks/, so hooks/ stays the single source of truth;
+        # git-template/hooks/ is just pointers into it (and is .gitignored,
+        # since it's generated). Editing hooks/pre-push takes effect on the
+        # next `git push` everywhere, no re-run of setup.py needed.
+        # build-verify.sh is linked here too (not in a separate scripts/
+        # dir) specifically so it's co-located with pre-push, which finds
+        # it via "$(dirname "$0")" at runtime — works in any project,
+        # regardless of where ai-framework itself is installed on disk.
+        # make_link() chmods through the symlink onto hooks/* itself, so
+        # this is also what keeps the source scripts executable.
+        linked = 0
+        for hook_name in ("pre-commit", "commit-msg", "pre-push", "build-verify.sh"):
+            src = hooks_src / hook_name
+            if not src.exists():
+                warn(f"hooks/{hook_name} not found — not included in template")
+                continue
+            dst = template_hooks / hook_name
+            make_link(dst, src, "file")
+            src.chmod(src.stat().st_mode | 0o111)  # ensure executable at the source
+            linked += 1
         subprocess.run(
             ["git", "config", "--global", "init.templateDir", str(template_dir)],
             check=True, capture_output=True
         )
-        ok(f"git init.templateDir -> {template_dir}")
+        ok(f"git init.templateDir -> {template_dir} ({linked} hooks linked)")
         info("Git hooks will apply to every new clone automatically")
         info("For existing repos: cd your-repo && git init  (safe, just refreshes hooks)")
     except Exception as exc:
@@ -601,15 +627,21 @@ def install_opencode_usage(det):
         )
         return False
     try:
-        if installer.endswith("uv"):
+        installer_name = Path(installer).name.lower()
+        if installer_name in ("uv", "uv.exe"):
             subprocess.run([installer, "tool", "install", "opencode-usage"],
                            check=True, capture_output=True)
         else:
             subprocess.run([installer, "install", "--user", "opencode-usage"],
                            check=True, capture_output=True)
-        ok("opencode-usage installed")
-        info("  Used by monitoring/model-policy-check.js — see monitoring/README.md")
-        return True
+
+        if shutil.which("opencode-usage"):
+            ok("opencode-usage installed")
+            info("  Used by monitoring/model-policy-check.js — see monitoring/README.md")
+            return True
+
+        warn("opencode-usage installed but could not run after installation")
+        return False
     except subprocess.CalledProcessError as exc:
         warn(f"opencode-usage install failed: {exc}")
         _need_action(
@@ -721,10 +753,11 @@ def wire_graphify(det):
             warn(f"graphify/{tool} failed: {exc}")
     if not installed_any:
         return
-    info("Graphify CLI registration complete.")
-    info("Install the per-project rebuild hook inside each opened repo:")
-    info("  cd <project> && graphify hook install")
-    info("Large repos: use scripts/hooks/graphify-smart-viz.sh instead of raw")
+    info("Graphify CLI registration complete (skill available globally).")
+    info("Two more steps, run once inside each opened project:")
+    info("  cd <project> && graphify <platform> install   # always-on nudge, e.g. opencode/claude/codex/gemini")
+    info("  cd <project> && graphify hook install          # keeps graph.json current on commit")
+    info("Large repos: use scripts/graphify-smart-viz.sh instead of raw")
     info("`graphify` when HTML output matters — auto-skips viz past ~5000 nodes.")
 
 # ── GitHub CLI ─────────────────────────────────────────────────────────────────
@@ -763,6 +796,7 @@ def verify_only():
     print()
     bold("ai-framework verify")
     bold("=" * 44)
+    info(f"version: {FRAMEWORK_VERSION}")
     print()
 
     det = detect()
@@ -798,6 +832,7 @@ def main():
     print()
     bold("ai-framework setup")
     bold("=" * 44)
+    info(f"version: {FRAMEWORK_VERSION}")
     info(f"repo: {REPO}")
     print()
 

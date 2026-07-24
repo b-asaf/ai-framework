@@ -55,6 +55,8 @@ Load only the skills relevant to the files actually changed in this diff:
 
 ### Stage 1 — Lint & security scan
 
+> `backend`/`frontend` already ran lint/format/test to a passing exit code via the `build-verify` skill before requesting review — this stage is a safety net, not the primary gate. A failure here on the same lint tool that already passed means the loop was skipped or its output was misread, which is itself worth flagging, not just re-reporting the lint violation.
+
 Detect which tools are configured (never add or suggest a tool that isn't already there — cache detection per session):
 
 **SonarQube (both repos — if configured):**
@@ -223,6 +225,11 @@ Do not declare review complete after reading a subset of changed files.
 
 ## Output format
 
+Findings are grouped **by file, then by line** — read like inline PR review
+comments anchored to their location, not a flat list sorted by category. A
+reader should be able to open one file section and see every comment that
+applies to it, in line order.
+
 ```
 ## Code Review: <branch or feature>
 
@@ -239,18 +246,19 @@ Do not declare review complete after reading a subset of changed files.
 ### ✅ Passed
 - [What was done well]
 
-### ⚠️ Non-blocking (advisory — fix when convenient)
-[NAMING] <file>:<line> — <observation>
-[FUNCTIONS] <file>:<line> — <observation>
-[SMELL/<name>] <file>:<line> — <observation>
+### Findings by file
 
-### ❌ Blocking (must fix before approval)
-[SOLID/SRP] <file>:<line> — <specific violation>
-[ERROR HANDLING] <file>:<line> — <specific issue>
-[SECURITY/<category>] <file>:<line> — <vulnerability>
-[READABILITY/<dimension>] <file>:<line> — <specific issue>
-[TEST QUALITY] <file>:<test name> — <why the test is fragile>
-[ATOMIC] — <what mixed concern was found>
+#### `<path/to/file.ts>`
+- **:<line>** ❌ BLOCKING [SOLID/SRP] — <specific violation>
+- **:<line>** ❌ BLOCKING [ERROR HANDLING] — <specific issue>
+- **:<line>** ⚠️ NON-BLOCKING [NAMING] — <observation>
+
+#### `<path/to/other-file.ts>`
+- **:<line>** ⚠️ NON-BLOCKING [SMELL/<name>] — <observation>
+
+#### Cross-file / not line-anchored
+- ❌ BLOCKING [ATOMIC] — <what mixed concern was found>
+- ❌ BLOCKING [TEST QUALITY] <file>:<test name> — <why the test is fragile>
 
 ### Verdict
 APPROVED | APPROVED WITH ADVISORY NOTES | REQUEST CHANGES
@@ -259,3 +267,13 @@ APPROVED | APPROVED WITH ADVISORY NOTES | REQUEST CHANGES
 REQUEST CHANGES routes back to the relevant implementation agent with the list of BLOCKING items.
 APPROVED WITH ADVISORY NOTES means no BLOCKING items — the NON-BLOCKING list is informational.
 After fixes, static analysis reruns, then this review reruns.
+
+### Posting findings as real inline PR comments (optional, on request only)
+
+`code-reviewer` stays read-only and never does this on its own. If you have
+an open GitHub PR for the branch and want the findings posted as actual
+inline review comments (visible in GitHub's diff UI, not just this chat),
+ask for it explicitly after `/review` finishes — e.g. "post these as inline
+PR comments." That runs through `gh pr review`/`gh api`, which falls under
+this agent's `"*": ask` permission gate, so you'll get a confirmation prompt
+before anything is posted. Requires `gh` authenticated (`gh auth status`).

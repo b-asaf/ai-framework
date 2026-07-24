@@ -38,7 +38,7 @@ Run `zoom-out` on each repo. Output feeds into Step 4 (knowing where to look) an
 
 ## Step 4 — Convention detection
 
-If the `graphify` skill is available and `graphify-out/graph.json` exists (or can be built), verify that the graph is fresh before using it. When `graphify-out/graph.json` is missing or stale, run `graphify . --update` first, then use `graphify query`/`graphify explain` against the real `calls`/`imports`/`inherits` edges to identify where patterns repeat across the whole repo, not just a sample — then confirm against the specific files found. If Graphify is unavailable or cannot refresh the artifact, scan 10-20 representative files per repo.
+If the `graphify` skill is available and `graphify-out/graph.json` exists (or can be built), verify that the graph is fresh before using it. When `graphify-out/graph.json` is missing or stale, run `graphify update .` first, then use `graphify query`/`graphify explain` against the real `calls`/`imports`/`inherits` edges to identify where patterns repeat across the whole repo, not just a sample — then confirm against the specific files found. If Graphify is unavailable or cannot refresh the artifact, scan 10-20 representative files per repo.
 
 Detect:
 
@@ -73,6 +73,8 @@ Review before starting feature work. No changes made automatically.
 - **`_opencode.json`** — replace `[XXX]`, apply topology changes (confirm with developer first)
 - **`workflow-guide.md`** — append `## Project-specific notes` only if genuinely needed
 - **`Manual.md`** — replace `[XXX]`, update workspace layout if microservices detected
+- **`.ai-framework.json`** — write to the root of **each individual repo** (not the shared framework install): `{"lint": "<cmd>", "format": "<cmd or empty string>", "test": "<cmd>"}`, mirroring the Lint/Format/Test command fields you just wrote into that repo's `stack.md`. This is what the `pre-push` git hook reads to run `build-verify` structurally — it must live inside the project's own repo, not the shared skills location, since the hook has no other way to find it. Commit it.
+- **`graphify-out/`** — if the `graphify` skill is available and hasn't been run in this repo yet, build the initial graph and **commit it** (except `graphify-out/cost.json`, which stays local). Without this, teammates pulling never get a current graph — see `skills/graphify/SKILL.md`'s "Staying in sync" for why this specific step is the one a hook can't substitute for.
 
 ## Completion message
 
@@ -82,7 +84,7 @@ Review before starting feature work. No changes made automatically.
 Project: [name]  |  Architecture: [type]  |  Repos: [list with state]
 Stack: BE [lang/framework]  |  FE [framework]
 
-Files updated: project-overview ✅  _opencode.json ✅  CONTEXT.md ✅
+Files updated: project-overview ✅  _opencode.json ✅  CONTEXT.md ✅  .ai-framework.json ✅  graphify-out ✅
 [📋 refactoring-plan.md generated] ← only if applicable
 
 Ready. What would you like to do first?

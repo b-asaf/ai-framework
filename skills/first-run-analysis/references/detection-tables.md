@@ -1,5 +1,12 @@
 # Detection Reference Tables
 
+> After identifying tools from the tables below, also record the **exact
+> runnable command** for lint, format, and test (e.g. from `package.json`
+> `scripts`, `pom.xml` plugin goals, a `Makefile`, or `build.gradle` tasks)
+> into `stack.md`'s Lint/Format/Test command fields — not just the tool
+> name. These are consumed verbatim by the `build-verify` skill; a tool
+> name alone isn't runnable.
+
 ## Backend detection signals
 
 | Category | What to detect |

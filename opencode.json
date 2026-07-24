@@ -22,8 +22,5 @@
     },
     "edit": "ask",
     "write": "allow"
-  },
-  "suggest": {
-    "autofix": false
   }
 }

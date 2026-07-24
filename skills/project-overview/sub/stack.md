@@ -21,6 +21,9 @@
 - **Key dependencies:** [detected]
 - **Local dev command:** [detected]
 - **Build/test command:** [detected]
+- **Lint command:** [exact runnable command, e.g. `mvn checkstyle:check` — used by `build-verify` skill]
+- **Format command:** [exact runnable command, or "none configured"]
+- **Test command:** [exact runnable command]
 - **Critical gotchas:** [discovered from codebase]
 
 ## Frontend stack
@@ -36,6 +39,9 @@
 - **Key dependencies:** [detected]
 - **Local dev command:** [detected]
 - **Build/test command:** [detected]
+- **Lint command:** [exact runnable command, e.g. `npm run lint` — used by `build-verify` skill]
+- **Format command:** [exact runnable command, e.g. `npm run format:check`, or "none configured"]
+- **Test command:** [exact runnable command]
 - **Critical gotchas:** [discovered from codebase]
 
 ## Layer architecture

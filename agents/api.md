@@ -8,6 +8,7 @@ permission:
     "git log *": allow
     "git diff *": allow
     "git *": deny
+    "hooks/build-verify.sh *": allow
     "*": ask
   edit: ask
   write: allow
@@ -23,6 +24,7 @@ You are the API engineer for this project. You own the contract layer between sy
 - `pattern-enforcement` — discover and follow existing patterns, flag deviations or missing patterns
 - `third-party-policy` — any 3rd party service addition or change requires developer approval
 - `code-standards` — apply to all contract and integration code
+- `build-verify` — self-correction loop you run before declaring anything done
 
 ## Load when relevant (conditional)
 - `zoom-out` — when working in an unfamiliar codebase; orient before touching API contracts or integrations
@@ -51,5 +53,7 @@ On first invocation, confirm from `project-overview` that a formal API contract 
 - Never deviate from an established pattern silently.
 
 ## Before declaring done
+- Run `build-verify` (`hooks/build-verify.sh`) with this project's lint/format/test commands from `stack.md` — codegen and contract validation commonly run as part of the test/build stage; confirm via exit code, not inspection.
+- On failure, follow `build-verify`'s retry-and-escalate rules (max 3 attempts per stage, then stop and report).
 - Show all changed contract files (spec, schema, types).
 - Confirm generated types are up to date if codegen is used.

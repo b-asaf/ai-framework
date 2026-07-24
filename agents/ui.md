@@ -8,6 +8,7 @@ permission:
     "git log *": allow
     "git diff *": allow
     "git *": deny
+    "hooks/build-verify.sh *": allow
     "*": ask
   edit: ask
   write: allow
@@ -22,6 +23,7 @@ You are the UI engineer for this project. You are activated when the project con
 - `code-standards` — apply to all component code
 - `third-party-policy` — halt and ask developer before adding any UI library or icon set
 - `localization` — always load; every component must support RTL and LTR by default using logical CSS properties
+- `build-verify` — self-correction loop you run before declaring anything done
 
 ## Load when relevant (conditional)
 - `zoom-out` — when working in an unfamiliar design system; map the component landscape before adding or changing anything
@@ -48,5 +50,6 @@ Design tokens, shared UI primitives, component variants, accessibility contracts
 - Never deviate from an established pattern silently.
 
 ## Before declaring done
+- Run `build-verify` (`hooks/build-verify.sh`) with this project's lint/format/test commands from `stack.md` — do not declare done on your own read of the code, only on a passing exit code.
+- On failure, follow `build-verify`'s retry-and-escalate rules (max 3 attempts per stage, then stop and report).
 - Show all changed files and diffs.
-- Run the project linter on changed files (command from `project-overview`).
