@@ -1,5 +1,19 @@
 #!/bin/sh
-# pre-push: prevent direct push to protected branches
+# pre-push: prevent direct push to protected branches, then run the
+# deterministic build-verify gate (lint/format/test) before the push
+# completes.
+#
+# This is the structural half of build-verify (see skills/build-verify/
+# SKILL.md) — the agent-side loop is instruction-level (an agent could in
+# theory skip or misreport it); this hook is not. It runs on your actual
+# `git push`, outside any agent's control, using the project's own
+# .ai-framework.json commands file. Missing file or missing commands ->
+# skipped with a note, not a hard failure, so projects that haven't run
+# first-run analysis yet aren't blocked.
+#
+# Escape hatch for emergencies: SKIP_BUILD_VERIFY=1 git push
+# (branch protection above still applies regardless).
+
 PROTECTED="main master develop"
 while read local_ref local_sha remote_ref remote_sha; do
   BRANCH=$(echo "$remote_ref" | sed 's|refs/heads/||')
@@ -13,4 +27,56 @@ while read local_ref local_sha remote_ref remote_sha; do
     fi
   done
 done
+
+if [ "${SKIP_BUILD_VERIFY:-}" = "1" ]; then
+  echo "⚠️  build-verify skipped (SKIP_BUILD_VERIFY=1)"
+  exit 0
+fi
+
+HOOK_DIR=$(dirname "$0")
+VERIFY_SCRIPT="$HOOK_DIR/build-verify.sh"
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
+COMMANDS_FILE="$REPO_ROOT/.ai-framework.json"
+
+if [ ! -x "$VERIFY_SCRIPT" ]; then
+  echo "ℹ️  build-verify.sh not found in hooks — skipping verify gate"
+  echo "   (re-run: python setup.py, from the ai-framework folder)"
+  exit 0
+fi
+
+if [ ! -f "$COMMANDS_FILE" ]; then
+  echo "ℹ️  .ai-framework.json not found — skipping verify gate"
+  echo "   (run first-run analysis in your agent session to generate it)"
+  exit 0
+fi
+
+json_get() {
+  # Extracts "key": "value" from a flat, single-level JSON file.
+  grep -o "\"$1\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" "$2" 2>/dev/null \
+    | sed -E 's/.*:[[:space:]]*"(.*)"/\1/'
+}
+
+LINT_CMD=$(json_get lint "$COMMANDS_FILE")
+FORMAT_CMD=$(json_get format "$COMMANDS_FILE")
+TEST_CMD=$(json_get test "$COMMANDS_FILE")
+
+if [ -z "$LINT_CMD" ] && [ -z "$FORMAT_CMD" ] && [ -z "$TEST_CMD" ]; then
+  echo "ℹ️  .ai-framework.json has no commands configured — skipping verify gate"
+  exit 0
+fi
+
+echo ""
+echo "Running build-verify before push..."
+cd "$REPO_ROOT" || exit 1
+"$VERIFY_SCRIPT" --lint "$LINT_CMD" --format "$FORMAT_CMD" --test "$TEST_CMD"
+VERIFY_EXIT=$?
+
+if [ "$VERIFY_EXIT" -ne 0 ]; then
+  echo ""
+  echo "❌ build-verify failed — push blocked."
+  echo "   Fix the failure above, or SKIP_BUILD_VERIFY=1 git push to override."
+  echo ""
+  exit 1
+fi
+
 exit 0

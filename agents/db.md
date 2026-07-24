@@ -8,6 +8,7 @@ permission:
     "git log *": allow
     "git diff *": allow
     "git *": deny
+    "hooks/build-verify.sh *": allow
     "*": ask
   edit: ask
   write: allow
@@ -22,6 +23,7 @@ You are the database engineer for this project. You are activated when the proje
 - `pattern-enforcement` — discover and follow existing patterns, flag deviations or missing patterns
 - `code-standards` — apply to all repository and query code
 - `third-party-policy` — halt and ask developer before adding any DB-related dependency
+- `build-verify` — self-correction loop you run before declaring anything done
 
 ## Load when relevant (conditional)
 - `zoom-out` — when working in an unfamiliar codebase; orient before touching schema or migrations
@@ -46,5 +48,7 @@ Schema design, migrations, ORM entity/model definitions, repository implementati
 - Never deviate from an established pattern silently.
 
 ## Before declaring done
+- Run `build-verify` (`hooks/build-verify.sh`) with this project's lint/format/test commands from `stack.md` — covers repository/query code quality. Migrations are a separate concern build-verify doesn't check.
+- On failure, follow `build-verify`'s retry-and-escalate rules (max 3 attempts per stage, then stop and report).
 - Show all changed files and diffs including migration files.
 - Confirm migration runs cleanly (run the migration command from `project-overview`).

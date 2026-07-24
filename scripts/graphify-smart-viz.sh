@@ -3,20 +3,23 @@
 # ----------------------
 # graphify has no built-in node-count threshold for skipping HTML generation —
 # graph.html just becomes unusably large/slow past ~5000 nodes. This wrapper
-# adds that threshold automatically:
+# adds that threshold automatically, matching graphify's own documented fix
+# for this exact problem (see its README "Troubleshooting" section):
 #
-#   1. Extract with --no-viz (cheap, always safe, never skipped)
+#   graphify cluster-only <path> --no-viz
+#
+#   1. Extract (cheap, always safe, never skipped)
 #   2. Count nodes in the resulting graph.json
-#   3. Only if the graph is under the threshold, regenerate with the HTML
-#      visualization via --cluster-only (reuses the existing graph — no
-#      re-extraction, so this costs nothing extra beyond one clustering pass)
+#   3. Always run clustering (community labels + GRAPH_REPORT.md — needed
+#      regardless of repo size), passing --no-viz only when over the
+#      threshold so the HTML is the only thing skipped, not the report
 #
 # Usage:
-#   scripts/hooks/graphify-smart-viz.sh <target-dir> [extra graphify args...]
+#   scripts/graphify-smart-viz.sh <target-dir> [extra graphify args...]
 #
 # Example:
-#   scripts/hooks/graphify-smart-viz.sh .
-#   scripts/hooks/graphify-smart-viz.sh ./my-service --update
+#   scripts/graphify-smart-viz.sh .
+#   scripts/graphify-smart-viz.sh ./my-service --update
 
 set -eu
 
@@ -24,7 +27,7 @@ TARGET="${1:-.}"
 shift || true
 EXTRA_ARGS="$@"
 
-# Override with GRAPHIFY_VIZ_NODE_LIMIT=8000 scripts/hooks/graphify-smart-viz.sh . etc.
+# Override with GRAPHIFY_VIZ_NODE_LIMIT=8000 scripts/graphify-smart-viz.sh . etc.
 NODE_LIMIT="${GRAPHIFY_VIZ_NODE_LIMIT:-5000}"
 
 if ! command -v graphify >/dev/null 2>&1; then
@@ -32,7 +35,7 @@ if ! command -v graphify >/dev/null 2>&1; then
   exit 0
 fi
 
-echo "graphify: extracting (no-viz) for $TARGET ..."
+echo "graphify: extracting $TARGET ..."
 graphify extract "$TARGET" $EXTRA_ARGS
 
 GRAPH_JSON="graphify-out/graph.json"
@@ -72,6 +75,8 @@ if [ "$NODE_COUNT" -le "$NODE_LIMIT" ]; then
   echo "graphify: under limit ($NODE_LIMIT) — generating HTML visualization"
   graphify cluster-only "$TARGET" $EXTRA_ARGS
 else
-  echo "graphify: $NODE_COUNT nodes exceeds limit ($NODE_LIMIT) — skipping HTML, use the CLI/JSON instead"
+  echo "graphify: $NODE_COUNT nodes exceeds limit ($NODE_LIMIT) — skipping HTML only"
+  echo "  (GRAPH_REPORT.md and graph.json are still fully generated)"
+  graphify cluster-only "$TARGET" --no-viz $EXTRA_ARGS
   echo "  graphify query \"...\"   graphify path \"A\" \"B\"   graphify explain \"X\""
 fi

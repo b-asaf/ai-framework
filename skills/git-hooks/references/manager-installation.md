@@ -28,14 +28,24 @@ pre-push:
 Run: `lefthook install`
 
 ## Plain scripts (fallback)
-```bash
-bash scripts/hooks/install-hooks.sh
-```
-Hook scripts are in `scripts/git-hooks/` in this skill folder.
+If ai-framework's `setup.py` has been run on this machine, hooks are wired
+automatically the moment a repo is created — git's `init.templateDir`
+copies them in on `git init`/`git clone`. Nothing to do; skip straight to
+Verification below.
 
-> ⚠️ Plain `.git/hooks/` scripts are not committed to the repo.
-> Every developer must run the installer after cloning.
-> Add to README: `bash scripts/hooks/install-hooks.sh`
+If they're missing (repo predates `setup.py`, or it hasn't been run on
+this machine yet), re-apply manually from the ai-framework checkout:
+```bash
+bash <path-to-ai-framework>/hooks/install-hooks.sh
+```
+Hook scripts live in `hooks/` at the ai-framework repo root — this skill
+folder doesn't carry its own copy.
+
+> ⚠️ Plain `.git/hooks/` scripts are not committed to the repo, and
+> `init.templateDir` only applies at `git init`/`git clone` time.
+> Add to README: run `python setup.py` from the ai-framework checkout
+> (once per machine), or `bash <ai-framework>/hooks/install-hooks.sh`
+> as a one-off fallback for a repo that already exists.
 
 ## Verification
 ```bash

@@ -8,6 +8,7 @@ permission:
     "git log *": allow
     "git diff *": allow
     "git *": deny
+    "hooks/build-verify.sh *": allow
     "*": ask
   edit: ask
   write: allow
@@ -23,6 +24,7 @@ You are the frontend engineer for this project.
 - `code-standards` — clean code and SOLID rules to apply
 - `third-party-policy` — halt and ask developer before adding/removing/updating any dependency
 - `atomic-changes` — keep each change small and independently reviewable
+- `build-verify` — self-correction loop you run before declaring anything done
 
 ## Load when relevant (conditional)
 - `capacitor-bridge` — when the task touches Capacitor plugins, web fallbacks, or platform-specific behaviour
@@ -51,5 +53,6 @@ Your scope is pages, routing, data fetching, state management, and API client co
   > "I need to add `[package]` for `[reason]`. Do you approve?"
 
 ## Before declaring done
+- Run `build-verify` (`hooks/build-verify.sh`) with this project's lint/format/test commands from `stack.md` — do not declare done on your own read of the code, only on a passing exit code.
+- On failure, follow `build-verify`'s retry-and-escalate rules (max 3 attempts per stage, then stop and report to the developer instead of continuing to retry).
 - Show all changed files and diffs.
-- Confirm the build passes (run the build/type-check command from `project-overview`).
