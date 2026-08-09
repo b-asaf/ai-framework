@@ -9,6 +9,19 @@ Changes are made on `develop` branch and merged to `main` when stable.
 
 ## Unreleased (develop)
 
+- **Removed `opencode-usage` and `monitoring/model-policy-check.js`.** The
+  policy check was the only consumer of `opencode-usage` data, and
+  `opencode-usage` was the only reason that dependency existed — removing
+  both together, not deprecating one and orphaning the other.
+  `install_opencode_usage()` and its call site/verify-mode check are gone
+  from `setup.py`; `ccusage` (cross-tool token/cost dashboard) is unaffected
+  and remains the framework's monitoring tool — see `monitoring/README.md`.
+  If per-agent model-policy enforcement is wanted again later, it needs a
+  different data source: `opencode-usage` installs hit a hard TLS-trust wall
+  on networks with corporate TLS-inspection proxies (`uv`'s bundled
+  cert store doesn't trust an intercepting proxy's CA by default), which is
+  what surfaced this dependency was worth cutting rather than working around.
+
 ## v1.8.0 — critical CRLF fix, folder reorg, graphify sync gaps closed
 
 - **Critical: every file touched since v1.5.0 had been silently corrupted

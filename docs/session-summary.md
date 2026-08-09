@@ -19,15 +19,15 @@ Stack focus: Java/Spring Boot (BE), JavaScript/TypeScript React (FE).
 
 ```
 ai-framework/
-├── AGENTS.md                    ← global rules (13 rules, XML-tagged) — every tool reads this
+├── AGENTS.md                    ← global rules (14 rules, XML-tagged) — every tool reads this
 ├── opencode.json                ← OpenCode global config: model=sonnet-4-6, permissions
 ├── setup.py                     ← run once per machine, no flags needed
 ├── workflow-guide.md            ← day-to-day developer guide
 │
-├── agents/                      ← 16 agent definitions with per-agent model assignment
-├── skills/                      ← 39 skill folders (all have ## Quick reference sections)
+├── agents/                      ← 15 agent definitions with per-agent model assignment
+├── skills/                      ← 42 skill folders (most have ## Quick reference sections)
 ├── commands/                    ← slash commands: /task /review /first-run /handoff
-├── hooks/                       ← git hooks + session-end.js (auto session summary)
+├── hooks/                       ← two unrelated kinds, same folder: git hooks (wired via git init.templateDir) + session-end.js (Claude Code's own Stop-event hook, wired via ~/.claude/hooks/)
 │
 ├── instructions/
 │   ├── AGENTS-reference.md      ← agent roles, task flow, skill routing (on-demand)
@@ -134,7 +134,6 @@ Global default (opencode.json): `anthropic/claude-sonnet-4-6`
 | RTK | Shell output filtering | Auto-installed by setup.py |
 | Token Optimizer | Structural audit + compaction survival | Auto-installed by setup.py (git clone) |
 | ccusage | Cross-tool token/cost monitoring | Auto-installed by setup.py (npm, or zero-install via npx) |
-| opencode-usage | OpenCode per-agent policy data | Auto-installed by setup.py (uv/pip) |
 | session-end.js hook | Auto session-summary at session end | Wired via ~/.claude/hooks/ |
 
 Plus framework-level optimisations already built in:

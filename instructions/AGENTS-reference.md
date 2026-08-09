@@ -61,5 +61,7 @@ implementation agents → one PR at a time
 ## Context budget rule
 
 If the orchestrator has produced more than **8 agent responses** in a session,
-or any single response exceeds **~3,000 tokens**, load the `handoff` skill
-before the next step and propose compacting the session.
+or any single response exceeds **~3,000 tokens**, auto-trigger both the
+`caveman` skill (compressed output mode, load first) and the `handoff` skill
+(save a session compact) before the next step — per Rule 14 in `AGENTS.md`,
+this doesn't wait for developer confirmation.
