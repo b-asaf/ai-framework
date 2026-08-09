@@ -104,10 +104,10 @@ Download if needed: https://git-scm.com/downloads
 
 ```bash
 # Mac / Linux
-git clone https://azuredevops.rafael.co.il/Almagor_V2_Collection/C2Apps/_git/AI-Team ~/ai-framework
+git clone https://github.com/b-asaf/ai-framework.git ~/ai-framework
 
-# Windows (run CMD as administrator)
-git clone https://azuredevops.rafael.co.il/Almagor_V2_Collection/C2Apps/_git/AI-Team "%USERPROFILE%\ai-framework"
+# Windows
+git clone https://github.com/b-asaf/ai-framework.git "%USERPROFILE%\ai-framework"
 ```
 
 ### Step 2 — Run setup
