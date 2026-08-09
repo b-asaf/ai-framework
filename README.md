@@ -104,10 +104,10 @@ Download if needed: https://git-scm.com/downloads
 
 ```bash
 # Mac / Linux
-git clone https://azuredevops.rafael.co.il/Almagor_V2_Collection/C2Apps/_git/AI-Team ~/ai-framework
+git clone https://github.com/b-asaf/ai-framework.git ~/ai-framework
 
-# Windows (run CMD as administrator)
-git clone https://azuredevops.rafael.co.il/Almagor_V2_Collection/C2Apps/_git/AI-Team "%USERPROFILE%\ai-framework"
+# Windows
+git clone https://github.com/b-asaf/ai-framework.git "%USERPROFILE%\ai-framework"
 ```
 
 ### Step 2 — Run setup
@@ -313,11 +313,15 @@ Symlinks update automatically — no need to re-run setup after pulling.
 
 ---
 
-## Is it working? — 6 checks
+## Is it working? — 6 steps
 
-Run these after setup to confirm the framework is active.
+Run these after setup to confirm the framework is active. (These are
+independent verification steps for confirming your *install* — not the
+same numbering as the workflow "Check 1"/"Check 2"/"Check 4" that AGENTS.md
+and `commands/task.md` refer to; Step 2 below actually asks the tool to
+recite those.)
 
-**Check 1 — Wiring looks correct**
+**Step 1 — Wiring looks correct**
 
 Re-run setup to verify:
 
@@ -327,7 +331,7 @@ python setup.py
 
 All installed tools should show `OK` lines. No `FAIL` lines.
 
-**Check 2 — Tool reads the instructions**
+**Step 2 — Tool reads the instructions**
 
 Open OpenCode (or Copilot Chat in VS Code) in any project folder and ask:
 
@@ -336,7 +340,7 @@ Open OpenCode (or Copilot Chat in VS Code) in any project folder and ask:
 ✅ Pass: it describes the first-run project scan and the branch guard.
 ❌ Fail: it says it has no instructions — re-run `python setup.py` and restart the tool.
 
-**Check 3 — First-run fires on a new project**
+**Step 3 — First-run fires on a new project**
 
 Open a project that has never used this framework and say:
 
@@ -345,7 +349,7 @@ Open a project that has never used this framework and say:
 ✅ Pass: the tool asks to run a first-time project scan before doing anything.
 ❌ Fail: it skips straight to the task — skills are not wired correctly.
 
-**Check 4 — Branch guard fires**
+**Step 4 — Branch guard fires**
 
 Ask your tool:
 
@@ -354,7 +358,7 @@ Ask your tool:
 ✅ Pass: it proposes a branch name and waits for your confirmation.
 ❌ Fail: it starts writing files without asking.
 
-**Check 5 — Skills loading**
+**Step 5 — Skills loading**
 
 Ask your tool:
 
@@ -363,9 +367,9 @@ Ask your tool:
 ✅ Pass: it lists specific skills (`pattern-enforcement`, `code-standards`, `tdd`, etc.).
 ❌ Fail: it says it has no skills — verify the skills symlink exists.
 
-**Check 6 — The push gate is actually enforced, not just instructed**
+**Step 6 — The push gate is actually enforced, not just instructed**
 
-This is the one check that doesn't involve the AI tool at all — it confirms `build-verify` is a real git hook, not just an instruction an agent could skip.
+This is the one step that doesn't involve the AI tool at all — it confirms `build-verify` is a real git hook, not just an instruction an agent could skip.
 
 ```bash
 cat .git/hooks/pre-push   # should contain build-verify.sh logic, not just branch protection
@@ -441,13 +445,13 @@ Make sure your own working tree is clean first so nothing of yours leaks into th
 ## Repo structure
 
 ```
-AGENTS.md                   ← behavior rules (13 rules, XML-tagged) — every tool reads this
+AGENTS.md                   ← behavior rules (14 rules, XML-tagged) — every tool reads this
 opencode.json               ← OpenCode global config (model: sonnet-4-6, permissions)
 
-agents/                     ← 16 agent definitions (each has model: field for cost tiering)
-skills/                     ← 41 skill folders (each has ## Quick reference section)
+agents/                     ← 15 agent definitions (each has model: field for cost tiering)
+skills/                     ← 42 skill folders (most have a ## Quick reference section)
 commands/                   ← slash commands (/task, /review, /first-run, /handoff)
-hooks/                      ← two unrelated kinds, same folder: git hooks (pre-commit, commit-msg, pre-push,     build-verify.sh, install-hooks.sh — wired via git init.templateDir, fire on git events) + session-end.js (Claude Code's own Stop-event hook, wired via ~/.claude/hooks/, fires on session end)
+hooks/                      ← two unrelated kinds, same folder: git hooks (pre-commit, commit-msg, pre-push, build-verify.sh, install-hooks.sh — wired via git init.templateDir, fire on git events) + session-end.js (Claude Code's own Stop-event hook, wired via ~/.claude/hooks/, fires on session end)
 scripts/                    ← graphify-smart-viz.sh (node-count-aware graph visualization)
 
 instructions/

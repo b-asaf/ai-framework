@@ -531,18 +531,24 @@ def add_git_template():
     try:
         template_hooks = template_dir / "hooks"
         template_hooks.mkdir(parents=True, exist_ok=True)
-        # Symlink each hook into the template dir — NOT a copy. git's
-        # init.templateDir preserves symlinks when it populates a new
-        # repo's .git/hooks/, so hooks/ stays the single source of truth;
-        # git-template/hooks/ is just pointers into it (and is .gitignored,
-        # since it's generated). Editing hooks/pre-push takes effect on the
-        # next `git push` everywhere, no re-run of setup.py needed.
+        # Hard-link each hook into the template dir — NOT a symlink, NOT a
+        # copy. A hard link is the same inode/bytes as hooks/*, so hooks/
+        # stays the single source of truth with zero drift (editing
+        # hooks/pre-push updates the template instantly, no re-run of
+        # setup.py needed) — but unlike a symlink, git.exe sees it as an
+        # ordinary file. That matters because git's init.templateDir
+        # recreates whatever it finds in the template dir on the *new*
+        # repo: a symlink there means every `git clone`, on every
+        # developer's machine, needs Developer Mode/admin AND working
+        # symlink support inside git.exe's own MSYS layer — not something
+        # we can assume, and it breaks clone with
+        # "fatal: cannot symlink ...: Function not implemented" the moment
+        # it isn't there. A hard link just gets copied like any other
+        # file, so cloning never needs any special privilege.
         # build-verify.sh is linked here too (not in a separate scripts/
         # dir) specifically so it's co-located with pre-push, which finds
         # it via "$(dirname "$0")" at runtime — works in any project,
         # regardless of where ai-framework itself is installed on disk.
-        # make_link() chmods through the symlink onto hooks/* itself, so
-        # this is also what keeps the source scripts executable.
         linked = 0
         for hook_name in ("pre-commit", "commit-msg", "pre-push", "build-verify.sh"):
             src = hooks_src / hook_name
@@ -550,8 +556,16 @@ def add_git_template():
                 warn(f"hooks/{hook_name} not found — not included in template")
                 continue
             dst = template_hooks / hook_name
-            make_link(dst, src, "file")
+            remove_existing(dst)
             src.chmod(src.stat().st_mode | 0o111)  # ensure executable at the source
+            try:
+                os.link(src, dst)  # hard link: same file, zero privilege needed
+            except OSError as exc:
+                # Cross-device (git-template/ and hooks/ on different
+                # volumes) or a filesystem without hard-link support —
+                # fall back to a plain copy rather than fail setup.
+                shutil.copy2(src, dst)
+                info(f"copied (hard link unavailable: {exc.strerror or exc}): {hook_name}")
             linked += 1
         subprocess.run(
             ["git", "config", "--global", "init.templateDir", str(template_dir)],
@@ -562,6 +576,43 @@ def add_git_template():
         info("For existing repos: cd your-repo && git init  (safe, just refreshes hooks)")
     except Exception as exc:
         warn(f"Could not set git templateDir: {exc}")
+
+def uninstall_git_template():
+    """Cleanly undo add_git_template(). Run this — not a manual `rmdir` —
+    before deleting or moving the ai-framework folder. `git config
+    init.templateDir` is a global, persistent setting: if git-template/ is
+    removed but the config still points at it, EVERY future `git clone` or
+    `git init` on this machine, on ANY project, prints
+      warning: templates not found in <path>
+    forever, whether or not that project has anything to do with
+    ai-framework. This unsets the config (only if it's still pointing at
+    our template dir — never touches it if you've since pointed
+    init.templateDir elsewhere) and removes the folder.
+    Already-cloned repos are unaffected: their hooks are already sitting
+    in their own .git/hooks/, independent of this config.
+    """
+    bold("Removing git hook template...")
+    template_dir = REPO / "git-template"
+    current = subprocess.run(
+        ["git", "config", "--global", "--get", "init.templateDir"],
+        capture_output=True, text=True
+    ).stdout.strip()
+    if current and Path(current).resolve() == template_dir.resolve():
+        subprocess.run(["git", "config", "--global", "--unset", "init.templateDir"], check=True)
+        ok("git config --global init.templateDir unset")
+    elif current:
+        warn(f"init.templateDir points elsewhere ({current}) — left it alone")
+    else:
+        info("init.templateDir was not set — nothing to unset")
+    if template_dir.exists():
+        shutil.rmtree(template_dir)
+        ok(f"removed {template_dir}")
+    else:
+        info(f"{template_dir} already gone")
+    print()
+    info("New `git clone`/`git init` on this machine will no longer install hooks.")
+    info("Already-cloned repos keep the hooks they already have.")
+    print()
 
 # ── Token Optimizer ────────────────────────────────────────────────────────────
 
@@ -590,6 +641,10 @@ def install_token_optimizer(det):
                     info("token-optimizer: Windows — use Claude Code plugin marketplace")
             except (subprocess.CalledProcessError, FileNotFoundError) as exc:
                 warn(f"token-optimizer/claude install failed: {exc}")
+                _need_action(
+                    "token-optimizer/claude not installed",
+                    f"Install manually: git clone {TOKEN_OPTIMIZER_REPO} <path> && bash <path>/install.sh",
+                )
     if det.get("opencode"):
         info("token-optimizer/opencode: add 'token-optimizer-opencode' to opencode.json plugins")
 
@@ -604,57 +659,11 @@ def audit_token_optimizer(det):
     info("  In Claude Code: /token-optimizer")
 
 # ── Token monitoring ─────────────────────────────────────────────────────────
-# Two tools, two different jobs — see monitoring/README.md for the full
-# distinction. ccusage covers cross-tool token/cost dashboards; opencode-usage
-# is what monitoring/model-policy-check.js reads for OpenCode-subagent-level
-# policy checks that ccusage's schema doesn't have data for.
-
-def install_opencode_usage(det):
-    if not det.get("opencode"):
-        return
-    bold("Setting up per-agent policy data (opencode-usage)...")
-    if shutil.which("opencode-usage"):
-        ok("opencode-usage already installed")
-        return True
-    installer = shutil.which("uv") or shutil.which("pip3") or shutil.which("pip")
-    if not installer:
-        warn("Neither uv nor pip found — cannot install opencode-usage")
-        _need_action(
-            "Model-policy checking not installed",
-            "opencode-usage needs uv or pip. Install one, then run:",
-            "  uv tool install opencode-usage   (recommended)",
-            "  pip install opencode-usage",
-        )
-        return False
-    try:
-        installer_name = Path(installer).name.lower()
-        if installer_name in ("uv", "uv.exe"):
-            subprocess.run([installer, "tool", "install", "opencode-usage"],
-                           check=True, capture_output=True)
-        else:
-            subprocess.run([installer, "install", "--user", "opencode-usage"],
-                           check=True, capture_output=True)
-
-        if shutil.which("opencode-usage"):
-            ok("opencode-usage installed")
-            info("  Used by monitoring/model-policy-check.js — see monitoring/README.md")
-            return True
-
-        warn("opencode-usage installed but could not run after installation")
-        return False
-    except subprocess.CalledProcessError as exc:
-        warn(f"opencode-usage install failed: {exc}")
-        _need_action(
-            "Model-policy checking not installed",
-            "Install manually: uv tool install opencode-usage",
-        )
-        return False
+# See monitoring/README.md — ccusage covers cross-tool token/cost dashboards.
 
 def install_ccusage(det):
     """Cross-tool token/cost dashboard — Claude Code, Codex, OpenCode, Gemini CLI,
-    Copilot CLI, all in one command. Complements opencode-usage (above), which
-    stays for the OpenCode-subagent-level policy check that ccusage's schema
-    doesn't cover — see monitoring/README.md for the distinction."""
+    Copilot CLI, all in one command. See monitoring/README.md."""
     bold("Checking token/cost dashboard (ccusage)...")
     if shutil.which("ccusage"):
         ok("ccusage already installed")
@@ -703,11 +712,11 @@ def install_graphify():
     try:
         installer_name = Path(installer).name.lower()
         if installer_name in ("uv", "uv.exe"):
-            subprocess.run([installer, "tool", "install", "graphifyy"],
-                           check=True, capture_output=True)
+            install_result = subprocess.run([installer, "tool", "install", "graphifyy"],
+                                             check=True, capture_output=True, text=True)
         else:
-            subprocess.run([installer, "install", "graphifyy"],
-                           check=True, capture_output=True)
+            install_result = subprocess.run([installer, "install", "graphifyy"],
+                                             check=True, capture_output=True, text=True)
 
         if shutil.which("graphify"):
             r = subprocess.run(["graphify", "--version"],
@@ -717,9 +726,35 @@ def install_graphify():
                 return True
 
         warn("Graphify installed but could not run after installation")
+        # uv installs to a per-user tool dir that isn't always on PATH yet —
+        # uv itself usually says so directly. Show it instead of guessing.
+        uv_output = (install_result.stdout + install_result.stderr).strip()
+        if uv_output:
+            info("uv said:")
+            for line in uv_output.splitlines():
+                info(f"  {line}")
+        _need_action(
+            "Graphify installed but not runnable",
+            "uv installed it, but 'graphify --version' still fails — almost",
+            "always a PATH issue (see \"uv said:\" output above, if any).",
+            "1. Run 'uv tool update-shell' to register uv's tool bin dir on PATH.",
+            "2. A NEW cmd/PowerShell window is often not enough on Windows —",
+            "   setx/uv update the registry but an already-running Explorer/shell",
+            "   session keeps its old PATH. Log off and back on (or reboot), or",
+            "   open System Properties -> Environment Variables -> OK to force a refresh.",
+            "3. Confirm the binary directly: run 'uv tool dir --bin' to find it,",
+            "   then '<that dir>\\graphify.exe --version' (Windows) to test it in isolation.",
+            "4. Once 'graphify --version' works in a fresh shell: re-run 'python setup.py'",
+            "   (not just --verify) — this both marks it installed AND registers the",
+            "   /graphify skill with each of your assistants (OpenCode, Claude Code, etc).",
+        )
         return False
     except subprocess.CalledProcessError as exc:
         warn(f"Graphify install failed: {exc}")
+        if exc.stderr:
+            info("uv said:")
+            for line in exc.stderr.strip().splitlines():
+                info(f"  {line}")
         _need_action(
             "Graphify not installed",
             "Install manually: uv tool install graphifyy",
@@ -751,6 +786,10 @@ def wire_graphify(det):
             installed_any = True
         except (subprocess.CalledProcessError, FileNotFoundError) as exc:
             warn(f"graphify/{tool} failed: {exc}")
+            _need_action(
+                f"Graphify not wired for {tool}",
+                f"Install manually: graphify install" + (f" --platform {flag}" if flag else ""),
+            )
     if not installed_any:
         return
     info("Graphify CLI registration complete (skill available globally).")
@@ -819,6 +858,36 @@ def verify_only():
     check_gh()
     print()
 
+    bold("Graphify status:")
+    if shutil.which("graphify"):
+        r = subprocess.run(["graphify", "--version"], capture_output=True, text=True)
+        if r.returncode == 0:
+            ok(f"graphify runnable: {r.stdout.strip()}")
+        else:
+            warn("graphify found on PATH but 'graphify --version' fails")
+            _need_action(
+                "Graphify installed but not runnable",
+                "Re-run: python setup.py",
+            )
+    else:
+        warn("graphify not found — run 'python setup.py' to install")
+        _need_action(
+            "Graphify not installed",
+            "Run: python setup.py",
+        )
+    print()
+
+    template_dir = REPO / "git-template"
+    current = subprocess.run(
+        ["git", "config", "--global", "--get", "init.templateDir"],
+        capture_output=True, text=True
+    ).stdout.strip()
+    if current and Path(current).resolve() == template_dir.resolve() and not template_dir.exists():
+        warn(f"git init.templateDir points at {template_dir}, which doesn't exist")
+        info("Every 'git clone'/'git init' on this machine warns until this is fixed")
+        info("Fix: 'python setup.py' to restore it, or 'python setup.py --uninstall' to remove the config")
+    print()
+
     print_action_required()
     print()
 
@@ -827,6 +896,9 @@ def verify_only():
 def main():
     if "--verify" in sys.argv:
         verify_only()
+        return
+    if "--uninstall" in sys.argv:
+        uninstall_git_template()
         return
 
     print()
@@ -893,10 +965,8 @@ def main():
         wire_graphify(det)
     print()
 
-    # 7. Token monitoring — cross-tool dashboard + OpenCode policy-check data
+    # 7. Token monitoring
     install_ccusage(det)
-    print()
-    install_opencode_usage(det)
     print()
 
     # 8. GitHub CLI (detect only — see check_gh docstring)
