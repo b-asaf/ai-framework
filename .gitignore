@@ -2,5 +2,6 @@
 /git-template/
 .symlink-test-src
 .symlink-test-lnk
-/skills/graphify/
+/skills/graphify/references/
+/skills/graphify/.graphify_version
 /.opencode/
