@@ -68,7 +68,17 @@ Review before starting feature work. No changes made automatically.
 
 ## Step 7 — Update all files
 
-- **`project-overview`** — populate all sections, replace all `[XXX]`
+- `project-overview` — populate all sections, replace all `[XXX]`. **Write the
+  populated content to the project's own repo** (e.g. `docs/project-overview/`,
+  mirroring the `sub/` folder structure), **never to the shared ai-framework skills
+  location.** The shared `skills/project-overview/` stays a generic, unpopulated
+  template for every project — see decisions/DEC-003 for why this matters.
+- **Before writing:** confirm you are populating the copy inside the project's own repo,
+  not the shared framework install. If `skills/project-overview/SKILL.md`'s Status line
+  ever shows a specific project name (not `[UNPOPULATED]`), STOP — this means a previous
+  run wrote project data into the shared repo by mistake, and every other project opened
+  through this install is now seeing that data instead of triggering its own first-run
+  analysis. Reset it to the template state and escalate before proceeding.
 - **`CONTEXT.md`** — load `domain-model` skill, create with top 5-10 domain terms discovered
 - **`_opencode.json`** — replace `[XXX]`, apply topology changes (confirm with developer first)
 - **`workflow-guide.md`** — append `## Project-specific notes` only if genuinely needed
