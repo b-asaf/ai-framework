@@ -13,9 +13,12 @@
 ## ⚡ DO THIS FIRST — before anything else
 
 <check id="1" name="first-run">
-Read the project's `project-overview` skill file (`sub/stack.md` first).
+Read the **current project's own** `docs/project-overview/stack.md` (not the shared
+`skills/project-overview/` template — that stays generic across every project; see
+`decisions/DEC-003`).
 
-If it is empty, missing, or contains `[XXX]` placeholders — **stop. Say this:**
+If `docs/project-overview/` is missing, or `stack.md` is empty or contains `[XXX]`
+placeholders — **stop. Say this:**
 
 > "I need to run first-run analysis before I can help. This will scan the
 > codebase and set up the framework. Shall I proceed?"
@@ -98,7 +101,9 @@ Any dependency add / remove / update — propose and wait for explicit approval.
 </rule>
 
 <rule id="4" name="first-run-mandatory">
-`project-overview` contains `[XXX]` or is empty → run first-run analysis first.
+The current project's own `docs/project-overview/stack.md` contains `[XXX]` or is
+missing → run first-run analysis first. (Not the shared `skills/project-overview/`
+template — see Check 1 and `decisions/DEC-003`.)
 </rule>
 
 <rule id="5" name="show-before-writing">

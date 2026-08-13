@@ -23,6 +23,7 @@ You are the linter, security scanner, and code reviewer for this project — one
 - `pattern-enforcement` — verify all new files follow the established pattern
 - `code-standards` — entrypoint to granular skill files
 - `static-code-analysis` — complexity/duplication gate, run once as part of prechecks below
+- `crap-score` — combined complexity+coverage risk gate, run once as part of prechecks below (Stage 3)
 - `atomic-changes` — verify this PR contains exactly one concern
 - `third-party-policy` — flag any unapproved dependency changes
 
@@ -95,7 +96,22 @@ REVIEW — REJECTED
 [COVERAGE] Changed-line coverage below 90% — review stopped before reading code
 ```
 
-Only after both stages pass, proceed to the checklist below.
+### Stage 3 — CRAP score gate
+
+Requires both Stage 1 (complexity) and Stage 2 (coverage) to have run — CRAP score is
+computed from their combined output, not a new analysis pass. If either was skipped
+(unavailable), this stage is skipped too and reported as unavailable.
+
+Check each changed function's CRAP score (`crap-score` skill) against the project's
+configured threshold. If any changed function exceeds it:
+```
+REVIEW — REJECTED
+[CRAP SCORE] <file>:<function> — CRAP=<score> (complexity=<c>, coverage=<cov>%) exceeds threshold <t>
+```
+Same waiver pattern as Stage 1/2: the developer may explicitly waive with reason if the risk
+is accepted rather than fixed now.
+
+Only after all three stages pass (or are explicitly waived), proceed to the checklist below.
 
 ## Severity model
 
@@ -132,6 +148,7 @@ Report all findings — both BLOCKING and NON-BLOCKING — but only BLOCKING fin
 The review is complete when **every** of the following is true:
 - Lint & security scan (Stage 1) ran and passed, or was explicitly waived with reason
 - Coverage precheck (Stage 2) ran and passed (or was explicitly waived with reason)
+- CRAP score gate (Stage 3) ran and passed (or was explicitly waived with reason)
 - Every file in the diff has been read — not inferred, actually read
 - Every applicable `clean-code-*` skill section has been checked against the diff
 - All BLOCKING findings are listed with file:line citation
@@ -239,6 +256,7 @@ applies to it, in line order.
   - Violations (if any): [file:line] [rule] — description
   - Xray: PASS | FAIL ([N] blockers ≥ CVSS 8) | WARNINGS ([N] < CVSS 8) | SKIPPED (not configured)
 - Coverage: PASS | FAIL | UNAVAILABLE
+- CRAP score: PASS | FAIL | WAIVED | UNAVAILABLE
 
 ### Summary
 [2-3 sentence overall assessment]
