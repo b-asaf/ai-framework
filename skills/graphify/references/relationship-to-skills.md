@@ -1,0 +1,7 @@
+# Relationship to other skills
+
+- **`zoom-out`** — runs a manual read sequence for orientation. If graphify is available, its Step 1–3 (root structure, entry points, module boundaries) should be answered from `graphify-out/GRAPH_REPORT.md` and `graphify explain` first, falling back to manual reads only for what the graph doesn't cover.
+- **`first-run-analysis`** — Step 4 (convention detection) currently scans 10–20 representative files. When graphify is available, seed that scan from the graph's cross-file `calls`/`imports`/`inherits` edges instead of sampling, then confirm patterns against the actual files found. Graphify does not replace this step's LLM judgment (is the convention good, is it consistent, does it belong in `docs/refactoring-plan.md`) — it only replaces how the input is gathered. Step 7 also wires graphify's install/hook setup automatically — see `references/staying-in-sync.md` and `decisions/DEC-005`.
+- **`pattern-enforcement`** — before proposing where a new file/class/component goes, check `graphify query "similar to X"` for existing analogous structures instead of relying on memory of the last few files read.
+
+Do not duplicate content between graphify's structural output and skill-authored narrative docs (`project-overview`, `CONTEXT.md`). Graphify answers "what connects to what"; `project-overview`/`CONTEXT.md` answer "why" and business rules. Link to graphify queries from those docs rather than re-describing the graph in prose.

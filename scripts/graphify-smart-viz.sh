@@ -1,82 +1,137 @@
-#!/bin/sh
-# graphify-smart-viz.sh
-# ----------------------
-# graphify has no built-in node-count threshold for skipping HTML generation —
-# graph.html just becomes unusably large/slow past ~5000 nodes. This wrapper
-# adds that threshold automatically, matching graphify's own documented fix
-# for this exact problem (see its README "Troubleshooting" section):
-#
-#   graphify cluster-only <path> --no-viz
-#
-#   1. Extract (cheap, always safe, never skipped)
-#   2. Count nodes in the resulting graph.json
-#   3. Always run clustering (community labels + GRAPH_REPORT.md — needed
-#      regardless of repo size), passing --no-viz only when over the
-#      threshold so the HTML is the only thing skipped, not the report
-#
-# Usage:
-#   scripts/graphify-smart-viz.sh <target-dir> [extra graphify args...]
-#
-# Example:
-#   scripts/graphify-smart-viz.sh .
-#   scripts/graphify-smart-viz.sh ./my-service --update
+#!/usr/bin/env python3
+"""
+graphify_smart_viz.py
+======================
+Cross-platform replacement for graphify-smart-viz.sh — same safety behavior,
+but works natively on Windows (no bash/WSL required, which the shell version
+needs and which may be blocked by corporate policy — see decisions/DEC-004).
 
-set -eu
+What this does, in order:
+  1. Detect whether any LLM API key is set in the environment. If not,
+     automatically add --code-only (skips the 26-doc-file semantic
+     extraction step that would otherwise fail with "no LLM API key found").
+  2. Extract (cheap, always safe, never skipped). Respects --out if given,
+     matching graphify's own real flag (confirmed via `graphify --help`):
+     "--out DIR   output dir (default: <path>); writes <DIR>/graphify-out/"
+  3. Count nodes in the resulting graph.json — read from the correct
+     location whether or not --out was used (this is the part the naive
+     shell-script port would get wrong: cluster-only has its OWN default
+     of <path>/graphify-out/graph.json, which does NOT know about a custom
+     --out used during extract — so --graph is always passed explicitly
+     below, never left to cluster-only's own default, once --out is used).
+  4. Always run clustering (community labels + GRAPH_REPORT.md — needed
+     regardless of repo size), passing --no-viz only when over the node
+     threshold, so the HTML is the only thing skipped, not the report.
 
-TARGET="${1:-.}"
-shift || true
-EXTRA_ARGS="$@"
+Usage:
+    python graphify_smart_viz.py <target-dir> [--out <output-dir>] [extra graphify args...]
 
-# Override with GRAPHIFY_VIZ_NODE_LIMIT=8000 scripts/graphify-smart-viz.sh . etc.
-NODE_LIMIT="${GRAPHIFY_VIZ_NODE_LIMIT:-5000}"
+Examples:
+    python graphify_smart_viz.py .
+    python graphify_smart_viz.py [D:\\project-name\\project-backend]
+    python graphify_smart_viz.py . --out D:\\graphify-data\\project-backend
+    python graphify_smart_viz.py . --update
 
-if ! command -v graphify >/dev/null 2>&1; then
-  echo "graphify not found on PATH — skipping (see skills/graphify/SKILL.md)"
-  exit 0
-fi
+Override the node threshold: set GRAPHIFY_VIZ_NODE_LIMIT=8000 in the environment.
+"""
 
-echo "graphify: extracting $TARGET ..."
-graphify extract "$TARGET" $EXTRA_ARGS
+import json
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
 
-GRAPH_JSON="graphify-out/graph.json"
-if [ ! -f "$GRAPH_JSON" ]; then
-  # Some invocations write into a target-relative graphify-out/ — check there too
-  ALT="$TARGET/graphify-out/graph.json"
-  if [ -f "$ALT" ]; then
-    GRAPH_JSON="$ALT"
-  fi
-fi
+NODE_LIMIT = int(os.environ.get("GRAPHIFY_VIZ_NODE_LIMIT", "5000"))
 
-if [ ! -f "$GRAPH_JSON" ]; then
-  echo "graphify: could not locate graph.json after extraction — skipping viz step"
-  exit 0
-fi
+# Every env var graphify itself checks for semantic extraction (per its real
+# error message and --extract help: "gemini|kimi|claude|openai|deepseek|ollama
+# (default: whichever API key is set)"). If none of these are set, --code-only
+# is added automatically rather than letting the run fail partway through.
+LLM_KEY_ENV_VARS = [
+    "GEMINI_API_KEY", "GOOGLE_API_KEY", "MOONSHOT_API_KEY",
+    "ANTHROPIC_API_KEY", "OPENAI_API_KEY", "DEEPSEEK_API_KEY",
+]
 
-NODE_COUNT=$(python3 - "$GRAPH_JSON" <<'PY'
-import json, sys
-try:
-    with open(sys.argv[1]) as f:
-        data = json.load(f)
-    nodes = data.get("nodes", [])
-    print(len(nodes))
-except Exception:
-    print(-1)
-PY
-)
 
-if [ "$NODE_COUNT" -lt 0 ]; then
-  echo "graphify: could not parse node count from $GRAPH_JSON — skipping viz step"
-  exit 0
-fi
+def has_llm_key():
+    return any(os.environ.get(v) for v in LLM_KEY_ENV_VARS)
 
-echo "graphify: $NODE_COUNT nodes"
 
-if [ "$NODE_COUNT" -le "$NODE_LIMIT" ]; then
-  echo "graphify: under limit ($NODE_LIMIT) — generating HTML visualization"
-  graphify cluster-only "$TARGET" $EXTRA_ARGS
-else
-  echo "graphify: $NODE_COUNT nodes exceeds limit ($NODE_LIMIT) — skipping HTML only"
-  echo "  (GRAPH_REPORT.md and graph.json are still fully generated)"
-  graphify cluster-only "$TARGET" --no-viz $EXTRA_ARGS
-  echo "  graphify query \"...\"   graphify path \"A\" \"B\"   graphify explain \"X\""
-fi
+def extract_out_dir(args):
+    """Return the value passed to --out, if present, else None."""
+    if "--out" in args:
+        idx = args.index("--out")
+        if idx + 1 < len(args):
+            return args[idx + 1]
+    return None
+
+
+def main():
+    args = sys.argv[1:]
+    if not args:
+        print("Usage: python graphify_smart_viz.py <target-dir> [--out <output-dir>] [extra graphify args...]")
+        sys.exit(1)
+
+    target = args[0]
+    extra_args = args[1:]
+
+    if not shutil.which("graphify"):
+        print("graphify not found on PATH — skipping (see skills/graphify/SKILL.md)")
+        sys.exit(0)
+
+    # --- Step 1: decide --code-only automatically ---
+    if not has_llm_key() and "--code-only" not in extra_args:
+        print("No LLM API key found in environment — adding --code-only "
+              "(code call/import graph only, no semantic extraction of docs/images).")
+        extra_args = extra_args + ["--code-only"]
+
+    # --- Step 2: extract ---
+    print(f"graphify: extracting {target} ...")
+    subprocess.run(["graphify", "extract", target] + extra_args, check=True)
+
+    # --- Step 3: locate graph.json correctly, whether --out was used or not ---
+    out_dir = extract_out_dir(extra_args)
+    base_dir = Path(out_dir) if out_dir else Path(target)
+    graph_json = base_dir / "graphify-out" / "graph.json"
+
+    node_count = None
+    if graph_json.exists():
+        try:
+            with open(graph_json, encoding="utf-8") as f:
+                data = json.load(f)
+            node_count = len(data.get("nodes", []))
+        except (json.JSONDecodeError, OSError) as exc:
+            print(f"warning: could not read node count from {graph_json}: {exc}")
+    else:
+        print(f"warning: expected graph.json at {graph_json} but it was not found")
+
+    # --- Step 4: always cluster; skip HTML viz only past the threshold ---
+    # --graph is always passed explicitly — never relying on cluster-only's
+    # own default, since that default does not know about a custom --out.
+    cluster_cmd = ["graphify", "cluster-only", target, "--graph", str(graph_json)]
+    if node_count is not None:
+        print(f"graph has {node_count} nodes (limit: {NODE_LIMIT})")
+        if node_count > NODE_LIMIT:
+            print("over threshold — generating GRAPH_REPORT.md, skipping HTML viz")
+            cluster_cmd.append("--no-viz")
+        else:
+            print("under threshold — generating GRAPH_REPORT.md and graph.html")
+    else:
+        print("could not determine node count — running cluster-only without --no-viz")
+
+    subprocess.run(cluster_cmd, check=True)
+
+    report = base_dir / "graphify-out" / "GRAPH_REPORT.md"
+    if report.exists():
+        print(f"Done. Report: {report}")
+        if node_count is not None and node_count <= NODE_LIMIT:
+            html = base_dir / "graphify-out" / "graph.html"
+            if html.exists():
+                print(f"Visualization: {html}")
+    else:
+        print("warning: GRAPH_REPORT.md was not produced — check graphify's own output above")
+
+
+if __name__ == "__main__":
+    main()

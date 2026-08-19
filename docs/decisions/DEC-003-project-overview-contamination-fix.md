@@ -4,14 +4,14 @@
 **Status:** accepted
 
 ## Context
-Running `/first-run` in `garud-backend` populated `skills/project-overview/` (SKILL.md's
+Running `/first-run` in real project populated `skills/project-overview/` (SKILL.md's
 status line, and all five `sub/*.md` files) with real, project-specific data — inside the
-shared `ai-framework` repo itself, not inside `garud-backend`'s own repo. Since
+shared `ai-framework` repo itself, not inside real project's own repo. Since
 `skills/project-overview/` is wired globally via `setup.py`'s directory-level symlink/
 junction (`~/.config/opencode/skills` -> `ai-framework/skills`), this data becomes visible
-to every project opened through this install, not just `garud-backend`. Confirmed by direct
-inspection: `SKILL.md`'s Status line read "POPULATED... (Garud monorepo)," and every
-`sub/*.md` file contained real Garud/BTA/P8I stack, topology, pattern, and tooling details.
+to every project opened through this install, not just real project. Confirmed by direct
+inspection: `SKILL.md`'s Status line read "POPULATED... (real project monorepo)," and every
+`sub/*.md` file contained real real projects stack, topology, pattern, and tooling details.
 
 Root cause: `first-run-analysis`'s Step 7 instruction for `.ai-framework.json` explicitly
 says "write to the root of each individual repo... not the shared skills location." The
@@ -19,7 +19,7 @@ instruction for `project-overview`, immediately below it, has no equivalent clau
 architecturally incomplete, and the agent followed it literally.
 
 Scope check: `opencode.json` and `.opencode/opencode.json` (the actual global agent config)
-were confirmed clean of any Garud references. Git hooks were confirmed to never be
+were confirmed clean of any real project references. Git hooks were confirmed to never be
 committed into any project repo — `setup.py`'s `add_git_template()` only sets
 `git config --global init.templateDir`, a machine-local setting; hooks land in each
 developer's own untracked `.git/hooks/` on `git init`/`git clone`, never in tracked files.
@@ -28,7 +28,7 @@ framework's hooks in general — the contamination was fully contained to the sh
 `project-overview` skill content.
 
 ## Decision
-1. `garud-backend`'s real project-overview data is relocated to `docs/project-overview/`
+1. Real project-overview data is relocated to `docs/project-overview/`
    inside its own repo (matching the already-established pattern of `docs/refactoring-
    plan.md` and `.ai-framework.json` living in that project's own `docs/`).
 2. The shared `ai-framework` copy (`skills/project-overview/SKILL.md` and all five
