@@ -28,8 +28,8 @@ Usage:
 
 Examples:
     python graphify_smart_viz.py .
-    python graphify_smart_viz.py D:\\garud\\garud-backend
-    python graphify_smart_viz.py . --out D:\\graphify-data\\garud-backend
+    python graphify_smart_viz.py [D:\\project-name\\project-backend]
+    python graphify_smart_viz.py . --out D:\\graphify-data\\project-backend
     python graphify_smart_viz.py . --update
 
 Override the node threshold: set GRAPHIFY_VIZ_NODE_LIMIT=8000 in the environment.

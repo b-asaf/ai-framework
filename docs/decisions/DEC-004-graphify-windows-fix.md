@@ -4,7 +4,7 @@
 **Status:** accepted
 
 ## Context
-Running graphify in `garud-backend` surfaced two real problems, both confirmed by direct
+Running graphify in real project surfaced two real problems, both confirmed by direct
 evidence, not assumption:
 
 1. `graphify extract .` failed with "no LLM API key found" — the corporate environment

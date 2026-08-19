@@ -41,7 +41,7 @@ Two gaps found through direct use, not design review:
    (graph + nudge + hooks) from one `/first-run` pass, with nothing left implicit.
 
 ## Consequences
-- Any project already populated before this fix (e.g. `garud-backend`, `bta-backend`) does
+- Any project already populated before this fix (e.g. real projects) does
   not retroactively get the nudge/hooks — the manual commands documented in
   `references/staying-in-sync.md`'s "If a project predates the DEC-005 automation" section
   still apply to those until run once by hand.
