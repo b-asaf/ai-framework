@@ -9,6 +9,8 @@ Changes are made on `develop` branch and merged to `main` when stable.
 
 ## Unreleased (develop)
 
+## v1.8.1 — 2026-08-30 — opencode-usage removed, pre-push reflog-evidence fix (DEC-010)
+
 - **Removed `opencode-usage` and `monitoring/model-policy-check.js`.** The
   policy check was the only consumer of `opencode-usage` data, and
   `opencode-usage` was the only reason that dependency existed — removing
@@ -21,6 +23,23 @@ Changes are made on `develop` branch and merged to `main` when stable.
   on networks with corporate TLS-inspection proxies (`uv`'s bundled
   cert store doesn't trust an intercepting proxy's CA by default), which is
   what surfaced this dependency was worth cutting rather than working around.
+- **Fixed reflog-evidence resolution in `hooks/pre-push`'s diff-base
+  detection (DEC-010).** Two bugs found via smoke test on `bta-frontend`:
+  (1) reading the target branch's own reflog for a `Created from` entry
+  silently failed for the common `git checkout -b <name>` case with no
+  explicit start-point, which records the literal string `Created from
+  HEAD` and ends up diffing a branch against itself (always 0 changed
+  lines, no error) rather than against its real base; (2) the fix for that
+  used `/` as a `sed` delimiter, which broke on any branch name containing
+  `/` (e.g. `feature/x`, `test/reflog-base2` — a common naming convention).
+  Now reads `HEAD`'s own reflog for `checkout: moving from <X> to
+  <branch>`, which reliably names the real source regardless of start-point,
+  and uses `#` as the sed delimiter. Falls through to the existing honest-
+  skip message if no reflog evidence exists at all — the DEC-009
+  never-guess principle is unchanged. Known remaining limitation, not
+  fixed: a branch name containing regex metacharacters could still break
+  the `grep -E` match; flagged for a future DEC if it surfaces. See
+  `docs/decisions/DEC-010-reflog-evidence-fix.md`.
 
 ## v1.8.0 — critical CRLF fix, folder reorg, graphify sync gaps closed
 
