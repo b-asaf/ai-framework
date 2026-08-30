@@ -1,54 +1,27 @@
 #!/bin/sh
-# pre-push: prevent direct push to protected branches, then run the
-# deterministic build-verify gate (lint/format/test) before the push
-# completes.
+# pre-push: prevent direct push to protected branches, enforce the atomic-
+# changes diff-size limit, then run the deterministic build-verify gate
+# (lint/format/test) before the push completes.
 #
-# This is the structural half of build-verify (see skills/build-verify/
-# SKILL.md) — the agent-side loop is instruction-level (an agent could in
-# theory skip or misreport it); this hook is not. It runs on your actual
-# `git push`, outside any agent's control, using the project's own
-# .ai-framework.json commands file. Missing file or missing commands ->
-# skipped with a note, not a hard failure, so projects that haven't run
-# first-run analysis yet aren't blocked.
+# Protected branches and diff-size logic implement DEC-007 and DEC-009.
+# Mutation testing (DEC-006/DEC-008) is a separate, agent-side gate in
+# code-reviewer.md Stage 4 and is intentionally NOT part of this hook.
 #
-# Escape hatch for emergencies: SKIP_BUILD_VERIFY=1 git push
-# (branch protection above still applies regardless).
+# DEC-009's core point: "protected branches" and "diff base" are two
+# distinct questions, resolved independently and deterministically.
+#   - Protected branches = origin/HEAD (always) + .ai-framework.json's
+#     "protectedBranches" array (additive). Never a hardcoded guess list.
+#   - Diff base = explicit "diffBaseBranch" config, OR an unambiguous
+#     git reflog "Created from" entry. If neither exists: skip honestly,
+#     never guess (Principle 4 - determinism where possible, else skip/ask).
+#
+# Escape hatches for emergencies:
+#   SKIP_DIFF_SIZE_CHECK=1 git push   (diff-size check only)
+#   SKIP_BUILD_VERIFY=1 git push      (build-verify only)
+# (branch protection above still applies regardless of either)
 
-PROTECTED="main master develop"
-while read local_ref local_sha remote_ref remote_sha; do
-  BRANCH=$(echo "$remote_ref" | sed 's|refs/heads/||')
-  for protected in $PROTECTED; do
-    if [ "$BRANCH" = "$protected" ]; then
-      echo ""
-      echo "❌ ERROR: Direct push to '$BRANCH' is not allowed."
-      echo "   Push to your feature branch and open a Pull Request."
-      echo ""
-      exit 1
-    fi
-  done
-done
-
-if [ "${SKIP_BUILD_VERIFY:-}" = "1" ]; then
-  echo "⚠️  build-verify skipped (SKIP_BUILD_VERIFY=1)"
-  exit 0
-fi
-
-HOOK_DIR=$(dirname "$0")
-VERIFY_SCRIPT="$HOOK_DIR/build-verify.sh"
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
 COMMANDS_FILE="$REPO_ROOT/.ai-framework.json"
-
-if [ ! -x "$VERIFY_SCRIPT" ]; then
-  echo "ℹ️  build-verify.sh not found in hooks — skipping verify gate"
-  echo "   (re-run: python setup.py, from the ai-framework folder)"
-  exit 0
-fi
-
-if [ ! -f "$COMMANDS_FILE" ]; then
-  echo "ℹ️  .ai-framework.json not found — skipping verify gate"
-  echo "   (run first-run analysis in your agent session to generate it)"
-  exit 0
-fi
 
 json_get() {
   # Extracts "key": "value" from a flat, single-level JSON file.
@@ -56,12 +29,187 @@ json_get() {
     | sed -E 's/.*:[[:space:]]*"(.*)"/\1/'
 }
 
+json_get_array() {
+  # Extracts string entries from a flat JSON array, e.g.
+  # "protectedBranches": ["main", "temp-dev"]
+  grep -o "\"$1\"[[:space:]]*:[[:space:]]*\[[^]]*\]" "$2" 2>/dev/null \
+    | grep -o '"[^"]*"' \
+    | grep -v "^\"$1\"$" \
+    | tr -d '"'
+}
+
+# --- Protected branches: origin/HEAD + config (DEC-009) --------------------
+
+ORIGIN_DEFAULT=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||')
+
+PROTECTED=""
+[ -n "$ORIGIN_DEFAULT" ] && PROTECTED="$ORIGIN_DEFAULT"
+
+if [ -f "$COMMANDS_FILE" ]; then
+  CONFIGURED_PROTECTED=$(json_get_array protectedBranches "$COMMANDS_FILE")
+  [ -n "$CONFIGURED_PROTECTED" ] && PROTECTED="$PROTECTED $CONFIGURED_PROTECTED"
+fi
+
+if [ -z "$PROTECTED" ]; then
+  echo ""
+  echo "WARNING: could not determine protected branches (no origin/HEAD set,"
+  echo "  no \"protectedBranches\" in .ai-framework.json). Branch-protection"
+  echo "  check is being skipped this push."
+  echo "  Fix: git remote set-head origin -a"
+  echo "  or add \"protectedBranches\": [...] to .ai-framework.json."
+  echo ""
+fi
+
+while read local_ref local_sha remote_ref remote_sha; do
+  BRANCH=$(echo "$remote_ref" | sed 's|refs/heads/||')
+  for protected in $PROTECTED; do
+    if [ "$BRANCH" = "$protected" ]; then
+      echo ""
+      echo "ERROR: Direct push to '$BRANCH' is not allowed."
+      echo "  Push to your feature branch and open a Pull Request."
+      echo ""
+      exit 1
+    fi
+  done
+done
+
+# --- Diff-size backstop (atomic-changes) — DEC-007 / DEC-009 ---------------
+
+if [ "${SKIP_DIFF_SIZE_CHECK:-}" = "1" ]; then
+  echo "diff-size check skipped (SKIP_DIFF_SIZE_CHECK=1)"
+else
+  BASE_BRANCH=""
+  BASE_SOURCE=""
+
+  # 1. explicit config
+  if [ -f "$COMMANDS_FILE" ]; then
+    CONFIGURED_BASE=$(json_get diffBaseBranch "$COMMANDS_FILE")
+    if [ -n "$CONFIGURED_BASE" ]; then
+      if git rev-parse --verify --quiet "$CONFIGURED_BASE" >/dev/null 2>&1; then
+        BASE_BRANCH="$CONFIGURED_BASE"
+        BASE_SOURCE="config (diffBaseBranch)"
+      else
+        echo ""
+        echo "WARNING: diffBaseBranch \"$CONFIGURED_BASE\" in .ai-framework.json"
+        echo "  does not resolve to a real ref. Falling back to reflog evidence."
+        echo ""
+      fi
+    fi
+  fi
+
+  # 2. unambiguous reflog evidence (only if step 1 found nothing)
+  #
+  # NOTE: the branch's OWN reflog ("git reflog show <branch>") is not
+  # reliable here. Its "branch: Created from X" entry only names a real
+  # ref if `git checkout -b <name> <start-point>` was given an explicit
+  # start-point. Plain `git checkout -b <name>` (the common case) records
+  # the literal string "Created from HEAD" -- and by the time this hook
+  # runs, HEAD resolves to the new branch's own tip, so it "verifies"
+  # successfully and silently diffs the branch against itself (always 0
+  # changed lines). Found via smoke test on a plain `checkout -b`.
+  #
+  # HEAD's OWN reflog doesn't have this problem: every checkout, with or
+  # without an explicit start-point, records
+  #   "checkout: moving from <actual-source> to <new-branch>"
+  # with the real source ref. We take the OLDEST such entry for the
+  # current branch (git reflog show lists newest-first, so `tail -1` on
+  # the filtered set) as the creation point.
+  if [ -z "$BASE_BRANCH" ]; then
+    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
+    if [ -n "$CURRENT_BRANCH" ] && [ "$CURRENT_BRANCH" != "HEAD" ]; then
+      CREATION_LINE=$(git reflog show HEAD 2>/dev/null \
+        | grep -E "checkout: moving from .* to ${CURRENT_BRANCH}\$" \
+        | tail -1)
+      if [ -n "$CREATION_LINE" ]; then
+        # '#' as delimiter, not '/' -- branch names routinely contain '/'
+        # (e.g. "test/reflog-base2"), which broke a '/'-delimited sed
+        # substitution outright (found via smoke test).
+        CANDIDATE=$(echo "$CREATION_LINE" \
+          | sed -E "s#.*moving from (.*) to ${CURRENT_BRANCH}\$#\1#")
+        if [ -n "$CANDIDATE" ] && [ "$CANDIDATE" != "$CURRENT_BRANCH" ] \
+           && [ "$CANDIDATE" != "HEAD" ] \
+           && git rev-parse --verify --quiet "$CANDIDATE" >/dev/null 2>&1; then
+          BASE_BRANCH="$CANDIDATE"
+          BASE_SOURCE="reflog (HEAD 'moving from' entry)"
+        fi
+      fi
+    fi
+  fi
+
+  # 3. neither -> skip honestly, never guess
+  if [ -z "$BASE_BRANCH" ]; then
+    echo ""
+    echo "diff-size check skipped: no diffBaseBranch configured and no"
+    echo "  unambiguous reflog evidence of this branch's origin."
+    echo "  Set \"diffBaseBranch\" in .ai-framework.json to enable this check."
+    echo ""
+  else
+    MERGE_BASE=$(git merge-base "$BASE_BRANCH" HEAD 2>/dev/null)
+    if [ -z "$MERGE_BASE" ]; then
+      echo "could not compute merge-base with $BASE_BRANCH ($BASE_SOURCE) - skipping diff-size check"
+    else
+      MAX_LINES=400
+      if [ -f "$COMMANDS_FILE" ]; then
+        CONFIGURED_MAX=$(grep -o '"maxDiffLines"[[:space:]]*:[[:space:]]*[0-9]*' "$COMMANDS_FILE" 2>/dev/null \
+          | sed -E 's/.*:[[:space:]]*([0-9]+)/\1/')
+        [ -n "$CONFIGURED_MAX" ] && MAX_LINES="$CONFIGURED_MAX"
+      fi
+
+      # Meaningful-line filtering (DEC-009): ignore whitespace-only and
+      # blank-line-only changes, then drop import/require-only lines. Pure
+      # renames with no content change produce no +/- body lines and are
+      # excluded automatically by git diff itself.
+      TOTAL=$(git diff -w --ignore-blank-lines "$MERGE_BASE" HEAD -- . 2>/dev/null \
+        | grep -E '^[+-][^+-]' \
+        | grep -vE '^[+-][[:space:]]*(import[[:space:]]|export[[:space:]]+.*[[:space:]]from[[:space:]]|const[[:space:]]+.*=[[:space:]]*require\()' \
+        | wc -l | tr -d ' ')
+      TOTAL=${TOTAL:-0}
+
+      if [ "$TOTAL" -gt "$MAX_LINES" ]; then
+        echo ""
+        echo "ERROR: This branch changes $TOTAL meaningful lines (vs $BASE_BRANCH,"
+        echo "  base via $BASE_SOURCE) - exceeds the atomic-changes limit of"
+        echo "  $MAX_LINES lines (skills/atomic-changes/SKILL.md)."
+        echo "  Split this into smaller PRs, or SKIP_DIFF_SIZE_CHECK=1 git push to"
+        echo "  override (only if this size is a deliberate, reviewed exception)."
+        echo ""
+        exit 1
+      fi
+    fi
+  fi
+fi
+
+# --- build-verify ------------------------------------------------------------
+# Unchanged; not part of DEC-006-009. Structural half of build-verify
+# (skills/build-verify/SKILL.md) - runs on the real `git push`, outside any
+# agent's control, using the project's own .ai-framework.json commands.
+
+if [ "${SKIP_BUILD_VERIFY:-}" = "1" ]; then
+  echo "build-verify skipped (SKIP_BUILD_VERIFY=1)"
+  exit 0
+fi
+
+HOOK_DIR=$(dirname "$0")
+VERIFY_SCRIPT="$HOOK_DIR/build-verify.sh"
+
+if [ ! -x "$VERIFY_SCRIPT" ]; then
+  echo "build-verify.sh not found in hooks - skipping verify gate"
+  echo "  (re-run: python setup.py, from the ai-framework folder)"
+  exit 0
+fi
+
+if [ ! -f "$COMMANDS_FILE" ]; then
+  echo "WARNING: .ai-framework.json not found - skipping verify gate"
+  echo "  (run first-run analysis in your agent session to generate it)"
+  exit 0
+fi
+
 LINT_CMD=$(json_get lint "$COMMANDS_FILE")
 FORMAT_CMD=$(json_get format "$COMMANDS_FILE")
 TEST_CMD=$(json_get test "$COMMANDS_FILE")
 
 if [ -z "$LINT_CMD" ] && [ -z "$FORMAT_CMD" ] && [ -z "$TEST_CMD" ]; then
-  echo "ℹ️  .ai-framework.json has no commands configured — skipping verify gate"
+  echo "WARNING: .ai-framework.json has no commands configured - skipping verify gate"
   exit 0
 fi
 
@@ -73,8 +221,8 @@ VERIFY_EXIT=$?
 
 if [ "$VERIFY_EXIT" -ne 0 ]; then
   echo ""
-  echo "❌ build-verify failed — push blocked."
-  echo "   Fix the failure above, or SKIP_BUILD_VERIFY=1 git push to override."
+  echo "ERROR: build-verify failed - push blocked."
+  echo "  Fix the failure above, or SKIP_BUILD_VERIFY=1 git push to override."
   echo ""
   exit 1
 fi

@@ -39,7 +39,7 @@ HOME = Path.home()
 
 # Single source of truth for the framework version. Bump this and add a
 # matching CHANGELOG.md entry together — README and --verify both read this.
-FRAMEWORK_VERSION = "1.8.0"
+FRAMEWORK_VERSION = "1.8.1"
 
 OPENCODE_DIR     = HOME / ".config" / "opencode"
 CLAUDE_DIR       = HOME / ".claude"
