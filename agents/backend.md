@@ -1,7 +1,7 @@
 ---
 description: Backend engineer. Implements server-side logic — services, repositories, controllers, and configurations — following the stack and patterns discovered in the project.
 mode: subagent
-model: anthropic/claude-sonnet-4-6
+model: github-copilot/claude-sonnet-5
 permission:
   bash:
     "git status": allow

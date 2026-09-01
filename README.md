@@ -475,8 +475,8 @@ workflow-guide.md           ← day-to-day developer guide
 
 | Tier | Model                         | Agents                                                                                             |
 | ---- | ----------------------------- | -------------------------------------------------------------------------------------------------- |
-| HIGH | `anthropic/claude-opus-4-8`   | architect, plan-reviewer, refactor-planner                                                         |
-| MID  | `anthropic/claude-sonnet-4-6` | orchestrator, product-manager, backend, frontend, ui, db, api, code-reviewer, frontend-error-fixer |
+| HIGH | github-copilot/claude-opus-4.8  | architect, refactor-planner                                                                      |
+| MID  | github-copilot/claude-sonnet-5  | orchestrator, product-manager, backend, frontend, ui, db, api, frontend-error-fixer              |
 | LOW  | `anthropic/claude-haiku-4-5`  | qa, gatekeeper, web-research-specialist                                                            |
 
 > **Note:** lint/security scanning used to run on a separate Haiku-tier `linter`

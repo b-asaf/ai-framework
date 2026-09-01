@@ -77,11 +77,11 @@ ai-framework/
 
 | Tier | Model | Agents |
 |---|---|---|
-| HIGH | `anthropic/claude-opus-4-8` | architect, plan-reviewer, refactor-planner |
-| MID | `anthropic/claude-sonnet-4-6` | orchestrator, product-manager, backend, frontend, ui, db, api, code-reviewer, frontend-error-fixer |
-| LOW | `anthropic/claude-haiku-4-5` | qa, gatekeeper, web-research-specialist |
+| HIGH | `github-copilot/claude-opus-4-8` | architect, plan-reviewer, refactor-planner |
+| MID | `github-copilot/claude-sonnet-5` | orchestrator, product-manager, backend, frontend, ui, db, api, code-reviewer, frontend-error-fixer |
+| LOW | `github-copilot/claude-haiku-4-5` | qa, gatekeeper, web-research-specialist |
 
-Global default (opencode.json): `anthropic/claude-sonnet-4-6`
+Global default (opencode.json): `github-copilot/claude-sonnet-5
 
 ---
 

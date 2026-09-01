@@ -1,7 +1,7 @@
 ---
 description: Product Manager. Invoked at the start of every task to clarify requirements, surface ambiguities, and produce a confirmed spec with acceptance criteria before any design or code begins.
 mode: primary
-model: anthropic/claude-sonnet-4-6
+model: github-copilot/claude-sonnet-5
 permission:
   bash:
     "git status": allow
