@@ -7,7 +7,7 @@
 DEC-009 set the diff-base resolution order for the pre-push diff-size
 backstop: explicit `diffBaseBranch` config, then unambiguous git reflog
 evidence, then an honest skip — never a guess. The reflog-evidence path was
-smoke tested on `bta-frontend` as part of five pre-push test scenarios
+smoke tested on `real project` as part of five pre-push test scenarios
 (protected-branch blocking, `diffBaseBranch` explicit path, reflog-evidence
 path, honest-skip case, meaningful-line filtering). Scenarios 1, 2, 4, and 5
 passed unmodified; the reflog-evidence path failed twice, in two different
@@ -76,8 +76,8 @@ in each target project's `.git/hooks/pre-push`.
 
 ## Consequences
 - `hooks/pre-push` (source) and both installed copies
-  (`bta-frontend/.git/hooks/pre-push`, template via `git-template/hooks/`)
-  needed updating; done and reverified against `bta-frontend`.
+  (`[project-name]/.git/hooks/pre-push`, template via `git-template/hooks/`)
+  needed updating; done and reverified against `real project`.
 - **Known remaining limitation, not fixed here:** the `grep -E` filter
   builds its pattern using the branch name directly inside an extended
   regex. `/` is confirmed safe (not special in ERE), but a branch name
@@ -92,7 +92,7 @@ in each target project's `.git/hooks/pre-push`.
   against `setup.py`/`CHANGELOG.md`/`README.md`).
 
 ## Test evidence
-Reproduced and fixed live against `bta-frontend` using disposable branches
+Reproduced and fixed live against `real project` using disposable branches
 (`test/reflog-base`, `test/reflog-base2`, `test/reflog-base3`), each pushed
 then deleted from origin. Final passing run:
 ```

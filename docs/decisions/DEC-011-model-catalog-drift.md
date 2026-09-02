@@ -61,7 +61,7 @@ close, and should raise its priority.
   `github-copilot/claude-sonnet-4-6` — wrong version, not just wrong
   namespace).
 - After fix: 3 consecutive headless `/review` runs against
-  `D:\BTA\bta-frontend` show no `ProviderModelNotFoundError` in debug
+  `real project` show no `ProviderModelNotFoundError` in debug
   logs. Session-level model resolution confirmed clean.
 - **Not yet confirmed:** agent-level resolution for the 8 corrected
   files, since an unrelated permission/bash-chaining bug (logged

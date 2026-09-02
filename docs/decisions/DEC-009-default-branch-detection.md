@@ -6,7 +6,7 @@
 **Status:** accepted; implementation still being smoke-tested against real repos
 
 ## Context
-Testing `DEC-007`'s diff-size backstop on a real repo (`bta-frontend`/`bta-backend`)
+Testing `DEC-007`'s diff-size backstop on a real repo
 surfaced two separate, more significant issues than the one being tested:
 
 1. **Protected branch ≠ diff base.** The original hook conflated two different questions —
@@ -112,7 +112,7 @@ direction for a blocking gate (errs toward counting, never toward under-counting
   added specifically to close this gap. This was caught by testing against real repos with
   real branch history, not by design review — consistent with this framework's established
   pattern (`DEC-003`, `DEC-008`) of smoke tests surfacing real gaps design alone didn't.
-- As of this writing, end-to-end confirmation on `bta-backend` is still in progress —
+- As of this writing, end-to-end confirmation on `real project` is still in progress —
   repeated propagation issues (edits to `ai-framework/hooks/pre-push` not reliably reaching
   the target repo's actual `.git/hooks/pre-push` without every step of `setup.py` → 
   `git-template` → `git init` being explicitly re-run and verified) have slowed final

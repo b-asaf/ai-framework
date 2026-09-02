@@ -24,7 +24,7 @@ Changes are made on `develop` branch and merged to `main` when stable.
   cert store doesn't trust an intercepting proxy's CA by default), which is
   what surfaced this dependency was worth cutting rather than working around.
 - **Fixed reflog-evidence resolution in `hooks/pre-push`'s diff-base
-  detection (DEC-010).** Two bugs found via smoke test on `bta-frontend`:
+  detection (DEC-010).** Two bugs found via smoke test on `real project`:
   (1) reading the target branch's own reflog for a `Created from` entry
   silently failed for the common `git checkout -b <name>` case with no
   explicit start-point, which records the literal string `Created from
