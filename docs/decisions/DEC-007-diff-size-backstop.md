@@ -49,7 +49,7 @@ beneath its otherwise fully agentic enforcement chain.
   rarely trigger this hook.
 - **Significantly extended by DEC-009**: this entry's original base-branch selection (first
   matching protected branch) and raw `git diff --shortstat` line counting were both found
-  to have real gaps during smoke testing on a real repo (`bta-frontend`/`bta-backend`) —
+  to have real gaps during smoke testing on a real repo —
   see DEC-009 for the corrected, more rigorous mechanism (explicit config or unambiguous
   git reflog evidence for the diff base; meaningful-line filtering to exclude
   whitespace/import/rename noise). This entry's core decision (the backstop belongs in

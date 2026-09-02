@@ -1,7 +1,7 @@
 ---
 description: Plan reviewer. Independently validates the architect's HLD and PR breakdown before any implementation begins. Catches show-stopping flaws, missing considerations, and better alternatives that the architect may have missed. Read-only — does not write files.
 mode: primary
-model: anthropic/claude-opus-4-8
+model: github-copilot/gpt-5.4
 permission:
   bash:
     "git status": allow

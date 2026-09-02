@@ -1,7 +1,7 @@
 ---
 description: API engineer. Owns API contracts between FE and BE, and between BE and 3rd party services. Manages OpenAPI specs, GraphQL schemas, and integration patterns. Activates when formal API contracts or 3rd party integrations are detected.
 mode: subagent
-model: anthropic/claude-sonnet-4-6
+model: github-copilot/claude-sonnet-5
 permission:
   bash:
     "git status": allow

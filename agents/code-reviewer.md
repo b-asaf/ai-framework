@@ -1,7 +1,7 @@
 ---
 description: Code reviewer. Lints, scans, and reviews every diff after implementation. Applies clean code, SOLID, security, and project-pattern checks without mercy. Read-only — does not modify files.
 mode: subagent
-model: anthropic/claude-sonnet-4-6
+model: github-copilot/gpt-5.4
 permission:
   bash:
     "git status": allow

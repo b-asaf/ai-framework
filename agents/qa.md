@@ -1,7 +1,7 @@
 ---
 description: QA engineer. Detects the test framework in use, writes missing unit and integration tests for new implementation, and runs the full suite. Covers both frontend and backend.
 mode: subagent
-model: anthropic/claude-haiku-4-5
+model: github-copilot/gpt-5.4-mini
 permission:
   bash:
     "git status": allow

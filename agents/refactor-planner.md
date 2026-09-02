@@ -1,7 +1,7 @@
 ---
 description: User-invoked. Produces a safe, incremental refactoring plan before any code changes. Only invoked when the developer explicitly decides to plan a refactor — never triggered automatically mid-task.
 mode: primary
-model: anthropic/claude-opus-4-8
+model: github-copilot/claude-opus-4.8
 permission:
   bash:
     "git status": allow
