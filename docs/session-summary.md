@@ -20,7 +20,7 @@ Stack focus: Java/Spring Boot (BE), JavaScript/TypeScript React (FE).
 ```
 ai-framework/
 ├── AGENTS.md                    ← global rules (14 rules, XML-tagged) — every tool reads this
-├── opencode.json                ← OpenCode global config: model=sonnet-4-6, permissions
+├── opencode.json                ← OpenCode global config: model=sonnet-5, permissions
 ├── setup.py                     ← run once per machine, no flags needed
 ├── workflow-guide.md            ← day-to-day developer guide
 │

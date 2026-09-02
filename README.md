@@ -446,7 +446,7 @@ Make sure your own working tree is clean first so nothing of yours leaks into th
 
 ```
 AGENTS.md                   ← behavior rules (14 rules, XML-tagged) — every tool reads this
-opencode.json               ← OpenCode global config (model: sonnet-4-6, permissions)
+opencode.json               ← OpenCode global config (model: sonnet-5, permissions)
 
 agents/                     ← 15 agent definitions (each has model: field for cost tiering)
 skills/                     ← 42 skill folders (most have a ## Quick reference section)
