@@ -10,7 +10,7 @@
 
 <checks>
 
-## ⚡ DO THIS FIRST — before anything else
+## DO THIS FIRST — before anything else
 
 <check id="1" name="first-run">
 Read the **current project's own** `docs/project-overview/stack.md` (not the shared
@@ -51,7 +51,7 @@ investigating — give grounded, hallucination-free answers.
 Before running `git add`, `git commit`, `git push`, or `gh pr create` — stop completely and show the developer:
 
 ```
-📦 Ready to commit and push. Please review:
+Ready to commit and push. Please review:
 
 Branch:     <current branch>
 Files:      <list of changed files>
@@ -90,6 +90,27 @@ Rules:
 
 **Never run under any circumstances:**
 `git merge`, `git rebase`, `git reset`, `git push --force`
+
+**One command per bash call — never chain.** Never combine multiple
+commands in a single bash tool call using `;`, `&&`, `|`, or any other
+shell operator, even when every individual command is separately allowed.
+Every agent's permission config matches the full command string, not
+command-by-command — a chained call falls through to that agent's `"*"`
+fallback (`ask` or `deny`), which fails outright in a headless session
+with no one to answer `ask`.
+
+**For checking git status and current branch together**, always call
+`powershell -File "$env:USERPROFILE\.config\opencode\scripts\git-context.ps1"`
+exactly as written, as a single command, instead of issuing separate or
+chained `git status`/`git branch` commands. Use this exact string,
+verbatim: `$env:USERPROFILE` (not `~`, which does not reliably expand when
+passed as a literal argument to an external process on Windows
+PowerShell), double quotes around the path, backslashes as shown. This is
+a pre-approved, exact-match command in every relevant agent's permission
+list, so it never falls through to the `ask`/`deny` fallback.
+
+For any other git information not covered by that script, issue each git
+command as its own separate tool call — never chained.
 </rule>
 
 <rule id="2" name="branch-before-write">

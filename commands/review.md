@@ -1,5 +1,6 @@
 ---
 description: Run the full post-implementation review pipeline on the current branch — code-reviewer (lint+scan+review), qa, gatekeeper.
+agent: orchestrator
 ---
 
 Run the post-implementation pipeline on the current branch:

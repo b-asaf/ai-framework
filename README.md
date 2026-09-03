@@ -1,6 +1,6 @@
 # ai-framework
 
-**Version 1.8.1** — see [`CHANGELOG.md`](CHANGELOG.md) for what changed. The
+**Version 1.8.2** — see [`CHANGELOG.md`](CHANGELOG.md) for what changed. The
 same version prints at the top of every `python setup.py` / `python setup.py
 --verify` run, so your installed copy and this README never disagree about
 which version you're on.

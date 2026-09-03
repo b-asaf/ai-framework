@@ -1,5 +1,6 @@
 ---
 description: Start a new task — runs Check 1 (first-run), Check 2 (branch guard), then the full product-manager → architect → plan-reviewer → implementation flow.
+agent: orchestrator
 ---
 
 Start a new development task. Follow this sequence exactly:

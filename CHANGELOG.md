@@ -9,6 +9,43 @@ Changes are made on `develop` branch and merged to `main` when stable.
 
 ## Unreleased (develop)
 
+## v1.8.2 — 2026-09-03 — `/review` dispatch, permission-ordering, and script-invocation fixes (DEC-012)
+
+- **`commands/review.md` and `commands/task.md` were missing an `agent:`
+  frontmatter field**, causing both to run under opencode's generic
+  built-in `build` agent instead of `orchestrator` — none of the
+  framework's Check 1/2, routing, or permission logic was ever actually
+  engaged for either command. Fixed by adding `agent: orchestrator` to
+  both. Added a new review-only entry point section to `orchestrator.md`
+  so `/review` enters at Step 6 (skipping the full task-clarification
+  flow) instead of starting at Step 1.
+- **Permission rule ordering was backwards in every agent's
+  `permission.bash` block** — catch-all `"*"` was listed last, and per
+  opencode's own last-match-wins evaluation, this silently overrode every
+  specific `allow`/`deny` rule before it, for both chained and unchained
+  commands. Fixed in `orchestrator.md` and `code-reviewer.md` (broadest
+  → narrowest, catch-all first, specific `allow` rules last). **Not yet
+  applied to the remaining 13 agent files** — flagged as an outstanding,
+  unverified gap in DEC-012.
+- **Added `AGENTS.md` Rule 1 sub-rule: one bash command per tool call,
+  never chain** — a chained call (`;`, `&&`, `|`) matches no
+  single-command permission rule and fails outright in headless sessions
+  with no one to answer the resulting `ask` prompt.
+- **Added `scripts/git-context.ps1`** — deterministic, fixed script
+  returning `git status` + `git branch --show-current` in one call,
+  removing the motivation to chain. Wired into `setup.py`'s global link
+  table (`~/.config/opencode/scripts`, `~/.claude/scripts`) via a new
+  `SCRIPTS` constant. Windows/PowerShell only for now — cross-platform
+  equivalent not yet built.
+- **Standardized the script's invocation string** on
+  `powershell -File "$env:USERPROFILE\.config\opencode\scripts\git-context.ps1"`
+  after finding `~`-prefixed paths don't reliably expand when passed as a
+  literal argument to an external process in Windows PowerShell (unlike
+  `$env:USERPROFILE`, genuine string interpolation). `AGENTS.md` and both
+  agents' permission blocks now require this exact string verbatim.
+- See `docs/decisions/DEC-012-review-pipeline-permission-fixes.md` for
+  full diagnosis, options considered, and outstanding gaps.
+
 ## v1.8.1 — 2026-08-30 — opencode-usage removed, pre-push reflog-evidence fix (DEC-010)
 
 - **Removed `opencode-usage` and `monitoring/model-policy-check.js`.** The

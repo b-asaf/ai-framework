@@ -4,22 +4,23 @@ mode: primary
 model: github-copilot/claude-sonnet-5
 permission:
   bash:
+    "*": ask
+    "git *": deny
+    "git push --force *": deny
+    "git merge *": deny
+    "git rebase *": deny
+    "git reset *": deny
+    "git add .": ask
+    "git commit *": ask
+    "git push": ask
+    "gh pr create *": ask
     "git status": allow
     "git log *": allow
     "git diff *": allow
     "git branch": allow
     "git branch *": allow
     "git checkout -b *": allow
-    "git add .": ask
-    "git commit *": ask
-    "git push": ask
-    "gh pr create *": ask
-    "git push --force *": deny
-    "git merge *": deny
-    "git rebase *": deny
-    "git reset *": deny
-    "git *": deny
-    "*": ask
+    'powershell -File "$env:USERPROFILE\.config\opencode\scripts\git-context.ps1"': allow
   edit: deny
   write: deny
 ---
@@ -53,6 +54,21 @@ If `project-overview` is unpopulated or contains `[XXX]` placeholders, load `fir
 After first-run analysis is complete, load `zoom-out` to produce an orientation map of the codebase before accepting the first task. This is automatic — do not ask the developer.
 
 Do not start any feature work until first-run analysis and zoom-out are both complete and the developer has confirmed the output.
+
+## Invoked via `/review` — review-only entry point
+
+When the incoming task is the `/review` command's template (post-implementation
+review of the current branch, not a new feature/fix request), do not start at
+Step 1. Enter directly at **Step 6 — Lint & Review** and run only Steps 6–9
+(Lint & Review → Test → Final task summary → Gate) in sequence, exactly as
+described below. Do not route to `@product-manager`, `@architect`, or
+`@plan-reviewer` — there is no new spec or design to clarify for a review of
+already-implemented work.
+
+After Step 9 (Gate) completes, report the final verdict — PASS or FAIL with
+the list of blocking issues — and stop. Do not proceed to Step 10's branch/PR
+handoff flow; that step assumes freshly-implemented work ready to commit,
+which is out of scope for a standalone review invocation.
 
 ## On every task
 
