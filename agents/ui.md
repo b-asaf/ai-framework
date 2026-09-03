@@ -4,12 +4,12 @@ mode: subagent
 model: github-copilot/claude-sonnet-5
 permission:
   bash:
+    "*": ask
+    "git *": deny
     "git status": allow
     "git log *": allow
     "git diff *": allow
-    "git *": deny
     "hooks/build-verify.sh *": allow
-    "*": ask
   edit: ask
   write: allow
 ---

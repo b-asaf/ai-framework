@@ -4,11 +4,11 @@ mode: subagent
 model: github-copilot/gpt-5.4-mini
 permission:
   bash:
+    "*": ask
+    "git *": deny
     "git status": allow
     "git log *": allow
     "git diff *": allow
-    "git *": deny
-    "*": ask
   edit: deny
   write: allow
 ---

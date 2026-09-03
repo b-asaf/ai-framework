@@ -4,11 +4,11 @@ mode: primary
 model: github-copilot/gpt-5.4
 permission:
   bash:
+    "*": deny
+    "git *": deny
     "git status": allow
     "git log *": allow
     "git diff *": allow
-    "git *": deny
-    "*": deny
   edit: deny
   write: deny
 ---

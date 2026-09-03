@@ -10,7 +10,7 @@ Following DEC-011's model-catalog fix, headless `opencode run --command
 review` still failed to produce a working end-to-end pipeline. Diagnosis
 surfaced six distinct, independent bugs, several masking each other —
 fixing one revealed the next underneath. All were confirmed via real
-headless runs against `real project`, using
+headless runs against `real repository`, using
 `--print-logs --log-level DEBUG` throughout (plain `run --command` output
 gives only an opaque `UnknownError` ref with no way to diagnose it).
 
@@ -71,19 +71,26 @@ suspected to be a command-chaining problem (see #4) — chained and
 unchained commands were both failing, for the same reason, before any
 chaining was involved.
 
-**Fix (applied so far — orchestrator.md and code-reviewer.md only):**
-reordered each file's `permission.bash` block broadest-to-narrowest,
-top-to-bottom: `"*"` first, then `deny` rules, then `ask` rules, then the
-specific `allow` rules last (so they win). Permission *semantics* are
-unchanged — only ordering.
+**Fix — applied to all 15 agent files.** Reordered each file's
+`permission.bash` block broadest-to-narrowest, top-to-bottom: `"*"` first,
+then `deny` rules, then `ask` rules, then the specific `allow` rules last
+(so they win). Permission *semantics* are unchanged — only ordering.
 
-**Outstanding:** the same reordering has not yet been applied to the
-remaining 13 agent files (`architect`, `api`, `backend`, `db`,
-`frontend`, `frontend-error-fixer`, `gatekeeper`, `plan-reviewer`,
-`product-manager`, `qa`, `refactor-planner`, `ui`,
-`web-research-specialist`). Each likely has the identical bug, unverified
-until fixed — should be treated as a known gap, not assumed safe by
-extrapolation.
+All 13 remaining agents (`architect`, `api`, `backend`, `db`, `frontend`,
+`frontend-error-fixer`, `gatekeeper`, `plan-reviewer`, `product-manager`,
+`qa`, `refactor-planner`, `ui`, `web-research-specialist`) had the
+identical bug, confirmed by inspection before fixing (each showed a
+specific `allow` rule before `"*"`/`"git *"`). Grouped into three shapes
+by existing permission scope — read-only (`architect`, `gatekeeper`,
+`plan-reviewer`, `product-manager`, `refactor-planner`,
+`web-research-specialist`: `"*": deny` fallback), implementers (`api`,
+`backend`, `db`, `frontend`, `frontend-error-fixer`, `ui`: `"*": ask`
+fallback, `hooks/build-verify.sh *` additionally allowed), and `qa`
+(`"*": ask` fallback, no build-verify line). Fixed identically within
+each group — reorder only, nothing added, removed, or changed in scope.
+Verified post-fix: each file's `"*"` line confirmed first, and each
+file's expected `allow` rule count confirmed present and unchanged
+(3 rules for read-only/qa groups, 4 for implementers).
 
 ### 4. Command chaining defeats exact-string permission matching
 
@@ -176,7 +183,7 @@ modification):
   failing silently.
 - **Not yet demonstrated:** a full pipeline run reaching an actual
   PASS/FAIL verdict end-to-end (`@code-reviewer` → `@qa` → `@gatekeeper`),
-  since `real repos`'s `real branch` branch currently has no in-progress
+  since `real repository`'s `dev` branch currently has no in-progress
   feature work to review. Dispatch and permission layers are confirmed
   clean; content-level pipeline execution is not yet exercised.
 
@@ -185,9 +192,6 @@ modification):
 - `/task` should be re-verified with the same rigor as `/review` — it
   received the same `agent: orchestrator` fix, but has not been
   headlessly smoke-tested this session the way `/review` was.
-- 13 of 15 agent files still carry the permission-ordering bug (#3) and
-  are unverified. Should be prioritized before relying on any of them in
-  a headless/unattended context.
 - The chaining instruction (#4) is necessary-but-not-sufficient on its
   own — confirmed to be followed inconsistently across runs even after
   being added. Should not be treated as a complete fix in isolation;

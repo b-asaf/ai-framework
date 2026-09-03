@@ -4,11 +4,11 @@ mode: primary
 model: github-copilot/claude-opus-4.8
 permission:
   bash:
+    "*": deny
+    "git *": deny
     "git status": allow
     "git log *": allow
     "git diff *": allow
-    "git *": deny
-    "*": deny
   edit: deny
   write: deny
 ---
