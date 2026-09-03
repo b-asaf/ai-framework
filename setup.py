@@ -39,7 +39,7 @@ HOME = Path.home()
 
 # Single source of truth for the framework version. Bump this and add a
 # matching CHANGELOG.md entry together — README and --verify both read this.
-FRAMEWORK_VERSION = "1.8.1"
+FRAMEWORK_VERSION = "1.8.2"
 
 OPENCODE_DIR     = HOME / ".config" / "opencode"
 CLAUDE_DIR       = HOME / ".claude"
@@ -64,6 +64,7 @@ SKILLS       = REPO / "skills"
 AGENTS       = REPO / "agents"
 COMMANDS     = REPO / "commands"
 HOOKS        = REPO / "hooks"
+SCRIPTS      = REPO / "scripts"
 
 RTK_BIN_DIR = REPO / "bin"
 RTK_EXE     = RTK_BIN_DIR / ("rtk.exe" if IS_WIN else "rtk")
@@ -106,6 +107,7 @@ def build_links(det):
             (OPENCODE_DIR / "skills",        SKILLS,                  "dir"),
             (OPENCODE_DIR / "commands",      COMMANDS,                "dir"),
             (OPENCODE_DIR / "hooks",         HOOKS,                   "dir"),
+            (OPENCODE_DIR / "scripts",       SCRIPTS,                 "dir"),
         ]
     if det["claude"]:
         links += [
@@ -116,6 +118,7 @@ def build_links(det):
             (CLAUDE_DIR / "commands",                COMMANDS,                    "dir"),
             (CLAUDE_DIR / "hooks",                   HOOKS,                       "dir"),
             (CLAUDE_DIR / "hooks" / "session-end.js", HOOKS / "session-end.js",  "file"),
+            (CLAUDE_DIR / "scripts",                 SCRIPTS,                     "dir"),
         ]
     if det["codex"]:
         links += [(CODEX_DIR / "AGENTS.md", INSTRUCTIONS / "codex-AGENTS.md", "file")]

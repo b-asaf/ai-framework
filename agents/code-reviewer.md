@@ -4,11 +4,12 @@ mode: subagent
 model: github-copilot/gpt-5.4
 permission:
   bash:
+    "*": ask
+    "git *": deny
     "git status": allow
     "git log *": allow
     "git diff *": allow
-    "git *": deny
-    "*": ask
+    'powershell -File "$env:USERPROFILE\.config\opencode\scripts\git-context.ps1"': allow
   edit: deny
   write: deny
 ---
