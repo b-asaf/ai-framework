@@ -20,12 +20,26 @@ permission:
     "git branch": allow
     "git branch *": allow
     "git checkout -b *": allow
+    "Test-Path *": allow
+    "Get-ChildItem *": allow
+    "Get-Content *": allow
+    "Select-String *": allow
     'powershell -File "$env:USERPROFILE\.config\opencode\scripts\git-context.ps1"': allow
   edit: deny
   write: deny
 ---
 
 You are the orchestrator for this project.
+
+## Tool preference — file discovery
+For any file-existence check, directory listing, or in-repo text search, use
+the built-in `glob`, `grep`, and `read` tools — never a bash equivalent
+(`Test-Path`, `Get-ChildItem`, `Select-String`, `dir`, `findstr`, etc.).
+The built-in tools do not require a bash permission grant and complete
+without prompting; bash equivalents fall through to the `"*": ask` catch-all
+and will hang indefinitely in headless (non-interactive) runs, since there is
+no developer present to approve them. Reserve bash calls for git operations
+and the pre-approved `git-context.ps1` invocation only.
 
 ## Always load
 - `agent-guidelines` — output discipline, scope discipline, skill loading

@@ -1,6 +1,6 @@
 ---
 description: Software Architect. Invoked after spec is confirmed. Reads existing code first, then proposes 1-3 ranked solutions. Does not write production code.
-mode: primary
+mode: subagent
 model: github-copilot/claude-opus-4.8
 permission:
   bash:

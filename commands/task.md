@@ -1,15 +1,32 @@
 ---
-description: Start a new task — runs Check 1 (first-run), Check 2 (branch guard), then the full product-manager → architect → plan-reviewer → implementation flow.
+description: Start a new task — routes to the orchestrator, which runs the first-run gate, then the full clarify → design → plan-review → branch → implementation flow (see agents/orchestrator.md for the authoritative step sequence).
 agent: orchestrator
 ---
 
-Start a new development task. Follow this sequence exactly:
+Start a new development task.
 
-1. Run Check 1: read `project-overview/sub/stack.md`. If it contains `[XXX]`, run first-run analysis first.
-2. Run Check 2: propose a branch name, wait for confirmation, create the branch.
-3. Load `instructions/AGENTS-reference.md` for the routing table.
-4. Route to `@product-manager` for requirements grill (including necessity check).
-5. Route to `@architect` for HLD and PR breakdown.
-6. Route to `@plan-reviewer` to validate the plan.
-7. On approval, implement one PR at a time.
-8. After each PR: code-reviewer (lint+scan+review) → qa → gatekeeper.
+Before Step 1, the orchestrator always checks `project-overview` for a
+first-run state (unpopulated or containing `[XXX]`). If triggered, first-run
+analysis runs to completion, with developer confirmation at each checkpoint,
+before any task is accepted.
+
+The task flow itself follows `agents/orchestrator.md`'s "On every task"
+section exactly, step by step:
+
+1. Clarify — route to `@product-manager`.
+2. Design — route to `@architect`.
+2b. Plan review (mandatory) — route to `@plan-reviewer`.
+3. Confirm atomic PR breakdown.
+4. Branch — propose the branch command for the current PR, wait for developer
+   confirmation, before any file is written.
+5. Implement (current PR only).
+6. Lint & Review — `@code-reviewer`.
+7. Test — `@qa`.
+8. Final task summary.
+9. Gate — `@gatekeeper`.
+10. Handoff.
+
+Do not skip, reorder, or renumber these steps here — `agents/orchestrator.md`
+is the source of truth for step definitions and gating logic. This file is a
+pointer only; if the two ever disagree, orchestrator.md wins and this file
+should be corrected to match.
