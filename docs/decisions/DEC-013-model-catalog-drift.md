@@ -250,7 +250,7 @@ validated.
 All diagnostic artifacts generated during this investigation
 (`review-*.json`, `review-*.txt`, `repro-*.json`, `repro-*.txt`,
 `task-mt*.json`, `task-mt*.txt`, `task-repro*.json`, `task-repro*.txt`) were
-removed from `D:\BTA\bta-backend`'s working directory at the end of this
+removed from a working directory at the end of this
 session. Pre-existing untracked files in that directory (`docs/`,
 `.ai-framework.json`, `_opencode.json`, `graphify-out/`, `iperf.exe`,
 `webos-keystore.jks`, `.handoff-graalvm-native-build-2026-09-03.md`,
