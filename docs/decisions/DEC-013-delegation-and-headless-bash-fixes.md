@@ -1,5 +1,11 @@
 # Decision: Fix subagent delegation, headless bash handling, and delegation discipline uncovered while smoke-testing `/task` and `/review`
 
+> **Filename note:** originally saved as `DEC-013-model-catalog-drift.md`,
+> which collided with `DEC-011`'s actual model-catalog-drift topic and
+> didn't describe this DEC's content at all. Renamed to
+> `DEC-013-delegation-and-headless-bash-fixes.md`. No content below
+> changed as part of the rename.
+
 **Date:** 2026-09-07 through 2026-09-12
 **Status:** accepted (Findings A–E, G); F partially accepted (hard block
 accepted, soft guidance alone confirmed insufficient); `/review` end-to-end
@@ -245,6 +251,25 @@ validated.
   confirmed not installed on this machine at all, independent of the
   permission fix, so `static-code-analysis`'s complexity check will still
   fail on missing-tool grounds whenever it legitimately runs.
+
+## Automated verification
+
+Added once `validate_agents.py` (item 6) gained a generic `requires-deny`
+check. Before this, the only protection against a fix like Finding D's or
+F's silently reverting (as `task: {"general": deny}` demonstrably did,
+once, within this same session) was a human re-reading the live file —
+exactly the failure mode that caused the reversion to go unnoticed until
+a headless run hung on it. These directives are consumed automatically by
+`validate_agents.py`; re-running it after any future edit to
+`orchestrator.md` will catch a silent reversion of either fix.
+
+<!-- requires-deny: agent=orchestrator permission="task.general" -->
+<!-- requires-deny: agent=orchestrator permission="bash.lizard *" -->
+<!-- requires-deny: agent=orchestrator permission="bash.jscpd *" -->
+
+Confirmed current as of this update: running `validate_agents.py` against
+the live repo shows all three still correctly set to `deny` — these fixes
+have not regressed again since landing.
 
 ## Session cleanup
 All diagnostic artifacts generated during this investigation
