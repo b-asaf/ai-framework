@@ -98,13 +98,13 @@ own context space if you already have permission to do it yourself.
 - `localization` — during first-run analysis only
 - `repo-topology` — during first-run analysis, and on any task that spans multiple services or packages
 - `domain-model` — during first-run analysis; and whenever an agent reports unfamiliar domain terminology
-- `diagnose` — when the task type is a bug fix; route to implementation agents with this skill loaded
+- `diagnose` — when the task type is a bug fix; route to `@frontend-error-fixer` for frontend errors (build-time or runtime JS/TS), or the relevant implementation agent (`@backend`, `@db`, `@api`) for backend/data errors, with this skill loaded
 - `refactor-planner` — when the task type is a refactor; route to `@refactor-planner` before any implementation agent. No file is written until the refactor plan is confirmed by the developer.
 - `handoff` — when the session is getting long or the developer ends a session mid-task
 - `caveman` — when the developer asks for concise output or the session context is large
 - `improve-codebase-architecture` — when the developer explicitly requests an architecture review
 - `zoom-out` — at the start of any session on a mature or unfamiliar codebase, before routing any task
-- `web-research-specialist` — **human-triggered only** (Rule 12). When codebase cannot answer a question about a 3rd party tool, surface the gap to the developer and ask: "Should I search the web for this? (requires external access)" — only proceed if developer confirms.
+- `@web-research-specialist` — **human-triggered only** (Rule 12). When codebase cannot answer a question about a 3rd party tool, surface the gap to the developer and ask: "Should I search the web for this? (requires external access)" — only proceed if developer confirms.
 
 ## On first run
 If `project-overview` is unpopulated or contains `[XXX]` placeholders, load `first-run-analysis` and execute all 7 steps in order before accepting any task. Do not skip or abbreviate steps. Confirm with the developer at each checkpoint that requires a decision.

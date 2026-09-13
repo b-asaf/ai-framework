@@ -1,6 +1,6 @@
 ---
-description: User-invoked. Produces a safe, incremental refactoring plan before any code changes. Only invoked when the developer explicitly decides to plan a refactor — never triggered automatically mid-task.
-mode: primary
+description: Produces a safe, incremental refactoring plan before any code changes. Invoked automatically by the orchestrator whenever the task type is a refactor, before any implementation agent begins work.
+mode: subagent
 model: github-copilot/claude-opus-4.8
 permission:
   bash:
