@@ -9,6 +9,45 @@ Changes are made on `develop` branch and merged to `main` when stable.
 
 ## Unreleased (develop)
 
+### CRLF fix actually applied this time; stale installed `pre-push` hook fixed
+
+- **The "v1.8.0" entry below claiming `.gitattributes` was added to fix CRLF
+  corruption was inaccurate — it was never actually committed.**
+  `git log --all -- .gitattributes` showed zero history for that file
+  before today. That changelog entry described a fix that was written up
+  but never landed.
+- **The repository content itself was never corrupted.** Verified via
+  `git cat-file -p HEAD:hooks/pre-push`, which reads the raw committed
+  blob independent of any working-tree checkout filter — it was already
+  pure LF. The CRLF that showed up in working-tree checkouts was a
+  checkout-time artifact of `core.autocrlf=true` with no `.gitattributes`
+  to override it, not repository-level damage.
+- **`.gitattributes` now actually added** (`* text=auto eol=lf`) and
+  committed.
+- **`core.autocrlf=true` did not yield to `.gitattributes`' `eol=lf`
+  on `git checkout-index -f -a` or even a plain `git reset --hard`**,
+  despite `git check-attr` confirming the attribute resolved correctly
+  for the file. Fixed by disabling `core.autocrlf` locally
+  (`git config core.autocrlf false`) rather than relying on `eol=lf` to
+  override it — the two together are a known source of exactly this kind
+  of silent inconsistency. Forcing an already-checked-out repo to
+  actually re-apply the corrected filter required emptying the index
+  first (`git rm -r --cached .`) before `git reset --hard` — a plain
+  `git reset --hard` alone left stale CRLF files untouched, since git
+  skips re-smudging a file whose tracked blob hasn't changed.
+- **Separately discovered while investigating, not part of the original
+  scope: the actually-installed `.git/hooks/pre-push` on at least one
+  contributor machine was a stale 2,722-byte version, vs. the current
+  9,159-byte tracked source.** This means the v1.8.2 (DEC-012) push-gate
+  ordering fixes — and possibly other changes — were never actually
+  running there, silently, because `hooks/install-hooks.sh` had not been
+  re-run since that hook grew. `pre-commit`, `commit-msg`, and
+  `build-verify.sh` were checked and confirmed NOT stale (byte-identical
+  to source) on that same machine — this was specific to `pre-push`.
+  **`install-hooks.sh` currently has no mechanism to detect or warn that
+  an installed hook is stale relative to its source** — worth a dedicated
+  DEC if this is addressed.
+
 ## v1.8.2 — 2026-09-03 — `/review` dispatch, permission-ordering, and script-invocation fixes (DEC-012)
 
 - **`commands/review.md` and `commands/task.md` were missing an `agent:`
@@ -79,6 +118,13 @@ Changes are made on `develop` branch and merged to `main` when stable.
   `docs/decisions/DEC-010-reflog-evidence-fix.md`.
 
 ## v1.8.0 — critical CRLF fix, folder reorg, graphify sync gaps closed
+
+> **Correction (see Unreleased above):** the `.gitattributes` fix
+> described below was never actually committed — verified via
+> `git log --all -- .gitattributes` showing no history for that file
+> until the real fix landed later. The rest of this entry (folder reorg,
+> `skills/graphify/SKILL.md` fixes) is accurate; only the CRLF/`.gitattributes`
+> claim was wrong.
 
 - **Critical: every file touched since v1.5.0 had been silently corrupted
   to CRLF line endings** (almost certainly a Windows-based merge with
