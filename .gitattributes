@@ -1,0 +1,18 @@
+# Enforce LF line endings for all text files, regardless of local
+# core.autocrlf. Without this, a Windows checkout with core.autocrlf=true
+# (the common default from the Git for Windows installer) silently
+# converts every text file — including extension-less git hook scripts
+# like hooks/pre-push, hooks/pre-commit, hooks/commit-msg — to CRLF on
+# checkout. Those hooks are invoked via a shell (Git Bash's sh) that
+# chokes on the literal \r, breaking them at push/commit time.
+#
+# This repo had exactly this bug once already (see CHANGELOG.md v1.8.0),
+# documented as fixed via a .gitattributes file — but that file was never
+# actually committed (confirmed via `git log --all -- .gitattributes`
+# returning no history at all), so the bug was never really fixed.
+#
+# `text=auto` autodetects text vs. binary content so this is safe to
+# apply repo-wide with a single rule; `eol=lf` forces LF on checkout and
+# normalizes to LF on commit, for every text file, regardless of any
+# contributor's local core.autocrlf setting.
+* text=auto eol=lf
