@@ -10,7 +10,7 @@ Findings D and F both failing on a single clean-looking run), one pass is
 not evidence; this runs N times and reports per-run and aggregate results.
 
 USAGE:
-    python test_gap1_delegation.py --repo D:\\path\\to\\bta-backend --runs 5
+    python test_gap1_delegation.py --repo D:\\path\\to\\real-repo --runs 5
 
 Requires: `opencode` on PATH, run from a machine with the framework
 installed (agents/, opencode.json, etc. — this only invokes opencode, it
@@ -221,7 +221,7 @@ def print_report(runs: list[RunResult]) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--repo", type=Path, required=True, help="Path to the repo under review (e.g. bta-backend)")
+    parser.add_argument("--repo", type=Path, required=True, help="Path to the repo under review (e.g. real repo)")
     parser.add_argument("--runs", type=int, default=5, help="Number of independent runs (default 5, per DEC-014)")
     parser.add_argument("--out-dir", type=Path, default=Path.cwd(), help="Where to write review-*.json/.txt files")
     args = parser.parse_args()
