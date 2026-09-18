@@ -9,6 +9,9 @@ permission:
     "git status": allow
     "git log *": allow
     "git diff *": allow
+    "git -C * status": allow
+    "git -C * log *": allow
+    "git -C * diff *": allow
     'powershell -File "$env:USERPROFILE\.config\opencode\scripts\git-context.ps1"': allow
     "lizard *": allow
     "jscpd *": allow

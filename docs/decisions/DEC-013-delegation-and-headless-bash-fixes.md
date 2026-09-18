@@ -271,7 +271,40 @@ Confirmed current as of this update: running `validate_agents.py` against
 the live repo shows all three still correctly set to `deny` — these fixes
 have not regressed again since landing.
 
-## Session cleanup
+## Update — 2026-09-18: Gap 1 partial validation + new external blocker found
+
+Live testing against `real repo` produced two clean
+instances of `permission=task pattern=code-reviewer action.action=allow`
+immediately followed by correct subagent session creation
+(`agent=code-reviewer`, correctly parented) and real work starting right
+away — no investigation-before-delegating detour in either. This is
+positive evidence for the Gap 1 guidance, though not yet the "multiple
+independent clean runs" bar this DEC set for trusting it — both runs were
+cut short by an unrelated blocker (below) before a full `/review` verdict
+was reached.
+
+**New blocker, confirmed external — not a config issue in this repo:**
+once inside the `@code-reviewer` subagent session, its own
+`permission.bash` allow rules (`"git diff *"`, the `git-context.ps1`
+powershell allow, etc.) are not being respected — every bash command
+falls to the `"*": ask` catch-all regardless of a matching allow rule.
+Confirmed via a same-run, side-by-side comparison: the identical literal
+command matched and was allowed for `orchestrator` (primary) and denied
+to the `"*": ask` fallback for `code-reviewer` (subagent) later in the
+same log. This matches a known upstream `opencode` bug
+(anomalyco/opencode#26747, "fixed" by PR #27201, merged 2026-05-13), but
+related, still-open issues (#28682, #31485, #49347 — the last reported
+against v1.18.31, the current latest release) suggest the `"*": ask` +
+subagent interaction remains fragile on Windows even post-fix. Framework
+is currently on opencode v1.17.20.
+
+**Status: left open.** Do not attempt further edits to any agent's
+`permission.bash` block chasing this specific symptom — already
+conclusively proven not to be a config issue. Recheck once opencode is
+upgraded, or a newer issue directly matching this reproduction is found
+upstream.
+
+
 All diagnostic artifacts generated during this investigation
 (`review-*.json`, `review-*.txt`, `repro-*.json`, `repro-*.txt`,
 `task-mt*.json`, `task-mt*.txt`, `task-repro*.json`, `task-repro*.txt`) were
