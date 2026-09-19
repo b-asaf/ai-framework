@@ -53,7 +53,7 @@ ai-framework/
 - `instructions/wrappers/` → deleted (wrappers now directly in `instructions/`)
 - `install.sh` → deleted (replaced by `setup.py`)
 - `verification/scripts/` → deleted (git hooks moved to `hooks/`)
-- `bin/` → deleted (RTK downloaded at runtime by setup.py)
+- `bin/` → deleted (previously used for RTK, which has since been removed from the framework entirely — see CHANGELOG.md)
 - `code-standards/references/solid.md` → deleted (superseded by `clean-code-solid` skill)
 
 ---
@@ -131,7 +131,6 @@ Global default (opencode.json): `github-copilot/claude-sonnet-5
 
 | Tool | Layer | Status |
 |---|---|---|
-| RTK | Shell output filtering | Auto-installed by setup.py |
 | Token Optimizer | Structural audit + compaction survival | Auto-installed by setup.py (git clone) |
 | ccusage | Cross-tool token/cost monitoring | Auto-installed by setup.py (npm, or zero-install via npx) |
 | session-end.js hook | Auto session-summary at session end | Wired via ~/.claude/hooks/ |

@@ -125,7 +125,7 @@ python setup.py
 That's it. No admin rights required. The script detects which tools are
 installed and wires everything automatically — symlinks (or file copies,
 if your machine can't symlink — see below), VS Code settings, git hooks,
-and token-reduction tools (RTK, Token Optimizer). Anything it can't do
+and token-reduction tools (Token Optimizer). Anything it can't do
 itself (like installing `gh`) is listed clearly at the end under
 "Action required," with exact steps to fix it.
 
@@ -140,7 +140,6 @@ Detected tools:
      OpenCode          [PRIMARY]          found
      Claude Code                          not found
      Copilot VS Code                      found
-     RTK                                  not found
 
 Wiring symlinks...
   OK   ~/.config/opencode/opencode.json
@@ -155,9 +154,6 @@ Wiring VS Code Copilot...
 
 Configuring git hooks...
   OK   git init.templateDir -> /home/you/ai-framework/hooks
-
-Setting up RTK...
-  OK   RTK installed: rtk 1.x.x
 
 Setting up Token Optimizer...
   OK   token-optimizer/claude installed
@@ -200,7 +196,6 @@ intended setup, not redundant.
 
 | Tool                | Layer                         | What it does                                                                                                                                                                                                                         |
 | ------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **RTK**             | Shell output                  | Filters verbose command output (test runs, builds, git logs) before the LLM reads it                                                                                                                                                 |
 | **Token Optimizer** | Structural + behavioral audit | Finds bloated configs, unused skills, stale memory, model misrouting; checkpoints session state so compression survives auto-compaction                                                                                              |
 | **Graphify**        | Codebase exploration          | Pre-builds a local, deterministic call/import graph (tree-sitter, zero LLM cost). Agents query it (`graphify explain`, `graphify path`) instead of reading files one by one to figure out structure — see `skills/graphify/SKILL.md` |
 
@@ -592,7 +587,6 @@ or by telling the orchestrator directly:
 | Tool shows "not found" but is installed                          | Restart your terminal (PATH needs to refresh), then re-run setup                                                                                                                                                                                                                                             |
 | VS Code Copilot has no instructions                              | Re-run `python setup.py` — it updates `settings.json` automatically                                                                                                                                                                                                                                          |
 | Skills not loading                                               | Verify `~/.config/opencode/skills` or `~/.claude/skills` exists                                                                                                                                                                                                                                              |
-| RTK download failed                                              | Install manually: https://github.com/rtk-ai/rtk/releases                                                                                                                                                                                                                                                     |
 | Token Optimizer not installing                                   | See "Token usage reduction" section above                                                                                                                                                                                                                                                                    |
 | Graphify not installing                                          | Install manually: `uv tool install graphifyy` (or `pipx install graphifyy`), then re-run `python setup.py`                                                                                                                                                                                                   |
 | `graph.html` too large / slow to open                            | Use `scripts/graphify-smart-viz.sh` instead of raw `graphify` — it skips HTML generation past ~5000 nodes automatically                                                                                                                                                                                      |

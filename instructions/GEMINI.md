@@ -1,7 +1,6 @@
 # GEMINI.md
 > Gemini CLI global instructions file (`~/.gemini/GEMINI.md`).
 > Imports shared rules, then adds Gemini-specific behaviour.
-> RTK appends its block below — the @import preserves AGENTS.md as the source of truth.
 
 @../AGENTS.md
 
