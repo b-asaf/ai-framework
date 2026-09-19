@@ -97,7 +97,6 @@ def build_links(det):
             (CLAUDE_DIR / "skills",                  SKILLS,                      "dir"),
             (CLAUDE_DIR / "commands",                COMMANDS,                    "dir"),
             (CLAUDE_DIR / "hooks",                   HOOKS,                       "dir"),
-            (CLAUDE_DIR / "hooks" / "session-end.js", HOOKS / "session-end.js",  "file"),
             (CLAUDE_DIR / "scripts",                 SCRIPTS,                     "dir"),
         ]
     if det["codex"]:
