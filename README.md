@@ -1,6 +1,6 @@
 # ai-framework
 
-**Version 1.8.2** — see [`CHANGELOG.md`](CHANGELOG.md) for what changed. The
+**Version 1.9.0** — see [`CHANGELOG.md`](CHANGELOG.md) for what changed. The
 same version prints at the top of every `python setup.py` / `python setup.py
 --verify` run, so your installed copy and this README never disagree about
 which version you're on.
@@ -446,7 +446,7 @@ opencode.json               ← OpenCode global config (model: sonnet-5, permiss
 agents/                     ← 15 agent definitions (each has model: field for cost tiering)
 skills/                     ← 42 skill folders (most have a ## Quick reference section)
 commands/                   ← slash commands (/task, /review, /first-run, /handoff)
-hooks/                      ← two unrelated kinds, same folder: git hooks (pre-commit, commit-msg, pre-push, build-verify.sh, install-hooks.sh — wired via git init.templateDir, fire on git events) + session-end.js (Claude Code's own Stop-event hook, wired via ~/.claude/hooks/, fires on session end)
+hooks/                      ← git hooks (pre-commit, commit-msg, pre-push, build-verify.sh, install-hooks.sh — wired via git init.templateDir, fire on git events)
 scripts/                    ← graphify-smart-viz.sh (node-count-aware graph visualization)
 
 instructions/

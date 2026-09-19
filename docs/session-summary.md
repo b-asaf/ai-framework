@@ -27,7 +27,7 @@ ai-framework/
 ├── agents/                      ← 15 agent definitions with per-agent model assignment
 ├── skills/                      ← 42 skill folders (most have ## Quick reference sections)
 ├── commands/                    ← slash commands: /task /review /first-run /handoff
-├── hooks/                       ← two unrelated kinds, same folder: git hooks (wired via git init.templateDir) + session-end.js (Claude Code's own Stop-event hook, wired via ~/.claude/hooks/)
+├── hooks/                       ← git hooks (wired via git init.templateDir)
 │
 ├── instructions/
 │   ├── AGENTS-reference.md      ← agent roles, task flow, skill routing (on-demand)
@@ -133,7 +133,6 @@ Global default (opencode.json): `github-copilot/claude-sonnet-5
 |---|---|---|
 | Token Optimizer | Structural audit + compaction survival | Auto-installed by setup.py (git clone) |
 | ccusage | Cross-tool token/cost monitoring | Auto-installed by setup.py (npm, or zero-install via npx) |
-| session-end.js hook | Auto session-summary at session end | Wired via ~/.claude/hooks/ |
 
 Plus framework-level optimisations already built in:
 - All skills have `## Quick reference` sections (load summary, not full content)

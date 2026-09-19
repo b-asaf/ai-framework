@@ -9,7 +9,25 @@ Changes are made on `develop` branch and merged to `main` when stable.
 
 ## Unreleased (develop)
 
-## v1.9.0 — RTK removed from the framework entirely
+## v1.9.0 — RTK removed from the framework entirely; broken session-end.js hook removed
+
+- **`hooks/session-end.js` never actually worked, even before the file
+  itself went missing.** The file was gone, but investigation found the
+  bigger problem: Claude Code hooks require an explicit registration in
+  a `settings.json` `"hooks"` block (event, matcher, command) — no such
+  registration existed anywhere in this repo. `setup.py` was symlinking
+  the script into `~/.claude/hooks/` the same way it links `agents/`,
+  `skills/`, `commands/`, but a symlinked script alone does nothing
+  without that registration. Rebuilding this properly would mean: a real
+  Stop-event script, plus safe additive JSON-merge logic in `setup.py`
+  to add a `hooks.Stop` entry into a real user's `~/.claude/settings.json`
+  without clobbering their existing settings — real, ongoing complexity
+  for a narrow safety-net case the `handoff` skill already covers when
+  explicitly invoked. It also would have been Claude-Code-only, working
+  against this framework's multi-tool-support principle (opencode is the
+  documented primary tool). Removed rather than rebuilt: the dangling
+  symlink entry in `setup.py`, and all references in `README.md` and
+  `docs/session-summary.md`.
 
 - **RTK's auto-install (`install_rtk()`) never actually succeeded on at
   least one contributor machine** — `bin/` (where the binary lands)
