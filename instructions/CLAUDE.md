@@ -24,7 +24,6 @@ Sub-agent definitions are in `~/.claude/agents/`.
 Event hooks are in `~/.claude/hooks/`. These fire automatically on Claude Code
 lifecycle events — do not call them manually.
 
-@RTK.md
 # graphify
 - **graphify** (`~/.claude/skills/graphify/SKILL.md`) - any input to knowledge graph. Trigger: `/graphify`
 When the user types `/graphify`, use the installed graphify skill or instructions before doing anything else.

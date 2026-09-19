@@ -9,6 +9,38 @@ Changes are made on `develop` branch and merged to `main` when stable.
 
 ## Unreleased (develop)
 
+## v1.9.0 — RTK removed from the framework entirely
+
+- **RTK's auto-install (`install_rtk()`) never actually succeeded on at
+  least one contributor machine** — `bin/` (where the binary lands)
+  was confirmed empty despite `setup.py` reporting no error, and every
+  session log showed `[rtk] rtk binary not found in PATH — plugin
+  disabled`. Root cause, confirmed via a matching public report: RTK's
+  Windows release binary is flagged by Microsoft Defender as
+  `Trojan:Script/Wacatac.H!ml` when downloaded fresh from GitHub
+  Releases — almost certainly a false positive, but it silently blocks
+  or quarantines the install with no visible error in `setup.py`'s own
+  output.
+- The integration code itself (`wire_rtk()`, calling
+  `rtk init -g --opencode --auto-patch`) was confirmed correct and
+  current against RTK's own documented install flow — this was not a
+  stale-integration bug, only a download/AV problem.
+- Given the install path is unreliable in exactly the environment this
+  framework targets (Windows, corporate/managed endpoints where AV
+  policy isn't something a `setup.py` run can control or work around),
+  RTK has been removed entirely rather than left as a silently-broken,
+  always-disabled dependency. Removed: `install_rtk()`, `configure_rtk()`,
+  `wire_rtk()`, `RTK_CONFIG`/`RTK_CONFIG_CONTENT`/`RTK_BIN_DIR`/`RTK_EXE`/
+  `RTK_URLS`, the `rtk` key from `detect()`, the `@RTK.md` import in
+  `instructions/CLAUDE.md`, and all references in `README.md` and
+  `docs/session-summary.md`.
+- If RTK's Windows AV issue is resolved upstream in the future and
+  reintroducing it becomes worthwhile, treat this as a fresh
+  integration rather than reverting this commit — RTK's own install
+  process has changed over time (see the `rtk init -g` step, not
+  present in earlier versions) and should be re-verified against
+  current upstream docs rather than assumed unchanged.
+
 ### CRLF fix actually applied this time; stale installed `pre-push` hook fixed
 
 - **The "v1.8.0" entry below claiming `.gitattributes` was added to fix CRLF

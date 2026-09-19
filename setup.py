@@ -39,7 +39,7 @@ HOME = Path.home()
 
 # Single source of truth for the framework version. Bump this and add a
 # matching CHANGELOG.md entry together — README and --verify both read this.
-FRAMEWORK_VERSION = "1.8.2"
+FRAMEWORK_VERSION = "1.9.0"
 
 OPENCODE_DIR     = HOME / ".config" / "opencode"
 CLAUDE_DIR       = HOME / ".claude"
@@ -51,13 +51,10 @@ COPILOT_INTELLIJ = (
 )
 if IS_WIN:
     VSCODE_SETTINGS = Path(os.environ.get("APPDATA", "")) / "Code" / "User" / "settings.json"
-    RTK_CONFIG      = Path(os.environ.get("APPDATA", "")) / "rtk" / "config.toml"
 elif platform.system() == "Darwin":
     VSCODE_SETTINGS = HOME / "Library" / "Application Support" / "Code" / "User" / "settings.json"
-    RTK_CONFIG      = HOME / "Library" / "Application Support" / "rtk" / "config.toml"
 else:
     VSCODE_SETTINGS = HOME / ".config" / "Code" / "User" / "settings.json"
-    RTK_CONFIG      = HOME / ".config" / "rtk" / "config.toml"
 
 INSTRUCTIONS = REPO / "instructions"
 SKILLS       = REPO / "skills"
@@ -66,25 +63,9 @@ COMMANDS     = REPO / "commands"
 HOOKS        = REPO / "hooks"
 SCRIPTS      = REPO / "scripts"
 
-RTK_BIN_DIR = REPO / "bin"
-RTK_EXE     = RTK_BIN_DIR / ("rtk.exe" if IS_WIN else "rtk")
-RTK_URLS    = {
-    "Windows": "https://github.com/rtk-ai/rtk/releases/latest/download/rtk-x86_64-pc-windows-msvc.zip",
-    "Darwin":  "https://github.com/rtk-ai/rtk/releases/latest/download/rtk-x86_64-apple-darwin.tar.gz",
-    "Linux":   "https://github.com/rtk-ai/rtk/releases/latest/download/rtk-x86_64-unknown-linux-musl.tar.gz",
-}
-
 # ── Tool detection ─────────────────────────────────────────────────────────────
 
 def detect():
-    rtk_candidate = shutil.which("rtk") or (str(RTK_EXE) if RTK_EXE.exists() else None)
-    rtk_ok = False
-    if rtk_candidate:
-        try:
-            r = subprocess.run([rtk_candidate, "--version"], capture_output=True, text=True)
-            rtk_ok = r.returncode == 0
-        except Exception:
-            pass
     return {
         "opencode":         bool(shutil.which("opencode") or OPENCODE_DIR.exists()),
         "claude":           bool(shutil.which("claude")   or CLAUDE_DIR.exists()),
@@ -92,7 +73,6 @@ def detect():
         "gemini":           bool(shutil.which("gemini")   or GEMINI_DIR.exists()),
         "copilot_intellij": IS_WIN and COPILOT_INTELLIJ is not None and COPILOT_INTELLIJ.exists(),
         "copilot_vscode":   bool(shutil.which("code") or VSCODE_SETTINGS.exists()),
-        "rtk":              rtk_ok,
     }
 
 # ── Link table ─────────────────────────────────────────────────────────────────
@@ -362,136 +342,6 @@ def print_action_required():
         warn(title)
         for d in details:
             info(f"  {d}")
-
-# ── RTK config ─────────────────────────────────────────────────────────────────
-
-RTK_CONFIG_CONTENT = """\
-# RTK configuration — ai-framework
-# Full reference: https://www.rtk-ai.app/docs/getting-started/configuration/
-
-[tracking]
-enabled      = true
-history_days = 90       # keep 90 days of token history
-
-[display]
-colors    = true
-emoji     = true
-max_width = 120
-
-[filters]
-# Directories excluded from file-reading commands (ls, find, grep, cat).
-# Keeps noise low — agent never sees these in output.
-ignore_dirs  = [".git", "node_modules", "target", "__pycache__", ".venv", "vendor", "dist", "build", ".next", ".turbo"]
-ignore_files = ["*.lock", "*.min.js", "*.min.css", "*.map", "*.snap"]
-
-[tee]
-# When a command fails, RTK saves full raw output so the agent can read it
-# without re-running the command. Critical for large test suites.
-enabled   = true
-mode      = "failures"  # "failures" | "always" | "never"
-max_files = 30          # keep last 30 failure logs
-
-[telemetry]
-enabled = false         # disabled — consistent with isolated-environment rule
-
-[hooks]
-# Commands that should NEVER be rewritten by RTK.
-# git operations managed by the framework's own guard (Check 2 + Check 4).
-# docker exec and psql produce output that should not be filtered.
-exclude_commands = [
-  "git rebase",
-  "git cherry-pick",
-  "git bisect",
-  "docker exec",
-  "psql",
-  "mysql",
-]
-"""
-
-def configure_rtk():
-    bold("Configuring RTK...")
-    if RTK_CONFIG.exists():
-        ok(f"RTK config already exists: {RTK_CONFIG}")
-        info("Edit manually to customise: https://www.rtk-ai.app/docs/getting-started/configuration/")
-        return True
-    try:
-        RTK_CONFIG.parent.mkdir(parents=True, exist_ok=True)
-        RTK_CONFIG.write_text(RTK_CONFIG_CONTENT, encoding="utf-8")
-        ok(f"RTK config created: {RTK_CONFIG}")
-        info("  telemetry disabled (isolated-environment rule)")
-        info("  git operations excluded from auto-rewrite")
-        info("  90-day token history, 30 failure logs retained")
-        return True
-    except Exception as exc:
-        warn(f"Could not write RTK config: {exc}")
-        return False
-
-# ── RTK install ────────────────────────────────────────────────────────────────
-
-def install_rtk():
-    bold("Setting up RTK...")
-    existing = shutil.which("rtk") or (str(RTK_EXE) if RTK_EXE.exists() else None)
-    if existing:
-        try:
-            r = subprocess.run([existing, "--version"], capture_output=True, text=True)
-            if r.returncode == 0:
-                ok(f"RTK already installed: {r.stdout.strip()}")
-                return existing
-        except Exception:
-            pass
-        info("rtk exists but failed — reinstalling")
-
-    url    = RTK_URLS.get(platform.system())
-    is_zip = platform.system() == "Windows"
-    if not url:
-        warn(f"RTK auto-install not supported on {platform.system()}")
-        info("Install manually: https://github.com/rtk-ai/rtk/releases")
-        return None
-
-    RTK_BIN_DIR.mkdir(parents=True, exist_ok=True)
-    tmp = str(RTK_BIN_DIR / ("dl.zip" if is_zip else "dl.tar.gz"))
-    try:
-        info("Downloading RTK from GitHub releases...")
-        urllib.request.urlretrieve(url, tmp)
-        if is_zip:
-            with zipfile.ZipFile(tmp, "r") as z:
-                z.extractall(str(RTK_BIN_DIR))
-        else:
-            subprocess.run(["tar", "-xzf", tmp, "-C", str(RTK_BIN_DIR)], check=True)
-        Path(tmp).unlink(missing_ok=True)
-        if not IS_WIN:
-            RTK_EXE.chmod(0o755)
-        r = subprocess.run([str(RTK_EXE), "--version"], capture_output=True, text=True)
-        if r.returncode == 0:
-            ok(f"RTK installed: {r.stdout.strip()}")
-            if not shutil.which("rtk"):
-                warn(f"Add {RTK_BIN_DIR} to your PATH:")
-                if IS_WIN:
-                    info(f'  setx PATH "%PATH%;{RTK_BIN_DIR}"')
-                else:
-                    info(f'  echo \'export PATH="{RTK_BIN_DIR}:$PATH"\' >> ~/.bashrc')
-            return str(RTK_EXE)
-    except Exception as exc:
-        warn(f"RTK download failed: {exc}")
-        info("Install manually: https://github.com/rtk-ai/rtk/releases")
-    return None
-
-def wire_rtk(rtk_path, det):
-    if not rtk_path:
-        return
-    bold("Wiring RTK hooks...")
-    cmds = []
-    if det["opencode"]: cmds.append((["--opencode", "--auto-patch"], "opencode"))
-    if det["claude"]:   cmds.append((["--auto-patch"],               "claude"))
-    if det["gemini"]:   cmds.append((["--gemini", "--auto-patch"],   "gemini"))
-    if det["codex"]:
-        info("rtk/codex: prompt-level — already in instructions/codex-AGENTS.md")
-    for flags, label in cmds:
-        try:
-            subprocess.run([rtk_path, "init", "-g"] + flags, check=True)
-            ok(f"rtk/{label}")
-        except (subprocess.CalledProcessError, FileNotFoundError) as exc:
-            warn(f"rtk/{label} failed: {exc}")
 
 # ── VS Code global settings ────────────────────────────────────────────────────
 
@@ -920,7 +770,6 @@ def main():
         "gemini":           "Gemini CLI",
         "copilot_intellij": "Copilot IntelliJ  (Windows)",
         "copilot_vscode":   "Copilot VS Code",
-        "rtk":              "RTK",
     }
     for key, label in labels.items():
         found  = det.get(key, False)
@@ -948,31 +797,21 @@ def main():
     add_git_template()
     print()
 
-    # 4. RTK — install, configure, wire
-    rtk_path = shutil.which("rtk") or (str(RTK_EXE) if RTK_EXE.exists() and det["rtk"] else None)
-    if not det["rtk"]:
-        rtk_path = install_rtk()
-    else:
-        ok("RTK already installed")
-    configure_rtk()
-    wire_rtk(rtk_path, det)
-    print()
-
-    # 5. Token Optimizer
+    # 4. Token Optimizer
     install_token_optimizer(det)
     audit_token_optimizer(det)
     print()
 
-    # 6. Graphify — code knowledge graph (see skills/graphify/SKILL.md)
+    # 5. Graphify — code knowledge graph (see skills/graphify/SKILL.md)
     if install_graphify():
         wire_graphify(det)
     print()
 
-    # 7. Token monitoring
+    # 6. Token monitoring
     install_ccusage(det)
     print()
 
-    # 8. GitHub CLI (detect only — see check_gh docstring)
+    # 7. GitHub CLI (detect only — see check_gh docstring)
     check_gh()
     print()
 

@@ -1,5 +1,5 @@
 # AGENTS.md — Codex CLI
-# Imports shared rules. RTK can safely append its block here.
+# Imports shared rules.
 
 @../AGENTS.md
 
