@@ -66,9 +66,10 @@ Actually evaluate the proposed solutions:
 - The PR breakdown table is your contract — make sure it's atomic enough
 - If solutions are proposed and grilled (see below), engage with the questions honestly
 
-### Checkpoint 3 — Diff (before committing)
+### Checkpoint 3 — Diff (before the gate)
 
-Before running `git commit`, read what the agents produced:
+Once code-reviewer and QA have both passed, read what the agents produced
+before the gatekeeper's final check:
 - Does it match the agreed spec?
 - Is it one concern only (matches one row in the PR breakdown)?
 - Are there any files changed that shouldn't be?
@@ -76,16 +77,26 @@ Before running `git commit`, read what the agents produced:
 
 If something looks wrong, route back to the relevant agent — don't fix it manually.
 
-### Checkpoint 4 — Commit
+### Checkpoint 4 — Commit & draft PR/MR (automatic)
 
-Review the suggested commit message. Make sure it follows conventional commits and accurately describes what changed. Then:
+Once the gatekeeper reports all PASS, the orchestrator commits, then runs one
+deterministic script (`scripts/open-draft-pr.py`, see the `pr-provider` skill)
+that detects where the repo is hosted, pushes the branch, and opens the PR/MR
+in draft mode — no approval wait (see AGENTS.md Check 4). Provider detection
+and the API calls are code, not model judgment: GitLab opens the MR through
+`git push` options, GitHub and Azure DevOps through their REST APIs.
 
 ```bash
 git add .
 git commit -m "fix(users): resolve CSV export click handler not firing"
-git push origin fix/csv-export-click-handler
-# open PR
+python open-draft-pr.py --title "fix(users): resolve CSV export click handler not firing"
 ```
+
+You'll get a notification with the draft PR/MR link once it's done (or, if
+the provider isn't recognized or a required token/PAT isn't set, a note
+telling you exactly what to open manually). Review the diff and commit
+message there, and mark it ready-for-review yourself when you're happy with
+it — that step stays manual.
 
 ---
 
@@ -94,7 +105,7 @@ git push origin fix/csv-export-click-handler
 The architect produces a PR breakdown table. Work through it sequentially — don't let agents start PR 2 while PR 1 is still in review.
 
 ```
-PR 1 → implement → lint → review → test → gate → YOU review → commit & push → open PR
+PR 1 → implement → lint → review → test → gate → auto commit & push → auto draft PR → YOU review the PR
 PR 2 → only after PR 1 is pushed
 ```
 
@@ -145,14 +156,15 @@ product-manager grills you on requirements → you answer → spec confirmed (2-
     ↓
 architect grills you on the solution → you engage → PR breakdown agreed (5 min)
     ↓
-orchestrator: "Please run: git checkout -b fix/csv-export-click-handler"
+orchestrator: "Created branch `fix/csv-export-click-handler`." (automatic)
     ↓
 frontend implements → shows diff → you approve
 code-reviewer lints/scans, finds one issue → frontend fixes → reruns → approved
 qa writes 2 tests → both pass → gatekeeper: all gates PASS
     ↓
-orchestrator: "Ready. Suggested commit: fix(users): resolve CSV export click handler"
-You review diff → commit → push → open PR
+orchestrator commits, pushes, opens a draft PR automatically:
+"Pushed and opened draft PR: fix(users): resolve CSV export click handler → <URL>"
+You review the PR and mark it ready-for-review when you're happy with it.
 Total: ~20 minutes. Clean, atomic, reviewable.
 ```
 

@@ -25,10 +25,14 @@ Branch names: lowercase, hyphen-separated, descriptive enough to understand with
 ## PR rules
 - `main` / `master` is only updated via PR — never directly.
 - One PR = one concern (see `atomic-changes` skill).
-- At the end of a task, the orchestrator provides the developer with:
+- Branch creation is automatic — no developer confirmation required (AGENTS.md Check 2).
+- At the end of a task, the orchestrator automatically commits, pushes, and
+  opens the PR **in draft mode** (AGENTS.md Check 4), then notifies the
+  developer with:
   1. A summary of what changed
-  2. A suggested commit message following conventional commits: `<prefix>: <description>`
-  3. A reminder to push and open a PR
+  2. The commit message used, following conventional commits: `<prefix>: <description>`
+  3. The draft PR link
+- Marking the PR ready-for-review, and merging it, stay manual developer actions.
 
 ## Commit message format
 Follow conventional commits:

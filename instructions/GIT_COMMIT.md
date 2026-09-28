@@ -1,6 +1,6 @@
 # GIT_COMMIT.md
-> Commit message guidelines. Suggested to the developer by agents — never
-> committed automatically.
+> Commit message guidelines. The orchestrator follows this format when it
+> commits automatically at the end of a task (see AGENTS.md Check 4).
 
 ---
 

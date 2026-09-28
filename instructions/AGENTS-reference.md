@@ -43,7 +43,7 @@ and double-loading skills.
 Developer: "do X"
     ↓
 CHECK 1: project-overview unpopulated?  → run first-run-analysis
-CHECK 2: working branch mismatch?           → propose → confirm → git checkout -b
+CHECK 2: working branch mismatch?           → git checkout -b (automatic, no confirmation)
     ↓
 @product-manager  → requirements grill → confirmed spec
 @architect        → solution grill     → confirmed HLD + PR breakdown
@@ -53,7 +53,8 @@ implementation agents → one PR at a time
     ↓
 @code-reviewer (lint + scan + review) → @qa → @gatekeeper
     ↓ all PASS (gatekeeper also persists any newly discovered facts to project-overview)
-"Ready. Please commit and push your branch."
+git add → git commit → scripts/open-draft-pr.py (push + draft PR/MR, automatic)
+"Pushed and opened draft PR: <URL>."
 ```
 
 ---

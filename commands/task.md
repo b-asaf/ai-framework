@@ -17,7 +17,7 @@ section exactly, step by step:
 2. Design — route to `@architect`.
 2b. Plan review (mandatory) — route to `@plan-reviewer`.
 3. Confirm atomic PR breakdown.
-4. Branch — propose the branch command for the current PR, wait for developer
+4. Branch — create the branch for the current PR automatically, no developer
    confirmation, before any file is written.
 5. Implement (current PR only).
 6. Lint & Review — `@code-reviewer`.

@@ -651,38 +651,51 @@ def wire_graphify(det):
     info("Large repos: use scripts/graphify-smart-viz.sh instead of raw")
     info("`graphify` when HTML output matters — auto-skips viz past ~5000 nodes.")
 
-# ── GitHub CLI ─────────────────────────────────────────────────────────────────
+# ── PR/MR provider tooling ───────────────────────────────────────────────────
 
-def check_gh():
-    """Detect gh only — we don't attempt to install it (package managers may be
-    unavailable or restricted). If missing, the framework still works: AGENTS.md
-    Check 4 falls back to 'push, then open the PR manually' when gh isn't found."""
-    bold("Checking GitHub CLI (gh)...")
-    if shutil.which("gh"):
-        try:
-            r = subprocess.run(["gh", "--version"], capture_output=True, text=True)
-            if r.returncode == 0:
-                ok(f"gh found: {r.stdout.splitlines()[0]}")
-                return True
-        except Exception:
-            pass
-    warn("gh not found")
-    _need_action(
-        "GitHub CLI (gh) not found",
-        "Needed to auto-open PRs at the end of a task.",
-        "Without it: the framework still pushes your branch and tells you",
-        "to open the PR manually (Check 4 in AGENTS.md) — not blocked, just manual.",
-        "Install: https://cli.github.com",
-        "Then run: gh auth login",
-        "Re-check anytime: python setup.py --verify",
-    )
-    return False
+def check_pr_provider():
+    """Report what's needed to open draft PRs/MRs automatically at the end of
+    a task (AGENTS.md Check 4). Opening them is done by scripts/open-draft-pr.py
+    (pure Python stdlib — no gh, curl, or other CLI required): GitLab uses
+    git push options, GitHub and Azure DevOps use their REST APIs and need a
+    token/PAT in the environment. If it isn't set, the framework still works —
+    the script pushes the branch and prints a link to open the PR/MR manually."""
+    bold("Checking PR/MR provider setup...")
+    script = SCRIPTS / "open-draft-pr.py"
+    if script.exists():
+        ok("scripts/open-draft-pr.py found — draft PR/MR opener is available")
+    else:
+        warn("scripts/open-draft-pr.py missing from the framework repo")
+        _need_action(
+            "open-draft-pr.py not found",
+            "Needed to open draft PRs/MRs automatically at the end of a task.",
+            "Update your framework checkout, then: python setup.py --verify",
+        )
+
+    has_gh_token = bool(os.environ.get("GITHUB_TOKEN"))
+    has_ado_pat = bool(os.environ.get("ADO_PAT"))
+    if has_gh_token:
+        ok("GITHUB_TOKEN is set — GitHub draft PRs can open automatically")
+    else:
+        info("GITHUB_TOKEN not set — only relevant if you work in GitHub repos.")
+        info("  Set it (a PAT with 'repo' or 'pull_requests: write' scope) to")
+        info("  let the framework open draft PRs automatically; without it,")
+        info("  it still pushes and gives you a direct link to open one yourself.")
+    if has_ado_pat:
+        ok("ADO_PAT is set — Azure DevOps draft PRs can open automatically")
+    else:
+        info("ADO_PAT not set — only relevant if you work in Azure DevOps repos.")
+        info("  Set it (a PAT with 'Code (Read & Write)' scope) to let the")
+        info("  framework open draft PRs automatically; without it, it still")
+        info("  pushes and gives you a direct link to open one yourself.")
+    info("GitLab repos need no token here — draft MRs open via git push options.")
+    return script.exists()
 
 # ── --verify (read-only) ────────────────────────────────────────────────────────
 
 def verify_only():
     """Read-only health check: no files are written, no links are touched.
-    Lets a dev re-check status anytime (e.g. after installing gh, or after IT
+    Lets a dev re-check status anytime (e.g. after setting GITHUB_TOKEN, or after IT
     enables Developer Mode) without re-running the full install."""
     print()
     bold("ai-framework verify")
@@ -707,7 +720,7 @@ def verify_only():
                 warn(f"copy out of date: {link.name} — run 'python setup.py' to refresh")
     print()
 
-    check_gh()
+    check_pr_provider()
     print()
 
     bold("Graphify status:")
@@ -810,8 +823,8 @@ def main():
     install_ccusage(det)
     print()
 
-    # 7. GitHub CLI (detect only — see check_gh docstring)
-    check_gh()
+    # 7. PR/MR provider tooling (detect only — see check_pr_provider docstring)
+    check_pr_provider()
     print()
 
     # Collect the remaining action items that only make sense after wiring

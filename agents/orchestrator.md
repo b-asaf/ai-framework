@@ -6,27 +6,27 @@ permission:
   bash:
     "*": ask
     "git *": deny
-    "git push --force *": deny
-    "git merge *": deny
-    "git rebase *": deny
-    "git reset *": deny
     "lizard *": deny
     "jscpd *": deny
-    "git add .": ask
-    "git commit *": ask
-    "git push": ask
-    "gh pr create *": ask
     "git status": allow
     "git log *": allow
     "git diff *": allow
     "git branch": allow
     "git branch *": allow
     "git checkout -b *": allow
+    "git add .": allow
+    "git commit *": allow
+    "python *scripts*open-draft-pr.py*": allow
+    "python3 *scripts*open-draft-pr.py*": allow
     "Test-Path *": allow
     "Get-ChildItem *": allow
     "Get-Content *": allow
     "Select-String *": allow
     'powershell -File "$env:USERPROFILE\.config\opencode\scripts\git-context.ps1"': allow
+    "git push*": deny
+    "git merge *": deny
+    "git rebase *": deny
+    "git reset *": deny
   edit: deny
   write: deny
   task:
@@ -91,6 +91,8 @@ own context space if you already have permission to do it yourself.
 
 ## Load when relevant (conditional)
 - `branching-policy` — on any task that writes files
+- `pr-provider` — during Step 10 (Handoff), to open the PR/MR for whichever
+  provider the origin remote points to
 - `atomic-changes` — on any task that involves a PR breakdown
 - `documentation` — when the task may require docs updates
 - `first-run-analysis` — immediately if `project-overview` is unpopulated or contains `[XXX]`
@@ -172,9 +174,11 @@ Before opening any branch, confirm the architect's PR breakdown is agreed:
 **Track the current PR number throughout execution.** Implementation agents work on one PR at a time — never two PRs in the same session without developer confirmation between them.
 
 ### Step 4 — Branch
-Tell the developer the exact command for the **current PR's branch**:
-> "Please run: `git checkout -b <prefix>/<descriptive-name>`"
-Wait for confirmation that the branch is open before any file is written.
+Create the branch for the **current PR** automatically — no confirmation wait
+(see AGENTS.md Check 2):
+Run `git checkout -b <prefix>/<descriptive-name>`, then tell the developer:
+> "Created branch `<prefix>/<descriptive-name>`."
+Only proceed to Step 5 once the branch exists.
 
 ### Step 5 — Implement (current PR only)
 Route to the relevant implementation agents for the **current PR only**, based on the agreed breakdown:
@@ -215,7 +219,13 @@ Route to `@gatekeeper`. If any check fails, rerun the relevant agent and recheck
 ### Step 10 — Handoff
 Once gatekeeper reports all PASS:
 1. Confirm whether `docs/` needs updating — if yes, update before handoff.
-2. Tell the developer:
-   > "All checks passed. Please review the changes, then commit and push your branch."
-   > "Suggested commit message: `<prefix>: <concise description of what changed>`"
-3. If more PRs remain in the breakdown table, ask the developer: "Ready to start PR [N+1]?"
+2. Commit, then push and open the PR/MR — no approval wait (see AGENTS.md
+   Check 4): `git add .` → `git commit -m "<prefix>: <description>"`, then
+   load the `pr-provider` skill and run its script (`open-draft-pr.py`), which
+   detects the provider, pushes, and opens the draft PR/MR. Never push or call
+   a provider API yourself. Report from the script's `STATUS:` line.
+3. Notify the developer — this does not wait for a reply:
+   > "All checks passed. Pushed and opened a draft PR/MR: <URL>"
+   > "Commit: `<prefix>: <concise description of what changed>`"
+   > "Ready for you to review and mark as ready when you're happy with it."
+4. If more PRs remain in the breakdown table, ask the developer: "Ready to start PR [N+1]?"
