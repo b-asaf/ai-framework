@@ -27,13 +27,14 @@ Then execute all first-run steps before accepting any task.
 </check>
 
 <check id="2" name="branch-guard">
-If the developer's message requires writing or editing files — **stop first:**
+If the developer's message requires writing or editing files — create the
+branch automatically, no approval needed:
 
-> "Before I make any changes I'll create a branch. I propose:
-> `<prefix>/<task-name>`
-> Reply 'yes' to confirm and I'll create it, or tell me a different name."
+1. Derive the branch name: `<prefix>/<task-name>`.
+2. Run `git checkout -b <prefix>/<task-name>` immediately.
+3. Tell the developer, after the fact (not a question, just a note):
+   > "Created branch `<prefix>/<task-name>`."
 
-Wait for confirmation. Once confirmed, run `git checkout -b <name>`.
 Only after the branch exists may any file be written or edited.
 
 Branch prefixes: `feat/` `fix/` `chore/` `refactor/` `docs/` `hotfix/` `release/`
@@ -47,29 +48,42 @@ answering questions about the codebase. Never make claims about code before
 investigating — give grounded, hallucination-free answers.
 </check>
 
-<check id="4" name="commit-push-pr-guard">
-Before running `git add`, `git commit`, `git push`, or `gh pr create` — stop completely and show the developer:
+<check id="4" name="commit-push-pr">
+Once the current PR's work is done (Steps 6–9 all PASS) — commit, push, and
+open the PR/MR automatically. Do not stop for approval first.
+
+1. Run: `git add .` → `git commit -m "<type(scope): description>"`.
+2. Load the `pr-provider` skill and run its script (`scripts/open-draft-pr.py`).
+   The script — not you — detects the provider (GitHub, GitLab, Azure DevOps),
+   pushes the branch, and opens the PR/MR as a draft. Do **not** run `git push`,
+   `curl`, or any provider CLI yourself; the script is the only push path.
+3. The PR/MR is **always** opened in draft mode. Never open it
+   ready-for-review automatically — that stays a manual developer action.
+4. Report from the script's `STATUS:` line and exit code, not from assumption.
+   If it says the PR/MR must be opened manually (missing token/PAT, unrecognized
+   host), the push has still happened — relay its `REASON:` and `URL:` to the
+   developer (see `pr-provider`'s "Interpreting the result"). Never ask the
+   developer to paste a token into chat.
+5. Once the PR/MR exists (or once you've reported why it doesn't), notify
+   the developer — this is a notification, not a question, and does not
+   wait for a reply:
 
 ```
-Ready to commit and push. Please review:
+Pushed and opened a draft PR/MR:
 
-Branch:     <current branch>
-Files:      <list of changed files>
-Commit msg: <type(scope): description>
-PR title:   <title>
-PR body:    <first 3 lines of body>
-Base branch: main
+Branch:     <current branch> → <base branch>
+Commit:     <type(scope): description>
+Draft PR/MR: <URL>
 
-Type 'yes' to proceed, edit the message to change it, or 'cancel' to stop.
+Ready for you to review and mark as ready when you're happy with it.
 ```
 
 Rules:
-- Never run any of these commands without completing this approval step first
-- If the developer edits the commit message, use the edited version exactly
-- If the developer says 'cancel' at any point, stop and do not proceed
 - `git push --force` is permanently forbidden — not guarded, never allowed
-- Run in this exact sequence after approval: `git add .` → `git commit -m "..."` → `git push` → `gh pr create`
-- If `gh` is not installed, stop after `git push` and tell the developer to open the PR manually
+- Never mark the PR/MR ready-for-review and never merge it — those stay manual
+- Never echo or log a token/PAT value in any message shown to the developer
+- If the developer wants to edit the commit message or PR/MR body afterward,
+  they can — it's a draft precisely so it isn't final
 </check>
 
 </checks>
@@ -81,12 +95,14 @@ Rules:
 ## Non-negotiable rules
 
 <rule id="1" name="git-permissions">
-**Allowed (run freely):**
+**Allowed (run freely, no developer approval needed):**
 `git status`, `git log`, `git diff`, `git branch`,
-`git checkout -b` (only after developer confirms — see Check 2)
-
-**Guarded (require explicit developer approval before every run — see Check 4):**
-`git add`, `git commit`, `git push`, `gh pr create`
+`git checkout -b` (auto-created per Check 2),
+`git add`, `git commit` — auto-run as the completion sequence per Check 4.
+Pushing and opening the PR/MR happen **only** through the `pr-provider`
+script (`scripts/open-draft-pr.py`), which detects GitHub / GitLab / Azure
+DevOps deterministically and always opens a draft. Direct `git push` by the
+agent is not permitted.
 
 **Never run under any circumstances:**
 `git merge`, `git rebase`, `git reset`, `git push --force`

@@ -6,8 +6,9 @@ same version prints at the top of every `python setup.py` / `python setup.py
 which version you're on.
 
 An agentic development framework that makes AI coding tools behave like a senior
-developer — safe git practices, clean code enforcement, agile vertical PRs, and
-no risky actions without your explicit approval.
+developer — safe git practices, clean code enforcement, agile vertical PRs.
+Branch creation and the commit → push → draft PR sequence run automatically;
+merges, force-pushes, and marking a PR ready-for-review always stay yours.
 
 Install once. Open any project folder. Framework is active.
 
@@ -126,8 +127,8 @@ That's it. No admin rights required. The script detects which tools are
 installed and wires everything automatically — symlinks (or file copies,
 if your machine can't symlink — see below), VS Code settings, git hooks,
 and token-reduction tools (Token Optimizer). Anything it can't do
-itself (like installing `gh`) is listed clearly at the end under
-"Action required," with exact steps to fix it.
+itself (like setting `GITHUB_TOKEN`/`ADO_PAT`) is
+listed clearly at the end under "Action required," with exact steps to fix it.
 
 **Expected output:**
 
@@ -158,8 +159,11 @@ Configuring git hooks...
 Setting up Token Optimizer...
   OK   token-optimizer/claude installed
 
-Checking GitHub CLI (gh)...
-  OK   gh found: gh version 2.x.x
+Checking PR/MR provider setup...
+  OK   scripts/open-draft-pr.py found — draft PR/MR opener is available
+     GITHUB_TOKEN not set — only relevant if you work in GitHub repos.
+     ADO_PAT not set — only relevant if you work in Azure DevOps repos.
+     GitLab repos need no token here — draft MRs open via git push options.
 
 Setup complete — 6 links wired and verified.
 
@@ -171,7 +175,7 @@ To re-check tool status without changing anything: python setup.py --verify
 Action required — none. Everything checked out.
 ```
 
-If something needs your attention (e.g. `gh` isn't installed, or your
+If something needs your attention (e.g. a file-symlink problem, or your
 machine can't create file symlinks), it's collected into a single
 "Action required" block at the end instead of being buried mid-log —
 each item includes exactly what to run or click. Re-check status anytime
@@ -350,8 +354,8 @@ Ask your tool:
 
 > "Add a new endpoint to the API."
 
-✅ Pass: it proposes a branch name and waits for your confirmation.
-❌ Fail: it starts writing files without asking.
+✅ Pass: it creates the branch automatically and tells you the name it used.
+❌ Fail: it starts writing files with no branch created first.
 
 **Step 5 — Skills loading**
 
@@ -582,7 +586,7 @@ or by telling the orchestrator directly:
 | `python: command not found`                                      | Try `python3 setup.py` instead                                                                                                                                                                                                                                                                               |
 | `WinError 1314` / `Permission denied` on file symlinks (Windows) | Setup doesn't need admin rights or Developer Mode — it auto-falls back to copying those files instead. This just means they won't auto-update on `git pull`; re-run `python setup.py` after pulling, or ask IT to enable Developer Mode (`Settings → System → For developers`) for live-linked files instead |
 | After `git pull` files seem stale (Windows copy mode)            | Re-run `python setup.py` — copies don't auto-update like symlinks. Run `python setup.py --verify` anytime to check without changing anything                                                                                                                                                                 |
-| `gh` not found                                                   | Not required — the framework still pushes your branch and tells you to open the PR manually. Install later from https://cli.github.com if you want the auto-open behavior, then `python setup.py --verify` to confirm it's picked up                                                                         |
+| Draft PR/MR didn't open automatically (push succeeded)           | Read the script's `STATUS:`/`REASON:` lines. GitHub needs `$env:GITHUB_TOKEN`, Azure DevOps needs `$env:ADO_PAT` (GitLab needs neither). Self-hosted host not recognized? Run once per repo: `git config ai-framework.provider <github\|gitlab\|ado>`. Without a token the branch is still pushed and you get a direct link to open the PR/MR yourself — see the `pr-provider` skill |
 | Not sure what still needs attention                              | Run `python setup.py --verify` — prints a read-only "Action required" summary, nothing is changed                                                                                                                                                                                                            |
 | Tool shows "not found" but is installed                          | Restart your terminal (PATH needs to refresh), then re-run setup                                                                                                                                                                                                                                             |
 | VS Code Copilot has no instructions                              | Re-run `python setup.py` — it updates `settings.json` automatically                                                                                                                                                                                                                                          |

@@ -10,8 +10,34 @@ permission:
     "git log *": allow
     "git diff *": allow
     "hooks/build-verify.sh *": allow
-  edit: ask
-  write: allow
+  edit:
+    "*": allow
+    "*package.json": ask
+    "*package-lock.json": ask
+    "*yarn.lock": ask
+    "*pnpm-lock.yaml": ask
+    "*pom.xml": ask
+    "*build.gradle": ask
+    "*build.gradle.kts": ask
+    "*requirements*.txt": ask
+    "*pyproject.toml": ask
+    "*poetry.lock": ask
+    "*Pipfile": ask
+    "*Pipfile.lock": ask
+  write:
+    "*": allow
+    "*package.json": ask
+    "*package-lock.json": ask
+    "*yarn.lock": ask
+    "*pnpm-lock.yaml": ask
+    "*pom.xml": ask
+    "*build.gradle": ask
+    "*build.gradle.kts": ask
+    "*requirements*.txt": ask
+    "*pyproject.toml": ask
+    "*poetry.lock": ask
+    "*Pipfile": ask
+    "*Pipfile.lock": ask
 ---
 
 You are the backend engineer for this project.
