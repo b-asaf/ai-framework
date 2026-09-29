@@ -69,7 +69,7 @@ You switch tools; the framework follows.
 **OpenCode as primary — why:**
 
 OpenCode is the only tool that natively supports per-agent model overrides
-(so `architect` uses Opus while `gatekeeper` uses Haiku), global skill discovery,
+(so `architect` uses GPT-6 Astra while `gatekeeper` uses Haiku), global skill discovery,
 slash commands (`/task`, `/review`), and lifecycle hooks. Claude Code supports
 most of these too. VS Code Copilot and IntelliJ support instructions only —
 no per-agent models, no slash commands, no hooks. For the full framework
@@ -470,20 +470,24 @@ setup.py                    ← run once per machine
 workflow-guide.md           ← day-to-day developer guide
 ```
 
-**Agent model tiers:**
+**Agent model assignments:**
 
-| Tier | Model                         | Agents                                                                                             |
-| ---- | ----------------------------- | -------------------------------------------------------------------------------------------------- |
-| HIGH | github-copilot/claude-opus-4.8  | architect, refactor-planner                                                                      |
-| MID  | github-copilot/claude-sonnet-5  | orchestrator, product-manager, backend, frontend, ui, db, api, frontend-error-fixer              |
-| LOW  | `anthropic/claude-haiku-4-5`  | qa, gatekeeper, web-research-specialist                                                            |
+| Tier | Model | Agents |
+|---|---|---|
+| FRONTIER / AGENTIC | `github-copilot/gpt-6-astra` | architect, refactor-planner |
+| FRONTIER / VALIDATION | `github-copilot/claude-opus-5.5` | plan-reviewer |
+| STRONG | `github-copilot/claude-sonnet-5` | orchestrator, product-manager, backend, frontend, ui, db, api, frontend-error-fixer |
+| FRONTIER / VALIDATION | `github-copilot/gpt-6-sol` | code-reviewer |
+| STRONG / VALIDATION | `github-copilot/gpt-5.6-sol` | qa |
+| EFFICIENT | `github-copilot/claude-haiku-4.5` | gatekeeper, web-research-specialist |
 
-> **Note:** lint/security scanning used to run on a separate Haiku-tier `linter`
-> agent; it's now Stage 1 of `code-reviewer` (Sonnet-tier), since the two were
-> already duplicating the static-analysis step. Net effect: one fewer agent
-> hop and one fewer LLM call per PR, at the cost of running the lint stage on
-> the pricier model. For most PRs this is a net win; if lint-tool cost becomes
-> a concern, splitting lint back out to a Haiku-tier agent is a one-file change.
+> **Validation rule:** model family is used for independence checks. The
+> implementation agents use Claude, while `code-reviewer` and `qa` use GPT;
+> `plan-reviewer` uses Claude because the architect/refactor-planner use GPT-6
+> Astra. Provider differences alone do not establish independence.
+
+> **Note:** lint/security scanning runs as Stage 1 of `code-reviewer`, avoiding
+> a separate linter agent and an additional LLM hop.
 
 ---
 

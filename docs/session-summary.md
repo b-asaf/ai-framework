@@ -77,13 +77,25 @@ ai-framework/
 
 | Tier | Model | Agents |
 |---|---|---|
-| HIGH | `github-copilot/claude-opus-4-8` | architect, plan-reviewer, refactor-planner |
-| MID | `github-copilot/claude-sonnet-5` | orchestrator, product-manager, backend, frontend, ui, db, api, code-reviewer, frontend-error-fixer |
-| LOW | `github-copilot/claude-haiku-4-5` | qa, gatekeeper, web-research-specialist |
+| FRONTIER / AGENTIC | `github-copilot/gpt-6-astra` | architect, refactor-planner |
+| FRONTIER / VALIDATION | `github-copilot/claude-opus-5.5` | plan-reviewer |
+| STRONG | `github-copilot/claude-sonnet-5` | orchestrator, product-manager, backend, frontend, ui, db, api, frontend-error-fixer, gatekeeper |
+| STRONG / VALIDATION | `github-copilot/gpt-5.6-sol` | qa |
+| STRONG / VALIDATION | `github-copilot/gpt-5.6-terra` | code-reviewer |
+| EFFICIENT | `github-copilot/claude-haiku-4.5` | web-research-specialist |
 
-Global default (opencode.json): `github-copilot/claude-sonnet-5
+Per-agent, in `agents/*.md` frontmatter — there is no global default model.
+Each agent's `model:` line is authoritative (Model Assignment Matrix, section
+2). See `docs/decisions/DEC-014-model-reassignment.md` for the most recent
+change: `code-reviewer` moved off the ungoverned `gpt-6-sol` onto
+`gpt-5.6-terra`, and `gatekeeper` moved from `claude-haiku-4.5` to
+`claude-sonnet-5` now that a gatekeeper PASS triggers an automatic push and
+draft PR/MR (see `AGENTS.md` Check 4) with no human approval step in between.
 
----
+**Note:** this section only tracks *models*. The git-approval flow described
+elsewhere in this file (branch confirmation, `gh pr create`, "Guarded"
+git commands) is stale relative to the current `AGENTS.md` and predates the
+`pr-provider` script — out of scope for this update; flagged separately.
 
 ## Key rules to remember
 
