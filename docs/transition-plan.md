@@ -66,17 +66,21 @@ Status meaning: **verified** = observed in a test or spike run; **inferred** = d
 | F1 | Headless `opencode run --format json` emits clean JSONL; `step_finish` carries tokens and cost | verified | `RunRecord` can log usage and cost |
 | F2 | Exit code is 0 even when the agent did nothing (permission rejection, ask-then-stop) | verified | Never treat exit code 0 as success. Execution success = `text` event + `reason: "stop"` + no `error` event (see section 5.3 for the other two levels) |
 | F3 | Hard failure (bad model id) gives exit 1 and a generic `error` event | verified | Validate model ids before running |
-| F4 | Permissions are default-allow; the last matching rule wins | inferred | Read-only roles need explicit `edit`, `write`, `task` deny, and `bash` deny or a tight allow-list; validator enforces. Test in step 0.5 |
+| F4 | Permissions are default-allow; the last matching rule wins | verified (bash rules) | Read-only roles need explicit `edit`, `write`, `task` deny, and `bash` deny or a tight allow-list; validator enforces. Evidence in `tests/bench/permissions-evidence.md` |
 | F5 | Delegation through `task` bypassed `write: deny` until `task: deny` was added | verified | Deny `task` for read-only roles |
 | F6 | `--agent X` on a `mode: subagent` agent silently falls back to the default agent (stderr warning only) | verified | Adapter derives primary-mode agent files; the warning is a hard failure |
 | F7 | Tool names vary by model (`apply_patch` vs `edit`) | verified | Gates inspect the working tree, not tool names |
-| F8 | Global `AGENTS.md` makes agents create branches and ask for confirmation; headless cannot answer | verified | Runner pre-approves in the task message, or roles carry non-interactive instructions |
-| F9 | Global `opencode.json` ends with `"*": "ask"`, which overrides earlier git allows | inferred | Move catch-all first when permissions are redefined. Test in step 0.6 |
+| F8 | Global `AGENTS.md` gates stop headless agents: (1) a first-run gate when `docs/project-overview/stack.md` is missing or only a heading, (2) the agent creates a branch on its own, (3) the agent asks to confirm its plan before writing | verified | A pre-approval sentence in the task message bypasses gate 3 but not gate 1. The runner must satisfy gate 1 (filled-in overview docs and `.ai-framework.json`) or use headless-specific role prompts. Decide in step 0.3 |
+| F9 | Global `opencode.json` ends with `"*": "ask"`, which overrides the git allows and denies before it; a headless agent inheriting it cannot branch, commit or push | verified | Move the catch-all first when permissions are redefined (step 1.9). Evidence in `tests/bench/git-permissions-evidence.md` |
 | F10 | Windows: the opencode shim goes through `cmd.exe`; quotes, pipes, braces in arguments break | verified | Plain-text task messages; pass artifacts as files; avoid long argv |
 | F11 | `opencode run` loads skills from `~/.claude/skills`, adding about 20k cached tokens per run | verified | Part of per-run cost; account for it in comparisons |
 | F12 | Spike results: model swap works; policy rejects before any model call; reports valid in 31/31 completed runs; 0% verdict flips on easy benchmark cases | verified | Architecture claim proven for the reviewer on easy cases |
+| F13 | In headless runs an `ask` rule is auto-rejected (`permission requested ... auto-rejecting`), so `ask` behaves like `deny` | verified | Anything that needs a human can stay `ask` in headless runs and fails safe |
+| F14 | The pre-push `branch_protection` check fails open: without `origin/HEAD` or `protectedBranches` in `.ai-framework.json` it warns and allows a push to `main`; the verify gate also skips when `.ai-framework.json` is missing | verified | Step 3A: read an explicit versioned list, fail closed, and fail the headless run when `.ai-framework.json` is missing. Server-side branch protection stays required |
+| F15 | `deny` on `edit`, `write` and `task` removes those tools from the model's tool list instead of returning a permission error | verified | Record it as tool unavailable in evidence; the working-tree check still decides |
+| F16 | The global config under `~/.config/opencode/` links into the framework repo (`opencode.json`, `AGENTS.md`, `agents`, `commands`, `hooks`, `scripts`, `skills`) | verified | A `git pull` on `main` changes live behavior for all projects. Test config changes in a throwaway setup before merging step 1.9 |
 | U1 | `--session` can be used for retry | unverified | Do not rely on it in `report.py` |
-| U2 | `bash: "*": deny` in a derived agent is parsed exactly as assumed | unverified | Covered by step 0.5 |
+| U2 | `bash: "*": deny` in a derived agent is parsed exactly as assumed | verified | Step 0.5 evidence |
 | U3 | Cause of one failed GPT benchmark run | unverified | Step 2.4 |
 
 ## 3. Target folder structure
@@ -192,7 +196,7 @@ Exit criterion: 0.5 and 0.6 pass (or Phase 2 is re-planned), and 0.2 to 0.4 are 
 | 1.6 | `execution/policy.json` as data, grouped into `models` and `constraints`. Per model: `family` (`claude`, `gpt`, `gemini`; independent of provider, so `github-copilot/claude-sonnet-5` and `anthropic/claude-sonnet-5` are both `claude`), `status` (approved / experimental), `evaluation` path for promoted ones. Independence edges move from code into `constraints` | validator reads policy; DEC-014 fixtures (same model for planner and reviewer, experimental without evaluation) both fail |
 | 1.7 | Rename to `validate_framework.py`, keep `validate_agents.py` as a wrapper | both entry points pass |
 | 1.8 | Lint: framework-owned role and verification files (`roles/`, `verification/`, `execution/schemas/`) must not contain concrete model ids or provider names. Match ids (`claude-`, `gpt-`, `codex`, `o1`/`o3`-style, `gemini-`, and provider prefixes such as `anthropic/`, `github-copilot/`), not prose mentions such as "GPT models may..." | fixture with a model id fails; fixture with a prose mention passes |
-| 1.9 | Apply the git and dependency permission rules from section 6 to the global `opencode.json` (catch-all first) and add the human-in-the-loop rules to `AGENTS.md`. Location of the source files comes from inventory step 0.3 | rerun the 0.6 tests against the real config; plus: on a `feat/x` branch, an unrelated request makes the agent ask "same branch or new one?" |
+| 1.9 | Apply the git and dependency permission rules from section 6 to the global `opencode.json` (catch-all first) and add the human-in-the-loop rules to `AGENTS.md`. The global `opencode.json` and `AGENTS.md` are links into this repo (F16), so edit the repo copies and test them in a throwaway setup before merging. Move the catch-all first and tighten patterns such as `git push*main*` | rerun the 0.6 tests against the real config; plus: on a `feat/x` branch, an unrelated request makes the agent ask "same branch or new one?" |
 
 Exit criterion: validator rejects all three DEC-014 incident types. This phase is valuable even if everything after it is abandoned. Merge to `main` at exit.
 
@@ -223,7 +227,7 @@ Also check the acceptance criteria in section 7 at this gate.
 | Step | Do | Test |
 |---|---|---|
 | 3A.1 | Classify every gatekeeper checklist item as deterministic or judgment (table in DEC-015) | every item labeled |
-| 3A.2 | `verification/checks/*` (one file per fact) and `verification/gates/*` (compose checks). Includes `branch_protection`, `dependency_change` (flags diffs to `package.json`, `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `pom.xml`, `build.gradle*`; blocks the push unless the commit carries a `Dependency-Approved:` trailer) and `protected_paths` (before/after tree diff against `constraints.protected_paths`). `hooks/` become thin entrypoints calling `verification/run.py`; keep the hard-link mechanism in `add_git_template` and add the new files to its tuple | per check: one passing and one failing fixture; a manifest change without the trailer is blocked at push; fresh clone blocks a bad push on Windows |
+| 3A.2 | `verification/checks/*` (one file per fact) and `verification/gates/*` (compose checks). Includes `branch_protection` (explicit protected-branch list, fails closed when it cannot decide), `dependency_change` (flags diffs to `package.json`, `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `pom.xml`, `build.gradle*`; blocks the push unless the commit carries a `Dependency-Approved:` trailer) and `protected_paths` (before/after tree diff against `constraints.protected_paths`). `hooks/` become thin entrypoints calling `verification/run.py`; keep the hard-link mechanism in `add_git_template` and add the new files to its tuple | per check: one passing and one failing fixture; a manifest change without the trailer is blocked at push; fresh clone blocks a bad push on Windows |
 | 3A.3 | Hook interpreter risk: hooks written in Python need `python3`/`python` resolvable from Git Bash. `setup.py` adds an "action required" entry if not | tested on this machine |
 | 3A.4 | Trim `gatekeeper` to judgment-only items; replay the baseline tasks | no more misses than baseline; then decide whether the tier can drop |
 
@@ -354,7 +358,7 @@ Checked at the Phase 2 gate and again at 4.5. A phase that breaks one is a reaso
 
 | Risk | Mitigation |
 |---|---|
-| Headless agents stop to ask for confirmation (F8) | Pre-approval text in the task message; or role prompts without the interactive workflow |
+| Headless agents stop at global `AGENTS.md` gates (F8) | A pre-approval sentence is not enough for the first-run gate. Satisfy the gate in the target repo, or use headless-specific role prompts (decided in step 0.3) |
 | Silent subagent fallback (F6) | Adapter derives primary-mode files and fails on the warning |
 | Permission leaks through delegation or tool-name variance (F5, F7) | Explicit denies, validator rule, step 0.5 evidence, tree-diff gate |
 | Windows quirks (F10, symlink privileges, Git Bash Python) | Plain messages, files as artifacts, `setup.py` action-required entries, Git Bash for all commands |
@@ -363,6 +367,8 @@ Checked at the Phase 2 gate and again at 4.5. A phase that breaks one is a reaso
 | Noisy comparisons (3-5 tasks, non-deterministic models) | Treat results as directional; log failures, do not chase averages |
 | Cost of skills loaded per run (F11) | Track in `RunRecord`; consider a leaner role prompt for headless runs |
 | Pattern-based git rules miss bypasses | Pre-push gate and server-side branch protection are the real enforcement |
+| Pre-push hook fails open (F14) | Explicit protected-branch list, fail closed, server-side branch protection |
+| Broad deny patterns such as `git push*main*` also match unrelated branch names | Tighten the patterns in step 1.9 and retest |
 | Tools differ in instruction file names (`AGENTS.md`, `GEMINI.md`) | Step 4.7 pointer files |
 | Live install changes by accident while working | Worktree per phase; throwaway-clone test for 3A and 4 |
 
@@ -370,7 +376,7 @@ Checked at the Phase 2 gate and again at 4.5. A phase that breaks one is a reaso
 
 1. **Which paths may implementation roles write, and what must always be protected?** The git permission rules are decided (section 6). The path list decides the 3C.1 write-allowed gate. Answer before Phase 2 ends.
 2. **Hooks in Python.** Port `pre-commit`, `commit-msg`, `pre-push`, `build-verify.sh` to Python, or keep shell and call Python from them? Can wait until 3A.
-3. **Global `opencode.json` ordering.** Move `"*": "ask"` to the top of the bash block so your git allows take effect? Settled by step 0.6.
+3. **Global `opencode.json` ordering.** Move `"*": "ask"` to the top of the bash block so your git allows take effect? Settled by step 0.6: yes, move it first (F9 verified).
 4. **Profile location.** Keep one default profile in the framework, or also support a per-project override such as `<project>/.ai-framework/execution-profile.json`? Can wait until Phase 4.
 5. **Parity margin** for the Phase 2 gate (what difference from the baseline reviewer is acceptable on the directional metrics). Answer before Phase 2 ends.
 
