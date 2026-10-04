@@ -55,7 +55,7 @@ Observed in step 0.5:
 2. **Own branch.** The agent creates a branch on its own.
 3. **Plan confirmation.** The agent asks to confirm its plan before writing. An approval sentence in the task message bypasses it.
 
-Proposal, to confirm:
+Decided on 2026-10-03, so that no second instruction set has to be maintained:
 - The runner runs a **preflight check in code**. It requires `docs/project-overview/stack.md` with content and `.ai-framework.json`. If either is missing, the run fails with a readable message ("run the first-run analysis interactively once"). It never skips the check.
 - The task message states the branch decision and the approval (section 6 of the plan, F8).
 - There is no headless-specific `AGENTS.md`, so there is no second instruction set to maintain.

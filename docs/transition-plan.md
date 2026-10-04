@@ -70,7 +70,7 @@ Status meaning: **verified** = observed in a test or spike run; **inferred** = d
 | F5 | Delegation through `task` bypassed `write: deny` until `task: deny` was added | verified | Deny `task` for read-only roles |
 | F6 | `--agent X` on a `mode: subagent` agent silently falls back to the default agent (stderr warning only) | verified | Adapter derives primary-mode agent files; the warning is a hard failure |
 | F7 | Tool names vary by model (`apply_patch` vs `edit`) | verified | Gates inspect the working tree, not tool names |
-| F8 | Global `AGENTS.md` gates stop headless agents: (1) a first-run gate when `docs/project-overview/stack.md` is missing or only a heading, (2) the agent creates a branch on its own, (3) the agent asks to confirm its plan before writing | verified | A pre-approval sentence in the task message bypasses gate 3 but not gate 1. The runner must satisfy gate 1 (filled-in overview docs and `.ai-framework.json`) or use headless-specific role prompts. Decide in step 0.3 |
+| F8 | Global `AGENTS.md` gates stop headless agents: (1) a first-run gate when `docs/project-overview/stack.md` is missing or only a heading, (2) the agent creates a branch on its own, (3) the agent asks to confirm its plan before writing | verified | A pre-approval sentence in the task message bypasses gate 3 but not gate 1. The runner must satisfy gate 1 (filled-in overview docs and `.ai-framework.json`). Decided in step 0.3: the runner runs a preflight check in code and fails closed; no headless-specific `AGENTS.md` (`docs/inventory.md`, section 4) |
 | F9 | Global `opencode.json` ends with `"*": "ask"`, which overrides the git allows and denies before it; a headless agent inheriting it cannot branch, commit or push | verified | Move the catch-all first when permissions are redefined (step 1.9). Evidence in `tests/bench/git-permissions-evidence.md` |
 | F10 | Windows: the opencode shim goes through `cmd.exe`; quotes, pipes, braces in arguments break | verified | Plain-text task messages; pass artifacts as files; avoid long argv |
 | F11 | `opencode run` loads skills from `~/.claude/skills`, adding about 20k cached tokens per run | verified | Part of per-run cost; account for it in comparisons |
@@ -205,7 +205,7 @@ Exit criterion: validator rejects all three DEC-014 incident types. This phase i
 | Step | Do | Test |
 |---|---|---|
 | 2.1 | Move the spike into `adws/`, `roles/reviewer.*`, `execution/profiles/`. `roles/reviewer.json` carries `access: read-only`; the adapter translates it into OpenCode deny rules; the validator checks the derived output. Split `runner.py` into `resolve.py`, `opencode_adapter.py`, `report.py`, `record.py` | offline unit tests: resolve rejections, event parsing, report validation, fallback warning caught, access-to-deny translation |
-| 2.2 | Implement the three success levels (section 5.3) and the minimum `RunRecord` fields (section 5.4). On failure, records include the stderr tail and event tail | a forced failure produces a readable error; a run with "I couldn't complete the review" is execution success but not artifact success |
+| 2.2 | Implement the three success levels (section 5.3) and the minimum `RunRecord` fields (section 5.4). On failure, records include the stderr tail and event tail. Add a runner preflight in code that requires `docs/project-overview/stack.md` with content and `.ai-framework.json` in the target repo, and fails with a readable message instead of skipping (see `docs/inventory.md`, section 4) | a forced failure produces a readable error; a repo without `.ai-framework.json` fails preflight with a readable message; a run with "I couldn't complete the review" is execution success but not artifact success |
 | 2.3 | Benchmark rework: replace the debatable `zero-division` fixture, add 4-6 harder cases (subtle logic error, bug hidden behind a passing test, cross-file context), tighten detection regexes, add a `baseline` profile that runs the real `code-reviewer` prompt in primary mode | fixtures build; offline summary works |
 | 2.4 | Investigate the failed GPT benchmark run (error not yet seen) | cause identified, handled or documented; U3 resolved |
 | 2.5 | Live benchmark, at least 3 repeats per model per case, with at least one model from each family (Claude, GPT, Gemini) | see gate below |
@@ -358,7 +358,7 @@ Checked at the Phase 2 gate and again at 4.5. A phase that breaks one is a reaso
 
 | Risk | Mitigation |
 |---|---|
-| Headless agents stop at global `AGENTS.md` gates (F8) | A pre-approval sentence is not enough for the first-run gate. Satisfy the gate in the target repo, or use headless-specific role prompts (decided in step 0.3) |
+| Headless agents stop at global `AGENTS.md` gates (F8) | A pre-approval sentence is not enough for the first-run gate. The runner preflight checks the gate's preconditions in code and fails closed; no headless-specific `AGENTS.md` (step 0.3) |
 | Silent subagent fallback (F6) | Adapter derives primary-mode files and fails on the warning |
 | Permission leaks through delegation or tool-name variance (F5, F7) | Explicit denies, validator rule, step 0.5 evidence, tree-diff gate |
 | Windows quirks (F10, symlink privileges, Git Bash Python) | Plain messages, files as artifacts, `setup.py` action-required entries, Git Bash for all commands |
