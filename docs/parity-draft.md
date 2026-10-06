@@ -18,7 +18,7 @@ The new path has parity with the current flow when it gives the **same verificat
 
 | Side | Source |
 |---|---|
-| Current flow | `tests/bench/baseline.md` (3 to 5 past tasks; "unknown" where not recorded) |
+| Current flow | The private baseline file kept outside this repo (3 to 5 past tasks; "unknown" where not recorded) |
 | New path | `RunRecord` JSONL (`adws/runs/`) plus the gate results |
 
 ## Rules

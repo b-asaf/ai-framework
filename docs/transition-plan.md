@@ -119,7 +119,7 @@ ai-framework/
 ├── tests/
 │   ├── fixtures/                 # valid + intentionally invalid
 │   ├── test_*.py                 # unittest
-│   └── bench/                    # baseline.md, permissions-evidence.md, bench.py, bench_cases.py, baseline profile
+│   └── bench/                    # permissions-evidence.md, git-permissions-evidence.md, bench.py, bench_cases.py, baseline profile
 ├── docs/
 │   ├── transition-plan.md        # this file
 │   └── decisions/
@@ -170,7 +170,7 @@ Do 0.5 and 0.6 first. They test the two assumptions the architecture rests on. I
 | 0.1 | Create the Phase 0 branch and worktree | branch exists, `git worktree list` shows two folders (done) |
 | 0.5 | Negative permission test. In a throwaway repo, run a derived read-only reviewer and ask it to: edit a file, write a new file, delegate through `task`, and run a shell command that writes. Record results in `tests/bench/permissions-evidence.md`; update the F4, F5 and U2 statuses | `git status --porcelain` is empty afterwards (`git diff --exit-code` alone misses new untracked files) |
 | 0.6 | Git permission tests in a throwaway repo with a local bare remote (`git init --bare remote.git`), using the rule block from section 6 with the catch-all first: (1) branch and commit with no prompt, (2) push a feature branch with no prompt, (3) `git push origin main` is denied, and `git push origin HEAD:main` is stopped by the hook or noted as a gap, (4) `npm install lodash` prompts | all four behave as expected; settles decision #3 and the F9 status |
-| 0.2 | Record 3-5 real past tasks on the current flow: outcome, review iterations (and cause: implementation / review / verification / environment / unclear requirement), time, tokens, what gatekeeper caught or missed | `tests/bench/baseline.md` exists, no empty fields ("unknown" allowed) |
+| 0.2 | Record 3-5 real past tasks on the current flow: outcome, review iterations (and cause: implementation / review / verification / environment / unclear requirement), time, tokens, what gatekeeper caught or missed. Project data stays out of this repo, so keep the file outside it (for example `/d/ai-framework-private/baseline.md`) | the private file exists with 3-5 tasks and no empty fields ("unknown" allowed); `git grep` finds no project names in this repo |
 | 0.3 | Inventory files not yet reviewed: `hooks/*`, `agents/gatekeeper.md`, `.ai-framework.json`, `tools/validate_agents.py` (including the 16 cross-family edges), `main` of `setup.py`, global `AGENTS.md`, `opencode.json` | inventory note lists each file with KEEP / MOVE / SPLIT / REPLACE / REMOVE |
 | 0.4 | Draft the definition of "parity" (below) | draft committed; finalized as part of DEC-015 |
 
