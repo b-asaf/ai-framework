@@ -69,7 +69,7 @@ class ValidatorFixtures(unittest.TestCase):
     def run_validator(self, fixture):
         env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
         return subprocess.run(
-            [sys.executable, str(REPO / "tools" / "validate_agents.py"),
+            [sys.executable, str(REPO / "tools" / "validate_framework.py"),
              "tests/fixtures/" + fixture, CATALOG],
             cwd=REPO, env=env, capture_output=True,
             encoding="utf-8", errors="replace",

@@ -11,7 +11,7 @@ class ValidatorOnRealRepo(unittest.TestCase):
     def test_validator_passes(self):
         env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
         result = subprocess.run(
-            [sys.executable, str(REPO / "tools" / "validate_agents.py")],
+            [sys.executable, str(REPO / "tools" / "validate_framework.py")],
             cwd=REPO, env=env, capture_output=True,
             encoding="utf-8", errors="replace",
         )

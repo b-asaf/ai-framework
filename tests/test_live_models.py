@@ -7,7 +7,7 @@ from unittest import mock
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "tools"))
 
-import validate_agents  # noqa: E402
+import validate_framework  # noqa: E402
 from lib.opencode_models import (  # noqa: E402
     LiveModelError,
     fetch_live_models,
@@ -74,24 +74,24 @@ class LiveModelFetch(unittest.TestCase):
 
 class ValidatorLiveCheck(unittest.TestCase):
     def test_unknown_model_names_agent_and_id(self):
-        agent = validate_agents.load_agent(GHOST)
-        with mock.patch("validate_agents.fetch_live_models", return_value=LIVE):
-            issues = validate_agents.check_live_models([agent])
+        agent = validate_framework.load_agent(GHOST)
+        with mock.patch("validate_framework.fetch_live_models", return_value=LIVE):
+            issues = validate_framework.check_live_models([agent])
         self.assertEqual(len(issues), 1)
         text = str(issues[0])
         self.assertIn("ghost-agent", text)
         self.assertIn("github-copilot/nope", text)
 
     def test_known_model_passes(self):
-        agent = validate_agents.load_agent(GOOD)
-        with mock.patch("validate_agents.fetch_live_models", return_value=LIVE):
-            self.assertEqual(validate_agents.check_live_models([agent]), [])
+        agent = validate_framework.load_agent(GOOD)
+        with mock.patch("validate_framework.fetch_live_models", return_value=LIVE):
+            self.assertEqual(validate_framework.check_live_models([agent]), [])
 
     def test_unreadable_list_is_reported(self):
-        agent = validate_agents.load_agent(GOOD)
+        agent = validate_framework.load_agent(GOOD)
         error = LiveModelError("cannot read the list")
-        with mock.patch("validate_agents.fetch_live_models", side_effect=error):
-            issues = validate_agents.check_live_models([agent])
+        with mock.patch("validate_framework.fetch_live_models", side_effect=error):
+            issues = validate_framework.check_live_models([agent])
         self.assertEqual(len(issues), 1)
         self.assertIn("cannot read the list", str(issues[0]))
 

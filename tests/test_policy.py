@@ -9,7 +9,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO / "tools"))
 
-import validate_agents  # noqa: E402
+import validate_framework  # noqa: E402
 from lib.policy import (  # noqa: E402
     PolicyError,
     check_experimental,
@@ -144,7 +144,7 @@ class ValidatorFixtures(unittest.TestCase):
     def run_validator(self, fixture):
         env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
         return subprocess.run(
-            [sys.executable, str(REPO / "tools" / "validate_agents.py"),
+            [sys.executable, str(REPO / "tools" / "validate_framework.py"),
              "tests/fixtures/" + fixture, CATALOG],
             cwd=REPO, env=env, capture_output=True,
             encoding="utf-8", errors="replace",
@@ -180,7 +180,7 @@ class RealPolicy(unittest.TestCase):
 
     def test_models_and_families_match_the_matrix(self):
         policy = load_policy(POLICY)
-        catalog = validate_agents.load_model_catalog_from_markdown(MATRIX)
+        catalog = validate_framework.load_model_catalog_from_markdown(MATRIX)
         self.assertEqual(set(policy["models"]), set(catalog))
         for model_id, entry in policy["models"].items():
             self.assertEqual(entry["family"].lower(), catalog[model_id].lower(), model_id)
@@ -189,13 +189,13 @@ class RealPolicy(unittest.TestCase):
         policy = load_policy(POLICY)
         from_policy = {(e["producer"], e["validator"]) for e in policy["constraints"]["independence"]}
         from_matrix = set()
-        for table in validate_agents._parse_markdown_tables(MATRIX.read_text(encoding="utf-8-sig")):
+        for table in validate_framework._parse_markdown_tables(MATRIX.read_text(encoding="utf-8-sig")):
             header, *rows = table
-            cols = [validate_agents._find_column(header, name) for name in ("producer", "validator", "required")]
+            cols = [validate_framework._find_column(header, name) for name in ("producer", "validator", "required")]
             if None in cols:
                 continue
             for row in rows:
-                if validate_agents._is_separator_row(row) or len(row) <= max(cols):
+                if validate_framework._is_separator_row(row) or len(row) <= max(cols):
                     continue
                 if row[cols[2]].strip().upper() == "YES":
                     from_matrix.add((row[cols[0]], row[cols[1]]))
