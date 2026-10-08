@@ -487,6 +487,20 @@ def validate_required_denies(agent: Agent, required: dict[str, set[str]]) -> lis
     return issues
 
 
+# Strict frontmatter checks live in tools/lib/frontmatter.py (step 1.3).
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from lib.frontmatter import lint_frontmatter  # noqa: E402
+
+
+def lint_agent_frontmatter(agent: Agent) -> list[Issue]:
+    """Report frontmatter problems that the hand-rolled parser accepts."""
+    text = agent.path.read_text(encoding="utf-8-sig")
+    return [
+        Issue(agent.name, "frontmatter", f"{agent.path.name}:{line}: {message}")
+        for line, message in lint_frontmatter(text)
+    ]
+
+
 def run_checks(repo_root: Path, agents_dir: Path, catalog_path: Path, dec_dir: Path) -> list[Issue]:
     agents = discover_agents(agents_dir)
     catalog = load_model_catalog(catalog_path)
@@ -497,6 +511,7 @@ def run_checks(repo_root: Path, agents_dir: Path, catalog_path: Path, dec_dir: P
         issues += validate_model_exists(agent, catalog)
         issues += lint_mode_value(agent, agents, repo_root)
         issues += validate_required_denies(agent, required_denies)
+        issues += lint_agent_frontmatter(agent)
 
     cross_family_edges = find_cross_family_edges(agents, catalog)
     if cross_family_edges:
