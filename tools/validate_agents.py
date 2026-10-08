@@ -523,7 +523,30 @@ def run_checks(repo_root: Path, agents_dir: Path, catalog_path: Path, dec_dir: P
     return issues
 
 
+# Opt-in live model check (step 1.4). OpenCode-specific knowledge stays in tools/lib/opencode_models.py.
+from lib.opencode_models import LiveModelError, fetch_live_models, find_unknown_models  # noqa: E402
+
+
+def check_live_models(agents: list[Agent]) -> list[Issue]:
+    """Opt-in (--live-models): report every agent whose model `opencode models` does not list.
+
+    Fails closed: if the live list cannot be read, that is reported as an issue.
+    """
+    try:
+        live_models = fetch_live_models()
+    except LiveModelError as error:
+        return [Issue("(live-models)", "live-model", str(error))]
+    agent_models = {agent.name: agent.model for agent in agents if agent.model}
+    return [
+        Issue(name, "live-model", f"model '{model}' is not in the live `opencode models` output")
+        for name, model in find_unknown_models(agent_models, live_models)
+    ]
+
+
 def main() -> int:
+    live_models = "--live-models" in sys.argv
+    if live_models:
+        sys.argv.remove("--live-models")
     repo_root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path.cwd()
     agents_dir = repo_root / "agents"
     catalog_path = (
@@ -534,6 +557,8 @@ def main() -> int:
     dec_dir = repo_root / "docs" / "decisions"
 
     issues = run_checks(repo_root, agents_dir, catalog_path, dec_dir)
+    if live_models:
+        issues += check_live_models(discover_agents(agents_dir))
 
     if not issues:
         print("All agent validation checks passed.")
