@@ -539,6 +539,31 @@ def lint_read_only(agent: Agent) -> list[Issue]:
     return issues
 
 
+# Model policy checks (step 1.6). Policy data lives in execution/policy.json; the logic is in tools/lib/policy.py.
+from lib.policy import PolicyError, check_experimental, check_independence, load_policy  # noqa: E402
+
+
+def check_policy(repo_root: Path, agents: list[Agent]) -> list[Issue]:
+    """Experimental models need an evaluation record; independence pairs must differ in family.
+
+    Fails closed: a missing or malformed policy is reported as an issue.
+    """
+    try:
+        policy = load_policy(repo_root / "execution" / "policy.json")
+    except PolicyError as error:
+        return [Issue("(policy)", "policy", str(error))]
+    agent_models = {agent.name: agent.model for agent in agents if agent.model}
+    issues = [
+        Issue(name, "experimental", message)
+        for name, message in check_experimental(agent_models, policy, repo_root)
+    ]
+    issues += [
+        Issue(label, "independence", message)
+        for label, message in check_independence(agent_models, policy)
+    ]
+    return issues
+
+
 def run_checks(repo_root: Path, agents_dir: Path, catalog_path: Path, dec_dir: Path) -> list[Issue]:
     agents = discover_agents(agents_dir)
     catalog = load_model_catalog(catalog_path)
@@ -551,6 +576,8 @@ def run_checks(repo_root: Path, agents_dir: Path, catalog_path: Path, dec_dir: P
         issues += validate_required_denies(agent, required_denies)
         issues += lint_agent_frontmatter(agent)
         issues += lint_read_only(agent)
+
+    issues += check_policy(repo_root, agents)
 
     cross_family_edges = find_cross_family_edges(agents, catalog)
     if cross_family_edges:

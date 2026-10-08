@@ -1,0 +1,234 @@
+{
+  "version": 1,
+  "models": {
+    "opencode/ling-3.0-flash-fin-free": {
+      "family": "opencode",
+      "status": "experimental",
+      "evaluation": null
+    },
+    "opencode/longcat-2.5-preview-free": {
+      "family": "opencode",
+      "status": "experimental",
+      "evaluation": null
+    },
+    "opencode/mimo-v2.6-flash-free": {
+      "family": "opencode",
+      "status": "experimental",
+      "evaluation": null
+    },
+    "opencode/muse-spark-1.3-contributor-free": {
+      "family": "opencode",
+      "status": "experimental",
+      "evaluation": null
+    },
+    "opencode/nemotron-3-ultra-free": {
+      "family": "opencode",
+      "status": "experimental",
+      "evaluation": null
+    },
+    "opencode/nemotron-3.5-lightning-free": {
+      "family": "opencode",
+      "status": "experimental",
+      "evaluation": null
+    },
+    "opencode/space-bunny-free": {
+      "family": "opencode",
+      "status": "experimental",
+      "evaluation": null
+    },
+    "opencode/big-pickle": {
+      "family": "opencode",
+      "status": "experimental",
+      "evaluation": null
+    },
+    "github-copilot/claude-fable-5": {
+      "family": "claude",
+      "status": "experimental",
+      "evaluation": null
+    },
+    "github-copilot/claude-fable-5.1": {
+      "family": "claude",
+      "status": "experimental",
+      "evaluation": null
+    },
+    "github-copilot/claude-haiku-4.5": {
+      "family": "claude",
+      "status": "approved",
+      "evaluation": null
+    },
+    "github-copilot/claude-opus-4.7": {
+      "family": "claude",
+      "status": "approved",
+      "evaluation": null
+    },
+    "github-copilot/claude-opus-4.7-fast": {
+      "family": "claude",
+      "status": "approved",
+      "evaluation": null
+    },
+    "github-copilot/claude-opus-4.8": {
+      "family": "claude",
+      "status": "approved",
+      "evaluation": null
+    },
+    "github-copilot/claude-opus-4.8-fast": {
+      "family": "claude",
+      "status": "approved",
+      "evaluation": null
+    },
+    "github-copilot/claude-opus-5": {
+      "family": "claude",
+      "status": "approved",
+      "evaluation": null
+    },
+    "github-copilot/claude-opus-5.5": {
+      "family": "claude",
+      "status": "approved",
+      "evaluation": null
+    },
+    "github-copilot/claude-sonnet-5": {
+      "family": "claude",
+      "status": "approved",
+      "evaluation": null
+    },
+    "github-copilot/gpt-5-mini": {
+      "family": "gpt",
+      "status": "approved",
+      "evaluation": null
+    },
+    "github-copilot/gpt-5.3-codex": {
+      "family": "gpt",
+      "status": "experimental",
+      "evaluation": null
+    },
+    "github-copilot/gpt-5.4": {
+      "family": "gpt",
+      "status": "approved",
+      "evaluation": null
+    },
+    "github-copilot/gpt-5.4-mini": {
+      "family": "gpt",
+      "status": "approved",
+      "evaluation": null
+    },
+    "github-copilot/gpt-5.5": {
+      "family": "gpt",
+      "status": "approved",
+      "evaluation": null
+    },
+    "github-copilot/gpt-5.6-luna": {
+      "family": "gpt",
+      "status": "approved",
+      "evaluation": null
+    },
+    "github-copilot/gpt-5.6-sol": {
+      "family": "gpt",
+      "status": "approved",
+      "evaluation": null
+    },
+    "github-copilot/gpt-5.6-terra": {
+      "family": "gpt",
+      "status": "approved",
+      "evaluation": null
+    },
+    "github-copilot/gpt-6-astra": {
+      "family": "gpt",
+      "status": "approved",
+      "evaluation": null
+    },
+    "github-copilot/gpt-6-luna": {
+      "family": "gpt",
+      "status": "approved",
+      "evaluation": null
+    },
+    "github-copilot/gpt-6-sol": {
+      "family": "gpt",
+      "status": "experimental",
+      "evaluation": null
+    }
+  },
+  "constraints": {
+    "independence": [
+      {
+        "producer": "architect",
+        "validator": "plan-reviewer",
+        "rule": "different-family"
+      },
+      {
+        "producer": "refactor-planner",
+        "validator": "plan-reviewer",
+        "rule": "different-family"
+      },
+      {
+        "producer": "api",
+        "validator": "code-reviewer",
+        "rule": "different-family"
+      },
+      {
+        "producer": "backend",
+        "validator": "code-reviewer",
+        "rule": "different-family"
+      },
+      {
+        "producer": "db",
+        "validator": "code-reviewer",
+        "rule": "different-family"
+      },
+      {
+        "producer": "frontend",
+        "validator": "code-reviewer",
+        "rule": "different-family"
+      },
+      {
+        "producer": "frontend-error-fixer",
+        "validator": "code-reviewer",
+        "rule": "different-family"
+      },
+      {
+        "producer": "ui",
+        "validator": "code-reviewer",
+        "rule": "different-family"
+      },
+      {
+        "producer": "api",
+        "validator": "qa",
+        "rule": "different-family"
+      },
+      {
+        "producer": "backend",
+        "validator": "qa",
+        "rule": "different-family"
+      },
+      {
+        "producer": "db",
+        "validator": "qa",
+        "rule": "different-family"
+      },
+      {
+        "producer": "frontend",
+        "validator": "qa",
+        "rule": "different-family"
+      },
+      {
+        "producer": "frontend-error-fixer",
+        "validator": "qa",
+        "rule": "different-family"
+      },
+      {
+        "producer": "ui",
+        "validator": "qa",
+        "rule": "different-family"
+      },
+      {
+        "producer": "code-reviewer",
+        "validator": "gatekeeper",
+        "rule": "different-family"
+      },
+      {
+        "producer": "qa",
+        "validator": "gatekeeper",
+        "rule": "different-family"
+      }
+    ]
+  }
+}
