@@ -91,6 +91,9 @@ class Agent:
         if not separator:
             return None
         category_block = self.permission.get(category)
+        if isinstance(category_block, str):
+            # A blanket value such as `task: deny` applies to every pattern.
+            return category_block
         if not isinstance(category_block, dict):
             return None
         return category_block.get(pattern)
@@ -176,6 +179,8 @@ def load_agent(path: Path) -> Agent:
     frontmatter = parse_frontmatter(path)
     permission = frontmatter.get("permission") or {}
     task_permissions = permission.get("task") or {}
+    if not isinstance(task_permissions, dict):
+        task_permissions = {}  # a blanket `task: deny` has no per-agent patterns
     return Agent(
         path=path,
         mode=frontmatter.get("mode"),
@@ -501,6 +506,39 @@ def lint_agent_frontmatter(agent: Agent) -> list[Issue]:
     ]
 
 
+# Read-only rule (step 1.5). An agent with `edit: deny` is read-only by intent.
+# `write` and `task` can bypass that deny (F5), so they must be denied too,
+# unless an exemption below records why not.
+READ_ONLY_EXEMPTIONS: dict[str, dict[str, str]] = {
+    "qa": {"write": "qa creates new files (tests and its report); edit stays denied"},
+    "orchestrator": {"task": "delegation is its job; its task block is checked by requires-deny directives"},
+}
+
+
+def lint_read_only(agent: Agent) -> list[Issue]:
+    """Require `write: deny` and `task: deny` on every agent that has `edit: deny`."""
+    if agent.permission.get("edit") != "deny":
+        return []
+    exempt = READ_ONLY_EXEMPTIONS.get(agent.name, {})
+    issues: list[Issue] = []
+    for category in ("write", "task"):
+        if category in exempt:
+            continue
+        actual = agent.permission.get(category)
+        if actual == "deny":
+            continue
+        shown = actual if isinstance(actual, str) else ("<pattern block>" if actual else "<missing>")
+        issues.append(
+            Issue(
+                agent.name,
+                "read-only",
+                f"edit is denied, so {category} must be denied too (found {shown}); "
+                f"{category} can bypass the edit deny (F5)",
+            )
+        )
+    return issues
+
+
 def run_checks(repo_root: Path, agents_dir: Path, catalog_path: Path, dec_dir: Path) -> list[Issue]:
     agents = discover_agents(agents_dir)
     catalog = load_model_catalog(catalog_path)
@@ -512,6 +550,7 @@ def run_checks(repo_root: Path, agents_dir: Path, catalog_path: Path, dec_dir: P
         issues += lint_mode_value(agent, agents, repo_root)
         issues += validate_required_denies(agent, required_denies)
         issues += lint_agent_frontmatter(agent)
+        issues += lint_read_only(agent)
 
     cross_family_edges = find_cross_family_edges(agents, catalog)
     if cross_family_edges:
