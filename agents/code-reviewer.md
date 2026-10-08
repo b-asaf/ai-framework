@@ -16,7 +16,7 @@ permission:
     "lizard *": allow
     "jscpd *": allow
   external_directory:
-    "D:\ai-framework\skills\linting-tools\references\*": allow
+    'D:\ai-framework\skills\linting-tools\references\*': allow
   edit: deny
   write: deny
 ---
