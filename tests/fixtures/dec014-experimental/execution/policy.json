@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "models": {
+    "github-copilot/gpt-6-sol": {"family": "gpt", "status": "experimental", "evaluation": null}
+  },
+  "constraints": {"independence": []}
+}

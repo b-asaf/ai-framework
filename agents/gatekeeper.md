@@ -11,6 +11,7 @@ permission:
     "git diff *": allow
   edit: deny
   write: deny
+  task: deny
 ---
 
 You are the gatekeeper for this project. You run once — at the very end, after QA — before the orchestrator hands off to the developer. You are the last line of defence.

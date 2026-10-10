@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "models": {
+    "github-copilot/claude-opus-5.5": {"family": "claude", "status": "approved", "evaluation": null}
+  },
+  "constraints": {
+    "independence": [
+      {"producer": "architect", "validator": "plan-reviewer", "rule": "different-family"}
+    ]
+  }
+}

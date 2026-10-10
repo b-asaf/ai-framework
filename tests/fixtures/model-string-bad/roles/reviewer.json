@@ -1,0 +1,5 @@
+{
+  "name": "reviewer",
+  "access": "read-only",
+  "model": "github-copilot/gpt-5.6-terra"
+}

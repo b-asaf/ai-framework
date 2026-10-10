@@ -4,4 +4,5 @@
 .symlink-test-lnk
 /skills/graphify/references/
 /skills/graphify/.graphify_version
-/.opencode/
+/.opencode/__pycache__/
+*.pyc
