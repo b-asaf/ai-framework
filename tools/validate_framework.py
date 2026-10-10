@@ -564,6 +564,23 @@ def check_policy(repo_root: Path, agents: list[Agent]) -> list[Issue]:
     return issues
 
 
+# Model-agnostic files (step 1.8). roles/, verification/ and execution/schemas/ must not name a concrete model.
+from lib.model_strings import scan_folders  # noqa: E402
+
+
+def lint_model_strings(repo_root: Path) -> list[Issue]:
+    """Report concrete model ids in framework-owned role, verification and schema files."""
+    return [
+        Issue(
+            f"{path}:{line}",
+            "model-string",
+            f"concrete model id '{match}' is not allowed here; "
+            "model choice belongs in execution/profiles and execution/policy.json",
+        )
+        for path, line, match in scan_folders(repo_root)
+    ]
+
+
 def run_checks(repo_root: Path, agents_dir: Path, catalog_path: Path, dec_dir: Path) -> list[Issue]:
     agents = discover_agents(agents_dir)
     catalog = load_model_catalog(catalog_path)
@@ -578,6 +595,7 @@ def run_checks(repo_root: Path, agents_dir: Path, catalog_path: Path, dec_dir: P
         issues += lint_read_only(agent)
 
     issues += check_policy(repo_root, agents)
+    issues += lint_model_strings(repo_root)
 
     cross_family_edges = find_cross_family_edges(agents, catalog)
     if cross_family_edges:

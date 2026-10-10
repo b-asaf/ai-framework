@@ -1,0 +1,5 @@
+{
+  "name": "reviewer",
+  "access": "read-only",
+  "description": "Reviews diffs. Any GPT, Claude or Gemini model may run this role; the profile decides."
+}
