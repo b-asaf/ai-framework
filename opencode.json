@@ -6,19 +6,27 @@
   ],
   "permission": {
     "bash": {
+      "*": "ask",
       "git status": "allow",
       "git log *": "allow",
       "git diff *": "allow",
       "git branch": "allow",
       "git branch *": "allow",
       "git checkout -b *": "allow",
+      "git switch -c *": "allow",
+      "git branch -d *": "deny",
+      "git branch -D *": "deny",
+      "git branch --delete *": "deny",
       "git commit *": "deny",
-      "git push *": "deny",
+      "git push*": "deny",
       "git merge *": "deny",
       "git rebase *": "deny",
       "git reset *": "deny",
-      "git push --force *": "deny",
-      "*": "ask"
+      "gh pr ready*": "deny",
+      "gh pr merge*": "deny",
+      "gh pr create*": "deny",
+      "glab mr merge*": "deny",
+      "glab mr create*": "deny"
     },
     "edit": "ask",
     "write": "allow"

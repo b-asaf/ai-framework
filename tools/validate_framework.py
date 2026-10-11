@@ -581,6 +581,22 @@ def lint_model_strings(repo_root: Path) -> list[Issue]:
     ]
 
 
+# opencode.json permission order (step 1.9, F9). The last matching rule wins, so '*' must come first.
+from lib.opencode_config import ConfigError, catch_all_problems, load_config  # noqa: E402
+
+
+def lint_opencode_config(repo_root: Path) -> list[Issue]:
+    """Report permission blocks in opencode.json where the catch-all is not the first rule."""
+    path = repo_root / "opencode.json"
+    if not path.is_file():
+        return []
+    try:
+        config = load_config(path)
+    except ConfigError as error:
+        return [Issue("opencode.json", "opencode-config", str(error))]
+    return [Issue("opencode.json", "opencode-config", message) for message in catch_all_problems(config.get("permission"))]
+
+
 def run_checks(repo_root: Path, agents_dir: Path, catalog_path: Path, dec_dir: Path) -> list[Issue]:
     agents = discover_agents(agents_dir)
     catalog = load_model_catalog(catalog_path)
@@ -596,6 +612,7 @@ def run_checks(repo_root: Path, agents_dir: Path, catalog_path: Path, dec_dir: P
 
     issues += check_policy(repo_root, agents)
     issues += lint_model_strings(repo_root)
+    issues += lint_opencode_config(repo_root)
 
     cross_family_edges = find_cross_family_edges(agents, catalog)
     if cross_family_edges:
