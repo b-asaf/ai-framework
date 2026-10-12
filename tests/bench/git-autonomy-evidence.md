@@ -24,3 +24,19 @@ Setup: a throwaway repo with one agent that has no bash rules of its own, so it 
 
 - The orchestrator's own block, which overrides the global rules. Checked in part B.
 - Interactive prompts. Only the headless auto-reject was observed.
+
+## Part B: orchestrator block (step 1.9, DEC-017)
+
+Date: 2026-10-12. Model: github-copilot/claude-sonnet-5.
+
+Setup: two test agents built from the real orchestrator frontmatter, run in a throwaway repo with the isolated global config. `orch-test` is the current block. `orch-old-test` lacks the nine new denies (`git branch -d/-D/--delete`, `git commit*--no-verify*`, `gh pr ready/merge/create`, `glab mr merge/create`).
+
+| Command | New | Old |
+|---|---|---|
+| `git checkout -b chore/orch-check` | ran | git refused (the branch existed from the first run); no permission rule involved |
+| `git branch -D chore/orch-check` | denied by rule | allowed; git refused because the branch was checked out |
+| `git commit --no-verify -m chore-x` | denied by rule | allowed; git said nothing to commit |
+| `gh pr ready` | denied by rule | `permission requested ... auto-rejecting` (a prompt, not a deny) |
+| `git push origin main` | denied by rule | not reached in the output |
+
+Finding F20: in the merged rule list the agent's own `"*": ask` comes after the global denies, so it overrides them. The global `gh pr ready*` deny did not protect the old orchestrator, which was only prompted. Agents that can commit repeat the denies in their own block, and the validator enforces it.
