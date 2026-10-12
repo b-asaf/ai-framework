@@ -27,6 +27,15 @@ permission:
     "git merge *": deny
     "git rebase *": deny
     "git reset *": deny
+    "git branch -d *": deny
+    "git branch -D *": deny
+    "git branch --delete *": deny
+    "git commit*--no-verify*": deny
+    "gh pr ready*": deny
+    "gh pr merge*": deny
+    "gh pr create*": deny
+    "glab mr merge*": deny
+    "glab mr create*": deny
   edit: deny
   write: deny
   task:
@@ -154,6 +163,8 @@ which is out of scope for a standalone review invocation.
 After each agent completes, produce a checkpoint summary before routing forward. See `agent-guidelines` [ref: checkpoint-format]. This keeps the working context lean and prevents earlier decisions from being lost or diluted as the session grows.
 
 ### Step 1 — Clarify
+**Branch check first (AGENTS.md Check 2).** Read the current branch with `git-context.ps1`. If it is not the base branch, ask the developer once: stay on `<current>`, get a new branch from `<current>`, or get a new branch from `<base>`. Record the answer; Step 4 uses it. Do not ask this on the base branch.
+
 Route to `@product-manager`. Do not proceed until the spec is confirmed by the developer.
 
 ### Step 2 — Design
@@ -174,11 +185,12 @@ Before opening any branch, confirm the architect's PR breakdown is agreed:
 **Track the current PR number throughout execution.** Implementation agents work on one PR at a time — never two PRs in the same session without developer confirmation between them.
 
 ### Step 4 — Branch
-Create the branch for the **current PR** automatically — no confirmation wait
+Create the branch for the **current PR** automatically, with no confirmation wait
 (see AGENTS.md Check 2):
-Run `git checkout -b <prefix>/<descriptive-name>`, then tell the developer:
+- If the developer chose in Step 1 to stay on the current branch, create nothing.
+- Otherwise run `git checkout -b <prefix>/<descriptive-name> [<source>]`, where `<source>` is the branch the developer chose in Step 1 (leave it out to branch from the current branch), then tell the developer:
 > "Created branch `<prefix>/<descriptive-name>`."
-Only proceed to Step 5 once the branch exists.
+Only proceed to Step 5 once the branch is settled.
 
 ### Step 5 — Implement (current PR only)
 Route to the relevant implementation agents for the **current PR only**, based on the agreed breakdown:
@@ -228,4 +240,4 @@ Once gatekeeper reports all PASS:
    > "All checks passed. Pushed and opened a draft PR/MR: <URL>"
    > "Commit: `<prefix>: <concise description of what changed>`"
    > "Ready for you to review and mark as ready when you're happy with it."
-4. If more PRs remain in the breakdown table, ask the developer: "Ready to start PR [N+1]?"
+4. If more PRs remain in the breakdown table, ask the developer: "Ready to start PR [N+1]? Its branch will start from `<current branch>` unless you prefer `<base branch>`." Record the answer; Step 4 uses it.

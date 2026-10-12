@@ -82,6 +82,7 @@ Status meaning: **verified** = observed in a test or spike run; **inferred** = d
 | F17 | `opencode agent list` reads agents through the global links, so it shows the files in the main folder and ignores edits in a worktree. Copying the agents into a throwaway project's `.opencode/agents/` shows the edited versions. After step 1.5, the edited `architect` showed a `task` rule with `deny` and pattern `*` (OpenCode reads the scalar form), while the live list showed none | verified | Test agent changes in a throwaway project before trusting them; use it in steps 2.1 and 4.1 |
 | F18 | A double-quoted Windows path in agent frontmatter (`"D:\ai-framework\...\*"`) was not registered as written: the live list for `code-reviewer` had no rule for the `linting-tools\references` folder, and the single-quoted version registers it. The loss is silent | verified | Keep the strict escape check (step 1.3). Compare derived agents against `opencode agent list` in tests where possible |
 | F19 | Setting `XDG_CONFIG_HOME` to a folder that holds `opencode/opencode.json` makes OpenCode read that file as its global config, so a global-config change can be tested without touching the live links. A probe rule (`git tag xdg-probe*`) shows the override is active. With the catch-all first, `git checkout -b`, `git switch -c` and the probe ran; `git commit`, `git push`, `git branch -D` and `gh pr ready` were denied by rule; `npm install` was auto-rejected | verified | Test every global-config change this way before merging (steps 1.9 and 4.x) |
+| F20 | An agent's own `"*"` rule comes after the global rules in the merged order, so it overrides every global rule before it: the global denies for `gh pr ready*`, `git branch -D *` and `git commit*--no-verify*` do not protect an agent whose block starts with `"*": ask`, such as the orchestrator | verified | Agents that can commit repeat the denies in their own block; the validator enforces it (`lint_commit_agents`, DEC-017) |
 | U1 | `--session` can be used for retry | unverified | Do not rely on it in `report.py` |
 | U2 | `bash: "*": deny` in a derived agent is parsed exactly as assumed | verified | Step 0.5 evidence |
 | U3 | Cause of one failed GPT benchmark run | unverified | Step 2.4 |
@@ -314,39 +315,13 @@ After Phase 4, `agents/*.md` and `MODEL-ASSIGNMENT-MATRIX.md` are never edited b
 
 ## 6. Git and dependency permissions
 
-**Allowed without approval:** create branches, add, commit, push feature branches, open draft PR/MR.
-**Blocked or asked:** push to `main`/`master`, force push, non-draft PR, merge, mark ready.
+Decided in DEC-017 and implemented in step 1.9.
 
-Global `opencode.json` (catch-all first, because the last matching rule wins, F9):
-
-```json
-"bash": {
-  "*": "ask",
-  "git status*": "allow", "git diff*": "allow", "git log*": "allow",
-  "git switch -c *": "allow", "git checkout -b *": "allow",
-  "git add *": "allow", "git commit *": "allow",
-  "git push -u origin *": "allow",
-  "git push*--force*": "deny",
-  "git push*main*": "deny", "git push*master*": "deny",
-  "python scripts/open-draft-pr.py*": "allow",
-  "gh pr create*": "ask", "gh pr merge*": "deny",
-  "npm ci": "allow",
-  "npm install *": "ask", "yarn add*": "ask", "pnpm add*": "ask",
-  "mvn*versions:*": "ask"
-}
-```
-
-Draft mode is guaranteed by the `pr-provider` script, not by pattern matching. Patterns cannot catch everything (`git push origin HEAD:main` slips past them), and they only protect OpenCode. The runtime-agnostic enforcement, which also covers Copilot, Codex and Gemini, is the `branch_protection` and `dependency_change` checks in the pre-push gate plus server-side branch protection on the remote.
-
-**Human in the loop 1: third-party dependencies.**
-- Interactive: package-manager commands are `ask`, so a real prompt appears.
-- Backstop: the `dependency_change` check blocks the push unless the commit has a `Dependency-Approved:` trailer. Code cannot prove a human approved it, but the trailer makes it visible and reviewable.
-- Headless runner: these commands are `deny`, and a manifest change fails the run.
-
-**Human in the loop 2: new task on an existing branch.** This is a judgment call, so it lives in `AGENTS.md`, not code.
-- On any non-main branch, when a request is not clearly a continuation, ask: same branch or new one?
-- Record each branch's purpose with `git config branch.<name>.description "<task>"`, so the agent has something to compare against.
-- Headless: the runner states the decision in the task message (F8), for example "work on the current branch" or "create a branch named X".
+- **Autonomous:** read and edit files, create branches, `git add` and `git commit` (orchestrator only), and push and open the draft PR/MR through `scripts/open-draft-pr.py` only.
+- **The developer keeps:** (1) publishing, meaning draft to ready and merging; (2) third-party changes; (3) a new task on an existing branch (stay, new from current, or new from base).
+- **Approval checkpoints:** the confirmed spec (`@product-manager`, `grill-me`) and the HLD with its PR breakdown (`@architect`, checked by `@plan-reviewer`).
+- **Permissions:** the global `opencode.json` has the catch-all first. The orchestrator's own block repeats the denies, because its own `"*"` rule overrides the global ones (F20). The validator enforces both (`lint_opencode_config`, `lint_commit_agents`).
+- **Backstops still to build (3A):** `branch_protection`, `dependency_change`, and server-side branch protection.
 
 ## 7. Acceptance criteria
 
