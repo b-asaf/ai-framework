@@ -597,6 +597,40 @@ def lint_opencode_config(repo_root: Path) -> list[Issue]:
     return [Issue("opencode.json", "opencode-config", message) for message in catch_all_problems(config.get("permission"))]
 
 
+# Agents that may commit (step 1.9, DEC-017). An agent's own bash block comes after the global rules, and its
+# own "*" rule overrides all of them, so the global denies do not protect it. It must carry the denies itself.
+COMMIT_AGENT_DENIES = (
+    "git commit*--no-verify*",
+    "git branch -d *", "git branch -D *", "git branch --delete *",
+    "git push*", "git merge *", "git rebase *", "git reset *",
+    "gh pr ready*", "gh pr merge*", "gh pr create*", "glab mr merge*", "glab mr create*",
+)
+
+
+def lint_commit_agents(agent: Agent) -> list[Issue]:
+    """An agent that allows `git commit *` must deny the commands that skip hooks, delete branches or publish."""
+    bash = agent.permission.get("bash")
+    if not isinstance(bash, dict) or bash.get("git commit *") != "allow":
+        return []
+    order = list(bash)
+    allow_at = max(order.index(rule) for rule in ("git commit *", "git branch *") if rule in bash)
+    issues: list[Issue] = []
+    for rule in COMMIT_AGENT_DENIES:
+        if bash.get(rule) != "deny":
+            found = bash.get(rule, "<missing>")
+            issues.append(Issue(agent.name, "commit-agent", f"may commit, so it must deny '{rule}' (found {found})"))
+        elif order.index(rule) < allow_at:
+            issues.append(
+                Issue(
+                    agent.name,
+                    "commit-agent",
+                    f"'{rule}' comes before an allow it must override; the last matching rule wins, "
+                    "so move it after the allows",
+                )
+            )
+    return issues
+
+
 def run_checks(repo_root: Path, agents_dir: Path, catalog_path: Path, dec_dir: Path) -> list[Issue]:
     agents = discover_agents(agents_dir)
     catalog = load_model_catalog(catalog_path)
@@ -609,6 +643,7 @@ def run_checks(repo_root: Path, agents_dir: Path, catalog_path: Path, dec_dir: P
         issues += validate_required_denies(agent, required_denies)
         issues += lint_agent_frontmatter(agent)
         issues += lint_read_only(agent)
+        issues += lint_commit_agents(agent)
 
     issues += check_policy(repo_root, agents)
     issues += lint_model_strings(repo_root)

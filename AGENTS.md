@@ -27,18 +27,26 @@ Then execute all first-run steps before accepting any task.
 </check>
 
 <check id="2" name="branch-guard">
-If the developer's message requires writing or editing files — create the
-branch automatically, no approval needed:
+If the developer's message requires writing or editing files, settle the branch before anything is
+written. The condition is deterministic: compare the current branch with the project's base branch
+(the documented default branch; if none is documented, the branch `origin/HEAD` points to).
 
-1. Derive the branch name: `<prefix>/<task-name>`.
-2. Run `git checkout -b <prefix>/<task-name>` immediately.
-3. Tell the developer, after the fact (not a question, just a note):
-   > "Created branch `<prefix>/<task-name>`."
+- **On the base branch:** create the branch automatically, no approval needed:
+  1. Derive the branch name: `<prefix>/<task-name>`.
+  2. Run `git checkout -b <prefix>/<task-name>` immediately.
+  3. Tell the developer, after the fact (not a question, just a note):
+     > "Created branch `<prefix>/<task-name>`."
+- **On any other branch** (for example the branch created for the previous task): ask once, before the
+  spec grill, and wait for the answer:
+  > "You are on `<current>`. Should this task (a) stay on `<current>`, (b) get a new branch from
+  > `<current>`, or (c) get a new branch from `<base>`?"
+  Then act on the answer without asking again: for (a) do nothing; for (b) or (c) create the new
+  branch with `git checkout -b <prefix>/<task-name> <source>`.
 
-Only after the branch exists may any file be written or edited.
+Only after the branch is settled may any file be written or edited.
 
 Branch prefixes: `feat/` `fix/` `chore/` `refactor/` `docs/` `hotfix/` `release/`
-Name rules: lowercase, hyphens only, ≤ 50 chars, derived from the task.
+Name rules: lowercase, hyphens only, at most 50 chars, derived from the task.
 </check>
 
 <check id="3" name="investigate-before-answering">
@@ -144,7 +152,11 @@ template — see Check 1 and `decisions/DEC-003`.)
 </rule>
 
 <rule id="5" name="show-before-writing">
-Always show a plan and get confirmation before writing files.
+The developer approves the plan at two checkpoints, not before every write: the confirmed spec
+(`@product-manager`, using `grill-me`) and the HLD with its atomic PR breakdown (`@architect`, checked
+by `@plan-reviewer`). Once the PR breakdown is approved, implementation agents write files within the
+current PR row without asking again. Anything outside that row halts and goes back to the orchestrator
+and the developer.
 </rule>
 
 <rule id="6" name="code-principles">
