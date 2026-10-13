@@ -157,6 +157,9 @@ The developer approves the plan at two checkpoints, not before every write: the 
 by `@plan-reviewer`). Once the PR breakdown is approved, implementation agents write files within the
 current PR row without asking again. Anything outside that row halts and goes back to the orchestrator
 and the developer.
+In the fast lane (`/quick`, which only the developer can declare) the declared description replaces both
+checkpoints. The lane's limits and every review, test and gate step still apply (see
+`agents/orchestrator.md`).
 </rule>
 
 <rule id="6" name="code-principles">
