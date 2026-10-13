@@ -39,6 +39,20 @@ update — the orchestrator performs the write.
 
 ## Checklist — all must PASS
 
+### Lane (read the final task summary first)
+
+If the summary says `Lane: quick` (the developer declared it with `/quick`), the items below that refer to the
+architect's PR breakdown or the product-manager's spec are replaced as follows, and nothing else is relaxed:
+
+- "This PR matches exactly one row in the architect's PR breakdown table" becomes: the diff matches the
+  declared description and nothing more.
+- "Implementation matches the confirmed spec" and "All acceptance criteria are satisfied" become: the diff
+  delivers what the declared description says, and the tests pass.
+- The summary must include the `quick-lane-check.py` output with `STATUS: OK`, and `git diff --name-only` must
+  list no manifest, lockfile or `.ai-framework.json`. Otherwise the Atomicity gate FAILS.
+
+If the summary has no lane line, or says `Lane: regular`, apply every item as written.
+
 ### Atomicity (checked first)
 
 - [ ] This PR matches exactly one row in the architect's PR breakdown table

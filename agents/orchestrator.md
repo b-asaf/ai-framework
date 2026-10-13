@@ -18,6 +18,8 @@ permission:
     "git commit *": allow
     "python *scripts*open-draft-pr.py*": allow
     "python3 *scripts*open-draft-pr.py*": allow
+    "python *scripts*quick-lane-check.py*": allow
+    "python3 *scripts*quick-lane-check.py*": allow
     "Test-Path *": allow
     "Get-ChildItem *": allow
     "Get-Content *": allow
@@ -156,6 +158,34 @@ After Step 9 (Gate) completes, report the final verdict — PASS or FAIL with
 the list of blocking issues — and stop. Do not proceed to Step 10's branch/PR
 handoff flow; that step assumes freshly-implemented work ready to commit,
 which is out of scope for a standalone review invocation.
+
+## Invoked via `/quick` - fast lane
+
+When the incoming task is the `/quick` command's template, the developer has declared a quick fix. Only the
+developer can declare it: never choose this lane yourself, never offer it as a shortcut, and never treat a
+request as quick because it sounds small. The text after the command is the whole spec. Keep every review,
+test and gate step.
+
+1. **Branch.** Run the branch check from Step 1 (AGENTS.md Check 2): on the base branch create a `fix/` or
+   `chore/` branch, on any other branch ask the developer once. Then run `quick-lane-check.py --start`. If it
+   does not say `STATUS: OK` (for example the working tree is not clean), stop and tell the developer.
+2. **Plan in two lines, no wait.** State what will change and in which files. There is no `@product-manager`,
+   no `@architect`, no `@plan-reviewer` and no PR breakdown in this lane.
+3. **Implement.** Route to the one relevant implementation agent, with the Step 5 rules: its scope is the
+   description and nothing more.
+4. **Measure.** Run `quick-lane-check.py` and read its output. If it does not say `STATUS: OK` (more than 3
+   files, more than 60 changed lines, or a manifest, lockfile or `.ai-framework.json` changed), stop and tell
+   the developer: "This is no longer a quick fix: <REASON>." Offer the regular lane (`/task`) or a split, and
+   wait. Never continue on your own, and never trim the change to fit.
+5. **Review, test, gate.** Steps 6 to 9, unchanged. The final task summary says `Lane: quick`, repeats the
+   description as the spec, and includes the `quick-lane-check.py` output.
+6. **Handoff.** Step 10, unchanged, except that the commit gets a second message paragraph, `Lane: quick`
+   (`git commit -m "<prefix>: <description>" -m "Lane: quick"`), and there is no PR breakdown table, so do
+   not ask about a next PR.
+
+Run the script from the framework scripts folder, the same way as `open-draft-pr.py`:
+`python "$env:USERPROFILE\.config\opencode\scripts\quick-lane-check.py"`
+(macOS/Linux: `python3 ~/.config/opencode/scripts/quick-lane-check.py`).
 
 ## On every task
 
