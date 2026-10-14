@@ -12,7 +12,8 @@ permission:
     "git -C * status": allow
     "git -C * log *": allow
     "git -C * diff *": allow
-    'powershell -File "$env:USERPROFILE\.config\opencode\scripts\git-context.ps1"': allow
+    "python *scripts*git-context.py*": allow
+    "python3 *scripts*git-context.py*": allow
     "lizard *": allow
     "jscpd *": allow
   external_directory:

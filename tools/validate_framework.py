@@ -597,6 +597,41 @@ def lint_opencode_config(repo_root: Path) -> list[Issue]:
     return [Issue("opencode.json", "opencode-config", message) for message in catch_all_problems(config.get("permission"))]
 
 
+# Shell syntax that breaks in the bash tool (F25): `$env:X` expands to nothing there, and git-context.ps1 is gone.
+# Only files the agents read are scanned; tests/, tools/, scripts/ and docs/decisions/ may mention the old forms.
+SHELL_SYNTAX_ROOTS = ("agents", "commands", "skills")
+SHELL_SYNTAX_FILES = ("AGENTS.md",)
+SHELL_SYNTAX_SUFFIXES = {".md", ".json", ".yaml", ".yml", ".txt"}
+SHELL_SYNTAX_BANNED = (
+    ("$env:", "PowerShell-only variable; use $HOME in commands"),
+    ("git-context.ps1", "removed; use git-context.py"),
+)
+
+
+def lint_shell_syntax(repo_root: Path) -> list[Issue]:
+    """Report PowerShell-only variables and the removed git-context.ps1 in files that agents read."""
+    paths: list[Path] = []
+    for root in SHELL_SYNTAX_ROOTS:
+        base = repo_root / root
+        if base.is_dir():
+            paths += sorted(p for p in base.rglob("*") if p.is_file() and p.suffix.lower() in SHELL_SYNTAX_SUFFIXES)
+    for name in SHELL_SYNTAX_FILES:
+        candidate = repo_root / name
+        if candidate.is_file():
+            paths.append(candidate)
+    issues: list[Issue] = []
+    for path in paths:
+        text = path.read_text(encoding="utf-8", errors="replace")
+        for number, line in enumerate(text.splitlines(), 1):
+            lowered = line.lower()
+            for token, hint in SHELL_SYNTAX_BANNED:
+                if token in lowered:
+                    issues.append(
+                        Issue(path.relative_to(repo_root).as_posix(), "shell-syntax", f"line {number}: '{token}' ({hint})")
+                    )
+    return issues
+
+
 # Agents that may commit (step 1.9, DEC-017). An agent's own bash block comes after the global rules, and its
 # own "*" rule overrides all of them, so the global denies do not protect it. It must carry the denies itself.
 COMMIT_AGENT_DENIES = (
@@ -648,6 +683,7 @@ def run_checks(repo_root: Path, agents_dir: Path, catalog_path: Path, dec_dir: P
     issues += check_policy(repo_root, agents)
     issues += lint_model_strings(repo_root)
     issues += lint_opencode_config(repo_root)
+    issues += lint_shell_syntax(repo_root)
 
     cross_family_edges = find_cross_family_edges(agents, catalog)
     if cross_family_edges:
