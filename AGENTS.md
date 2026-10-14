@@ -124,14 +124,13 @@ fallback (`ask` or `deny`), which fails outright in a headless session
 with no one to answer `ask`.
 
 **For checking git status and current branch together**, always call
-`powershell -File "$env:USERPROFILE\.config\opencode\scripts\git-context.ps1"`
+`python "$HOME/.config/opencode/scripts/git-context.py"`
 exactly as written, as a single command, instead of issuing separate or
-chained `git status`/`git branch` commands. Use this exact string,
-verbatim: `$env:USERPROFILE` (not `~`, which does not reliably expand when
-passed as a literal argument to an external process on Windows
-PowerShell), double quotes around the path, backslashes as shown. This is
-a pre-approved, exact-match command in every relevant agent's permission
-list, so it never falls through to the `ask`/`deny` fallback.
+chained `git status`/`git branch` commands. Use `$HOME` (not `~`, and not
+PowerShell-only variable syntax: the bash tool expands that to nothing),
+with double quotes around the path and forward slashes as shown. This is
+a pre-approved command in every relevant agent's permission list, so it
+never falls through to the `ask`/`deny` fallback.
 
 For any other git information not covered by that script, issue each git
 command as its own separate tool call — never chained.

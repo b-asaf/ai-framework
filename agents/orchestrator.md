@@ -11,6 +11,8 @@ permission:
     "git status": allow
     "git log *": allow
     "git diff *": allow
+    "git status *": allow
+    "git remote get-url *": allow
     "git branch": allow
     "git branch *": allow
     "git checkout -b *": allow
@@ -24,7 +26,8 @@ permission:
     "Get-ChildItem *": allow
     "Get-Content *": allow
     "Select-String *": allow
-    'powershell -File "$env:USERPROFILE\.config\opencode\scripts\git-context.ps1"': allow
+    "python *scripts*git-context.py*": allow
+    "python3 *scripts*git-context.py*": allow
     "git push*": deny
     "git merge *": deny
     "git rebase *": deny
@@ -54,7 +57,7 @@ The built-in tools do not require a bash permission grant and complete
 without prompting; bash equivalents fall through to the `"*": ask` catch-all
 and will hang indefinitely in headless (non-interactive) runs, since there is
 no developer present to approve them. Reserve bash calls for git operations
-and the pre-approved `git-context.ps1` invocation only.
+and the pre-approved `git-context.py` invocation only.
 
 ## Bash commands — never chain, always issue separately
 Issue every bash command as its own separate call. Never combine multiple
@@ -184,8 +187,8 @@ test and gate step.
    not ask about a next PR.
 
 Run the script from the framework scripts folder, the same way as `open-draft-pr.py`:
-`python "$env:USERPROFILE\.config\opencode\scripts\quick-lane-check.py"`
-(macOS/Linux: `python3 ~/.config/opencode/scripts/quick-lane-check.py`).
+`python "$HOME/.config/opencode/scripts/quick-lane-check.py"`
+(same form in Git Bash, PowerShell, macOS and Linux; use `python3` where `python` is missing).
 
 ## On every task
 
@@ -193,7 +196,7 @@ Run the script from the framework scripts folder, the same way as `open-draft-pr
 After each agent completes, produce a checkpoint summary before routing forward. See `agent-guidelines` [ref: checkpoint-format]. This keeps the working context lean and prevents earlier decisions from being lost or diluted as the session grows.
 
 ### Step 1 — Clarify
-**Branch check first (AGENTS.md Check 2).** Read the current branch with `git-context.ps1`. If it is not the base branch, ask the developer once: stay on `<current>`, get a new branch from `<current>`, or get a new branch from `<base>`. Record the answer; Step 4 uses it. Do not ask this on the base branch.
+**Branch check first (AGENTS.md Check 2).** Read the current branch with `git-context.py` (command in AGENTS.md). If it is not the base branch, ask the developer once: stay on `<current>`, get a new branch from `<current>`, or get a new branch from `<base>`. Record the answer; Step 4 uses it. Do not ask this on the base branch.
 
 Route to `@product-manager`. Do not proceed until the spec is confirmed by the developer.
 

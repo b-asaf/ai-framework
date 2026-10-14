@@ -7,7 +7,7 @@ description: Pushes the current branch and opens a draft PR/MR on GitHub, GitLab
 
 - **Run the script — never compose `git push`, `curl`, or JSON yourself.**
   ```
-  python "$env:USERPROFILE\.config\opencode\scripts\open-draft-pr.py" --title "<type(scope): description>" --body "<short summary>"
+  python "$HOME/.config/opencode/scripts/open-draft-pr.py" --title "<type(scope): description>" --body "<short summary>"
   ```
   (macOS/Linux: `python3 ~/.config/opencode/scripts/open-draft-pr.py ...`)
 - `--branch`, `--base`, `--title`, `--body` are all optional; when omitted the script derives them from git (current branch, `origin/HEAD`, last commit subject/body). Use `--body-file <path>` for multi-line bodies.
