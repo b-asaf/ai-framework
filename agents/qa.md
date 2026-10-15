@@ -5,6 +5,8 @@ model: github-copilot/gpt-5.6-sol
 permission:
   bash:
     "*": ask
+    "python *scripts*git-context.py*": allow
+    "python3 *scripts*git-context.py*": allow
     "git *": deny
     "git status": allow
     "git log *": allow

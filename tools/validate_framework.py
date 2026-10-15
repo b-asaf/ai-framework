@@ -666,6 +666,29 @@ def lint_commit_agents(agent: Agent) -> list[Issue]:
     return issues
 
 
+# An agent whose own bash fallback is ask prompts the developer on every branch check: AGENTS.md tells every
+# agent to run git-context.py, and an agent's own "*" rule overrides the global rules (F20, F28).
+GIT_CONTEXT_ALLOWS = ("python *scripts*git-context.py*", "python3 *scripts*git-context.py*")
+
+
+def lint_git_context(agent: Agent) -> list[Issue]:
+    """An agent whose bash fallback is `ask` must allow git-context.py, after the fallback rule."""
+    bash = agent.permission.get("bash")
+    if not isinstance(bash, dict) or bash.get("*") != "ask":
+        return []
+    order = list(bash)
+    issues: list[Issue] = []
+    for rule in GIT_CONTEXT_ALLOWS:
+        if bash.get(rule) != "allow":
+            found = bash.get(rule, "<missing>")
+            issues.append(Issue(agent.name, "git-context", f"falls back to ask, so it must allow '{rule}' (found {found})"))
+        elif order.index(rule) < order.index("*"):
+            issues.append(
+                Issue(agent.name, "git-context", f"'{rule}' comes before the '*' rule; the last matching rule wins, so move it after")
+            )
+    return issues
+
+
 def run_checks(repo_root: Path, agents_dir: Path, catalog_path: Path, dec_dir: Path) -> list[Issue]:
     agents = discover_agents(agents_dir)
     catalog = load_model_catalog(catalog_path)
@@ -679,6 +702,7 @@ def run_checks(repo_root: Path, agents_dir: Path, catalog_path: Path, dec_dir: P
         issues += lint_agent_frontmatter(agent)
         issues += lint_read_only(agent)
         issues += lint_commit_agents(agent)
+        issues += lint_git_context(agent)
 
     issues += check_policy(repo_root, agents)
     issues += lint_model_strings(repo_root)
