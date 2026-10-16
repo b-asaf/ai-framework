@@ -690,6 +690,32 @@ def lint_git_context(agent: Agent) -> list[Issue]:
     return issues
 
 
+# QA runs the project's tests all day. Its own "*": ask would prompt on every run (F20, F30), so it must allow
+# the test runners, after the "*" rule. Add a runner to TEST_RUNNERS when a new stack needs one.
+TEST_RUNNER_AGENTS = ("qa",)
+TEST_RUNNERS = (
+    "node --test", "npm test", "npm run test", "npx vitest run", "npx jest",
+    "mvn test", "./mvnw test", "./gradlew test",
+)
+TEST_RUNNER_ALLOWS = tuple(rule for runner in TEST_RUNNERS for rule in (runner, runner + " *"))
+
+
+def lint_test_runners(agent: Agent) -> list[Issue]:
+    """A test-running agent whose bash fallback is `ask` must allow the test runners, after the fallback rule."""
+    bash = agent.permission.get("bash")
+    if agent.name not in TEST_RUNNER_AGENTS or not isinstance(bash, dict) or bash.get("*") != "ask":
+        return []
+    order = list(bash)
+    issues: list[Issue] = []
+    for rule in TEST_RUNNER_ALLOWS:
+        if bash.get(rule) != "allow":
+            found = bash.get(rule, "<missing>")
+            issues.append(Issue(agent.name, "test-runner", f"falls back to ask, so it must allow '{rule}' (found {found})"))
+        elif order.index(rule) < order.index("*"):
+            issues.append(Issue(agent.name, "test-runner", f"'{rule}' comes before the '*' rule; the last matching rule wins"))
+    return issues
+
+
 def run_checks(repo_root: Path, agents_dir: Path, catalog_path: Path, dec_dir: Path) -> list[Issue]:
     agents = discover_agents(agents_dir)
     catalog = load_model_catalog(catalog_path)
@@ -704,6 +730,7 @@ def run_checks(repo_root: Path, agents_dir: Path, catalog_path: Path, dec_dir: P
         issues += lint_read_only(agent)
         issues += lint_commit_agents(agent)
         issues += lint_git_context(agent)
+        issues += lint_test_runners(agent)
 
     issues += check_policy(repo_root, agents)
     issues += lint_model_strings(repo_root)

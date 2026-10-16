@@ -7,6 +7,22 @@ permission:
     "*": ask
     "python *scripts*git-context.py*": allow
     "python3 *scripts*git-context.py*": allow
+    "node --test": allow
+    "node --test *": allow
+    "npm test": allow
+    "npm test *": allow
+    "npm run test": allow
+    "npm run test *": allow
+    "npx vitest run": allow
+    "npx vitest run *": allow
+    "npx jest": allow
+    "npx jest *": allow
+    "mvn test": allow
+    "mvn test *": allow
+    "./mvnw test": allow
+    "./mvnw test *": allow
+    "./gradlew test": allow
+    "./gradlew test *": allow
     "git *": deny
     "git status": allow
     "git log *": allow
