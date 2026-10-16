@@ -605,6 +605,7 @@ SHELL_SYNTAX_SUFFIXES = {".md", ".json", ".yaml", ".yml", ".txt"}
 SHELL_SYNTAX_BANNED = (
     ("$env:", "PowerShell-only variable; use $HOME in commands"),
     ("git-context.ps1", "removed; use git-context.py"),
+    ("--output .jscpd-report", "writes a report into the project; run scripts/static-analysis.py instead"),
 )
 
 

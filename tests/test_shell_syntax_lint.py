@@ -44,6 +44,12 @@ class ShellSyntaxLintTest(unittest.TestCase):
         files = sorted(i.file for i in issues)
         self.assertEqual(files, ["AGENTS.md", "AGENTS.md", "skills/s/SKILL.md"])
 
+    def test_jscpd_report_output_in_a_skill_is_reported(self):
+        issues = self.lint({"skills/s/SKILL.md": "jscpd --reporters json --output .jscpd-report src/\n"})
+        self.assertEqual(len(issues), 1)
+        self.assertEqual(issues[0].check, "shell-syntax")
+        self.assertIn("static-analysis.py", issues[0].message)
+
     def test_exempt_paths_are_not_scanned(self):
         issues = self.lint({
             "tests/t.py": "$env:USERPROFILE git-context.ps1\n",
