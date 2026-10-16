@@ -4,7 +4,7 @@ mode: primary
 model: github-copilot/claude-sonnet-5
 permission:
   bash:
-    "*": ask
+    "*": deny
     "git *": deny
     "lizard *": deny
     "jscpd *": deny
