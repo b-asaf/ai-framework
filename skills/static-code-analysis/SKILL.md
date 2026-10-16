@@ -5,7 +5,8 @@ description: Run a static code analysis gate using lizard (cyclomatic complexity
 
 ## Quick reference
 
-- **Tools:** `lizard --warnings_only --CCN 10 <path>` (complexity) + `jscpd --threshold 10 <path>` (duplication)
+- **Run:** `python "$HOME/.config/opencode/scripts/static-analysis.py" <changed paths>` (lizard + jscpd, nothing written into the repo)
+- **PARTIAL** means duplication was not analyzed (inputs below the minimum block size): report it as not analyzed, never as a pass
 - **Thresholds:** CCN ≤ 10 per function, duplication ≤ 10%, changed-line coverage ≥ 90%
 - **Scope:** enforce only on changed lines — legacy violations are context, not blockers
 - **Missing tool:** stop and report install command (`pip install lizard` / `npm install -g jscpd`)
@@ -52,29 +53,23 @@ Do not treat a missing tool as a code failure. It is an environment issue the de
 
 ## How to run
 
-**Cyclomatic complexity (lizard):**
+Run the script on the changed files or folders. It runs lizard as `python -m lizard` (so PATH does not matter) and jscpd with the console reporter, and it writes nothing into the project:
 
 ```bash
-lizard --warnings_only --CCN 10 <file-or-dir> [...]
+python "$HOME/.config/opencode/scripts/static-analysis.py" <changed-file-or-dir> [...]
 ```
 
-**Duplication (jscpd):**
+Read the `STATUS:` line and the exit code, not your own impression of the output:
 
-```bash
-jscpd --threshold 10 --reporters json --output .jscpd-report <file-or-dir> [...]
-# or without global install:
-npx jscpd --threshold 10 --reporters json --output .jscpd-report <file-or-dir> [...]
-```
+| STATUS | Exit | Meaning |
+|---|---|---|
+| OK | 0 | both checks ran and passed |
+| PARTIAL | 0 | complexity passed; duplication was not analyzed because the inputs are below the minimum block size. Say "duplication not analyzed", never "duplication passed" |
+| FAIL | 1 | a threshold failed; `WARNING:` lines give function locations, `DUP_PERCENT:` the duplication |
+| ERROR | 3 | a tool is missing or broke; the `INSTALL:` line gives the command |
+| NOT_APPLICABLE | 0 | no supported source files in the given paths |
 
-Examples:
-
-```bash
-# Single file
-lizard --warnings_only --CCN 10 src/UserService.java
-
-# Directory
-jscpd --threshold 10 --reporters json --output .jscpd-report src/
-```
+Do not run `lizard` or `jscpd` directly. A jscpd report folder inside the project gets staged and committed by mistake.
 
 ---
 
@@ -96,6 +91,7 @@ Run whole-file tools, but enforce thresholds only for findings that intersect th
 | Tool missing | PREREQUISITE FAILURE — stop, report install command |
 | Threshold failure in current diff | BLOCKING — reject before reading any code |
 | Threshold failure outside current diff | NON-BLOCKING — record as legacy context |
+| Duplication not analyzed (STATUS: PARTIAL) | Record as unavailable, continue; never report it as a pass |
 | Coverage infrastructure missing | Record as unavailable, continue |
 | Coverage below threshold on changed lines | BLOCKING |
 | All checks pass | Proceed to code review |

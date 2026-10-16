@@ -14,8 +14,8 @@ permission:
     "git -C * diff *": allow
     "python *scripts*git-context.py*": allow
     "python3 *scripts*git-context.py*": allow
-    "lizard *": allow
-    "jscpd *": allow
+    "python *scripts*static-analysis.py*": allow
+    "python3 *scripts*static-analysis.py*": allow
   external_directory:
     'D:\ai-framework\skills\linting-tools\references\*': allow
   edit: deny
@@ -89,7 +89,7 @@ Reject immediately, before reading any code, if:
 REVIEW — REJECTED
 [LINT] <tool> — <N> violation(s) on changed files
 ```
-or if static analysis fails on a supported changed path:
+or if static analysis fails on a supported changed path (static-analysis.py STATUS: FAIL or ERROR; PARTIAL is not a failure, report duplication as not analyzed and continue):
 ```
 REVIEW — REJECTED
 [STATIC ANALYSIS] Static analysis failed on supported changed paths — review stopped before reading code
