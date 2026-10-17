@@ -609,27 +609,36 @@ SHELL_SYNTAX_BANNED = (
 )
 
 
-def lint_shell_syntax(repo_root: Path) -> list[Issue]:
-    """Report PowerShell-only variables and the removed git-context.ps1 in files that agents read."""
+def _shell_syntax_files(repo_root: Path) -> list[Path]:
+    """The files that agents read and that are scanned for shell syntax that breaks in the bash tool."""
     paths: list[Path] = []
     for root in SHELL_SYNTAX_ROOTS:
         base = repo_root / root
         if base.is_dir():
             paths += sorted(p for p in base.rglob("*") if p.is_file() and p.suffix.lower() in SHELL_SYNTAX_SUFFIXES)
-    for name in SHELL_SYNTAX_FILES:
-        candidate = repo_root / name
-        if candidate.is_file():
-            paths.append(candidate)
+    paths += [repo_root / name for name in SHELL_SYNTAX_FILES if (repo_root / name).is_file()]
+    return paths
+
+
+def _shell_syntax_issues_in(path: Path, relative: str) -> list[Issue]:
+    """The banned tokens found in one file, with their line numbers."""
     issues: list[Issue] = []
-    for path in paths:
-        text = path.read_text(encoding="utf-8", errors="replace")
-        for number, line in enumerate(text.splitlines(), 1):
-            lowered = line.lower()
-            for token, hint in SHELL_SYNTAX_BANNED:
-                if token in lowered:
-                    issues.append(
-                        Issue(path.relative_to(repo_root).as_posix(), "shell-syntax", f"line {number}: '{token}' ({hint})")
-                    )
+    text = path.read_text(encoding="utf-8", errors="replace")
+    for number, line in enumerate(text.splitlines(), 1):
+        lowered = line.lower()
+        issues += [
+            Issue(relative, "shell-syntax", f"line {number}: '{token}' ({hint})")
+            for token, hint in SHELL_SYNTAX_BANNED
+            if token in lowered
+        ]
+    return issues
+
+
+def lint_shell_syntax(repo_root: Path) -> list[Issue]:
+    """Report PowerShell-only variables and the removed git-context.ps1 in files that agents read."""
+    issues: list[Issue] = []
+    for path in _shell_syntax_files(repo_root):
+        issues += _shell_syntax_issues_in(path, path.relative_to(repo_root).as_posix())
     return issues
 
 
