@@ -124,5 +124,22 @@ class OrchestratorContractTest(unittest.TestCase):
         self.assertNotIn("or a split", self.orchestrator_text())
 
 
+class AgentsMdBranchGuardTest(unittest.TestCase):
+    def agents_md(self):
+        raw = (SCRIPT.parent.parent / "AGENTS.md").read_text(encoding="utf-8")
+        return " ".join(raw.replace(">", " ").split())
+
+    def test_check_2_uses_the_ahead_count(self):
+        text = self.agents_md()
+        self.assertIn("AHEAD_OF_BASE", text)
+        self.assertIn("Staying puts this task into the same PR", text)
+
+    def test_check_2_recommends_a_new_branch_from_base(self):
+        self.assertIn("(recommended)", self.agents_md())
+
+    def test_implementation_agents_never_ask_the_branch_question(self):
+        self.assertIn("Implementation agents never ask this question", self.agents_md())
+
+
 if __name__ == "__main__":
     unittest.main()

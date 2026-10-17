@@ -196,7 +196,7 @@ Run the script from the framework scripts folder, the same way as `open-draft-pr
 After each agent completes, produce a checkpoint summary before routing forward. See `agent-guidelines` [ref: checkpoint-format]. This keeps the working context lean and prevents earlier decisions from being lost or diluted as the session grows.
 
 ### Step 1 — Clarify
-**Branch check first (AGENTS.md Check 2).** Read the current branch with `git-context.py` (command in AGENTS.md). If it is not the base branch, read the `--- ahead ---` section of its output and ask the developer once. If `AHEAD_OF_BASE` is `0`, offer: stay on `<current>`, get a new branch from `<current>`, or get a new branch from `<base>`. If it is more than `0` or `unknown`, list the `COMMIT:` lines, say that staying puts this task into the same PR as those commits, and offer: get a new branch from `<base>` (recommended), get a new branch from `<current>`, or stay only if this task continues the same change. Record the answer; Step 4 uses it. Do not ask this on the base branch.
+**Branch check first (AGENTS.md Check 2).** Read the current branch with `git-context.py` (command in AGENTS.md). If it is not the base branch, read the `--- ahead ---` section of its output and ask the developer once, with the wording in AGENTS.md Check 2, which depends on `AHEAD_OF_BASE`. Record the answer; Step 4 uses it. Do not ask this on the base branch.
 
 Route to `@product-manager`. Do not proceed until the spec is confirmed by the developer.
 
