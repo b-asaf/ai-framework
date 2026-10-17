@@ -716,6 +716,19 @@ def lint_test_runners(agent: Agent) -> list[Issue]:
     return issues
 
 
+# The orchestrator has edit: deny and write: deny, but an approved bash prompt such as `node -e` edits files anyway
+# (F5, F27). An agent that may commit therefore denies every command it was not explicitly given.
+def lint_committer_fallback(agent: Agent) -> list[Issue]:
+    """An agent that allows `git commit *` must have a bash fallback of `deny`."""
+    bash = agent.permission.get("bash")
+    if not isinstance(bash, dict) or bash.get("git commit *") != "allow":
+        return []
+    found = bash.get("*", "<missing>")
+    if found == "deny":
+        return []
+    return [Issue(agent.name, "committer-fallback", f"may commit, so its bash fallback must be deny (found {found})")]
+
+
 def run_checks(repo_root: Path, agents_dir: Path, catalog_path: Path, dec_dir: Path) -> list[Issue]:
     agents = discover_agents(agents_dir)
     catalog = load_model_catalog(catalog_path)
@@ -731,6 +744,7 @@ def run_checks(repo_root: Path, agents_dir: Path, catalog_path: Path, dec_dir: P
         issues += lint_commit_agents(agent)
         issues += lint_git_context(agent)
         issues += lint_test_runners(agent)
+        issues += lint_committer_fallback(agent)
 
     issues += check_policy(repo_root, agents)
     issues += lint_model_strings(repo_root)
