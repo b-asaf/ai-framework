@@ -36,12 +36,19 @@ written. The condition is deterministic: compare the current branch with the pro
   2. Run `git checkout -b <prefix>/<task-name>` immediately.
   3. Tell the developer, after the fact (not a question, just a note):
      > "Created branch `<prefix>/<task-name>`."
-- **On any other branch** (for example the branch created for the previous task): ask once, before the
-  spec grill, and wait for the answer:
-  > "You are on `<current>`. Should this task (a) stay on `<current>`, (b) get a new branch from
-  > `<current>`, or (c) get a new branch from `<base>`?"
-  Then act on the answer without asking again: for (a) do nothing; for (b) or (c) create the new
-  branch with `git checkout -b <prefix>/<task-name> <source>`.
+- **On any other branch** (for example the branch created for the previous task): only the orchestrator
+  asks, once, before the spec grill, and it waits for the answer. Read the `--- ahead ---` section of
+  `git-context.py` first. Implementation agents never ask this question: if they are on the base branch,
+  or the branch was not settled, they stop and tell the orchestrator.
+  - If `AHEAD_OF_BASE` is `0`, ask:
+    > "You are on `<current>`. Should this task (a) stay on `<current>`, (b) get a new branch from
+    > `<current>`, or (c) get a new branch from `<base>`?"
+  - If `AHEAD_OF_BASE` is more than `0` or `unknown`, list the `COMMIT:` lines and ask:
+    > "You are on `<current>`, which already has these commits: <list>. Staying puts this task into the
+    > same PR. Should this task (a) get a new branch from `<base>` (recommended), (b) get a new branch
+    > from `<current>`, or (c) stay on `<current>` because it continues the same change?"
+  Then act on the answer without asking again: for a new branch run
+  `git checkout -b <prefix>/<task-name> <source>`; for stay do nothing.
 
 Only after the branch is settled may any file be written or edited.
 
