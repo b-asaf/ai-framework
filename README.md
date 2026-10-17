@@ -394,9 +394,21 @@ by name, in one place, so nothing manual gets lost in the automatic tables.
 | Command      | What it does                                                                                         |
 | ------------ | ---------------------------------------------------------------------------------------------------- |
 | `/task`      | Start a new task — runs Check 1/2, then product-manager → architect → plan-reviewer → implementation |
+| `/quick`     | Fast lane for a small change you declare yourself: no spec or plan, review, QA and gate still run    |
 | `/review`    | Full post-implementation pipeline on the current branch — code-reviewer, qa, gatekeeper              |
 | `/first-run` | Manually re-run first-run analysis (project-overview is stale or has `[XXX]`)                        |
 | `/handoff`   | Compact the session — saves a handoff doc, appends to `docs/session-summary.md`                      |
+
+**Running `/quick` - the fast lane for a small change you decide is small:**
+
+`/quick <description>` is declared by you only. The framework never picks it for you and never offers it as a shortcut. The text after the command is the whole spec, so there is no `@product-manager`, no spec grill, no `@architect`, no `@plan-reviewer` and no PR breakdown. Review, QA and the gatekeeper still run.
+
+1. Start from a clean working tree. On the base branch a `fix/` or `chore/` branch is created for you; on any other branch you are asked once (Check 2 in `AGENTS.md`). `scripts/quick-lane-check.py --start` must say `STATUS: OK`.
+2. The orchestrator states the plan in two lines and routes to one implementation agent. It does not wait for approval.
+3. `scripts/quick-lane-check.py` measures the change. More than 3 files, more than 60 changed lines, or a change to a dependency manifest, a lockfile or `.ai-framework.json` ends the lane: the orchestrator stops, says "This is no longer a quick fix", and offers `/task` or stopping. It never trims the change to fit.
+4. Review, QA and the gatekeeper run as in the regular lane. The commit gets a second paragraph, `Lane: quick`, and the PR is opened as a draft through `scripts/open-draft-pr.py`.
+
+Use `/task` for anything that needs a spec or touches dependencies.
 
 **Running `/review` — no arguments, no separate setup:**
 
