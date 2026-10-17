@@ -3,11 +3,19 @@
 All notable changes to ai-framework are documented here.
 Format: [version] — [date] — [summary]
 
-Changes are made on `develop` branch and merged to `main` when stable.
+Changes are made on short-lived branches and merged to `main` through a pull request (merge commit).
 
 ---
 
-## Unreleased (develop)
+## Unreleased
+
+- **Framework hardening and verification (Phase 1 of the transition plan).** `tools/validate_framework.py` (renamed from `validate_agents.py`, which stays as a wrapper) now checks frontmatter strictly, optionally checks live model ids, enforces the read-only rule (`edit: deny` needs `write` and `task` denied), checks `execution/policy.json` (approved and experimental models, independence rules between agents), rejects concrete model ids in `roles/`, `verification/` and `execution/schemas/`, and lints `opencode.json` (catch-all first, publishing commands denied). A `unittest` harness runs the validator against the real repo: `python -m unittest`. See `docs/transition-plan.md` and DEC-015 to DEC-018.
+- **Approval checkpoints and the committer (DEC-017).** Two approval checkpoints (the spec; the high-level design with the PR breakdown) and three control points (publishing, third parties, a new task on an existing branch). The orchestrator is the only agent that commits; the validator checks the extra denies it needs and that its bash fallback is `deny`.
+- **Fast lane (DEC-018).** New `/quick <description>` command for a change the developer declares small. It skips the spec grill, high-level design, plan review and PR breakdown, and keeps review, QA and the gatekeeper. `scripts/quick-lane-check.py` ends the lane at more than 3 files or 60 changed lines, or when a manifest, lockfile or `.ai-framework.json` changes. The commit carries a `Lane: quick` paragraph.
+- **One branch question.** Check 2 in `AGENTS.md` is the single place that asks it, and only the orchestrator asks. `git-context.py` reports how many commits the branch is ahead of the base, and plain "stay" is offered only at 0. Implementation agents stop and tell the orchestrator instead of asking.
+- **Scripts replace PowerShell snippets.** `scripts/git-context.py` replaces `git-context.ps1` (removed): `$env:USERPROFILE` expands to nothing in the bash tool. Script calls in agents, skills and `AGENTS.md` now use `python "$HOME/.config/opencode/scripts/<name>.py"`, and the validator rejects `$env:` there. This supersedes the `git-context.ps1` wording in older entries and in DEC-012 and DEC-013, which stay as history.
+- **`scripts/static-analysis.py`.** Runs lizard (as `python -m lizard`, so PATH does not matter) and jscpd with the console reporter, writes nothing into the project, and reports `PARTIAL` when duplication could not be analyzed (inputs below the minimum block size) instead of passing silently. `code-reviewer` and the `static-code-analysis` skill call it.
+- **Permission fixes.** An agent's own `"*"` rule overrides the global rules, so the seven agents with an `ask` fallback now allow `git-context.py`, and `qa` also allows the common test runners (node, npm, vitest, jest, mvn, gradle). The validator checks both.
 
 ## v1.9.0 — RTK removed from the framework entirely; broken session-end.js hook removed
 
