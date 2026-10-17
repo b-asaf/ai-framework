@@ -178,8 +178,8 @@ test and gate step.
    description and nothing more.
 4. **Measure.** Run `quick-lane-check.py` and read its output. If it does not say `STATUS: OK` (more than 3
    files, more than 60 changed lines, or a manifest, lockfile or `.ai-framework.json` changed), stop and tell
-   the developer: "This is no longer a quick fix: <REASON>." Offer the regular lane (`/task`) or a split, and
-   wait. Never continue on your own, and never trim the change to fit.
+   the developer: "This is no longer a quick fix: <REASON>." Offer the regular lane (`/task`) or stopping here, and
+   wait. Never continue on your own, never trim the change to fit, and never suggest splitting it to fit the limit.
 5. **Review, test, gate.** Steps 6 to 9, unchanged. The final task summary says `Lane: quick`, repeats the
    description as the spec, and includes the `quick-lane-check.py` output.
 6. **Handoff.** Step 10, unchanged, except that the commit gets a second message paragraph, `Lane: quick`
@@ -196,7 +196,7 @@ Run the script from the framework scripts folder, the same way as `open-draft-pr
 After each agent completes, produce a checkpoint summary before routing forward. See `agent-guidelines` [ref: checkpoint-format]. This keeps the working context lean and prevents earlier decisions from being lost or diluted as the session grows.
 
 ### Step 1 — Clarify
-**Branch check first (AGENTS.md Check 2).** Read the current branch with `git-context.py` (command in AGENTS.md). If it is not the base branch, ask the developer once: stay on `<current>`, get a new branch from `<current>`, or get a new branch from `<base>`. Record the answer; Step 4 uses it. Do not ask this on the base branch.
+**Branch check first (AGENTS.md Check 2).** Read the current branch with `git-context.py` (command in AGENTS.md). If it is not the base branch, read the `--- ahead ---` section of its output and ask the developer once. If `AHEAD_OF_BASE` is `0`, offer: stay on `<current>`, get a new branch from `<current>`, or get a new branch from `<base>`. If it is more than `0` or `unknown`, list the `COMMIT:` lines, say that staying puts this task into the same PR as those commits, and offer: get a new branch from `<base>` (recommended), get a new branch from `<current>`, or stay only if this task continues the same change. Record the answer; Step 4 uses it. Do not ask this on the base branch.
 
 Route to `@product-manager`. Do not proceed until the spec is confirmed by the developer.
 
