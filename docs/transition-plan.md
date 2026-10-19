@@ -42,7 +42,7 @@ Note (2026-10-18): the reviewer spike mentioned in this plan is not in the repos
   | 3A | `feat/phase-3a-verification` |
   | 3B | `feat/phase-3b-roles` |
   | 3C | `feat/phase-3c-pipeline-experiment` |
-  | 4 | `feat/phase-4-generated-agents` |
+  | 4 | `chore/phase-4-soak` |
 - **Repo hooks:** direct commits to `main` are blocked, and branch names need a prefix (`feat/ fix/ chore/ refactor/ docs/ hotfix/ release/`). Merging is done through a GitHub pull request, not a local merge.
 - **Merge rule:** `main` is what is installed, so only merge what you would be comfortable having live today. Merge at phase exit, when the phase's exit test passes.
 - **Phases that change live behavior (1b model routing, 3A hooks):** verify in a throwaway clone with a fresh `setup.py` run before opening the PR.
@@ -177,7 +177,7 @@ Source of truth:
 Rules for every phase:
 - Each commit is atomic and independently verifiable.
 - Do not start a step before the previous step's test passes. If a test fails, fix or revert, never stack.
-- No step deletes anything until Phase 4.
+- No step deletes anything until Phase 4, with one exception: Phase 1b moves the `model:` lines out of the agent files into the profile. The profile is seeded from those lines first (step 1b.2), and the resolved models are compared before and after (step 1b.5).
 - Check the commit-msg hook format before the first commit of a phase.
 - Merge at phase exit through a pull request (see "Working method").
 
@@ -273,7 +273,7 @@ Also check the acceptance criteria in section 7 at this gate.
 
 | Step | Do | Test |
 |---|---|---|
-| 3B.1 | `qa` role through the same mechanism (QAReport envelope) | passes the model-swap test across families |
+| 3B.1 | `qa` agent through the same runner (QAReport schema in `execution/schemas/`, profile entry, no `model:` line) | passes the model-swap test across families |
 | 3B.2 | `plan-reviewer` role | passes the model-swap test across families |
 
 **Gate 3B.** Proceed to 3C only if both roles pass the swap test and the Phase 2 results still hold.
