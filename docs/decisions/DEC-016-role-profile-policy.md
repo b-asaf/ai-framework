@@ -1,6 +1,6 @@
 # DEC-016 — Role, profile and policy separation
 
-**Status:** Accepted. Supersedes the ownership model of DEC-011; DEC-011 is marked "superseded by DEC-016" in step 4.3 of `docs/transition-plan.md`.
+**Status:** Accepted, partly superseded by DEC-019 (the `roles/` home, access intent, generated agents). Supersedes the ownership model of DEC-011; DEC-011 is marked "superseded by DEC-016" in step 4.3 of `docs/transition-plan.md`.
 **Date:** 2026-10-06
 
 ## Context
