@@ -1,6 +1,8 @@
 # ai-framework transition plan: role / profile / policy separation
 
-Status: proposed 2026-10-02, revised 2026-10-03 after review. Based on the Stage 0 feasibility tests and the reviewer spike (see `handoff.md`).
+Status: proposed 2026-10-02, revised 2026-10-03 after review, revised 2026-10-18 (model routing: decisions #4 and #8). Based on the Stage 0 feasibility tests (see `handoff.md`) and on the routing experiments E1 to E4 (F32 to F36).
+
+Note (2026-10-18): the reviewer spike mentioned in this plan is not in the repository. Phase 2 writes the runner from scratch and re-tests F12.
 
 ## 1. Goal and scope
 
@@ -8,14 +10,14 @@ Status: proposed 2026-10-02, revised 2026-10-03 after review. Based on the Stage
 
 | Concern | Today | Target |
 |---|---|---|
-| Role (responsibility, access intent, prompt) | `agents/*.md` | `roles/<role>.json` + `roles/<role>.prompt.md`, no model, no concrete runtime permissions |
-| Model selection | `model:` in agent frontmatter + matrix | `execution/profiles/*.json` |
+| Role (responsibility, prompt, permissions) | `agents/*.md` | `agents/*.md` without a `model:` line (no separate `roles/` layer, decision #8) |
+| Model selection | `model:` in agent frontmatter + matrix | `execution/profiles/default.json` only, rendered into a generated routing file that is linked as `~/.config/opencode/config.json` |
 | Constraints (allowed models, families, experimental status, independence, protected paths) | matrix prose + `validate_agents.py` | `execution/policy.json`, enforced by code |
-| Verification facts (build, tests, branch, diff, dependency changes) | partly `gatekeeper` (LLM) | `verification/checks` + `gates`, run by code |
+| Verification facts (build, tests, branch, diff, dependency changes) | partly `gatekeeper` (LLM) | `execution/verification/checks` + `gates`, run by code |
 
 **Principle.** LLMs make judgments; code determines facts.
 
-**Why (evidence, not theory).** DEC-014 documents three incidents: the same model assigned to planner and plan-reviewer, an experimental model assigned without evaluation, and a gatekeeper tier decided by hand. All three are preventable by a validated profile plus policy. The spike proved a model swap needs only a profile change (reviewer GPT vs Claude, same role, runner and gates).
+**Why (evidence, not theory).** DEC-014 documents three incidents: the same model assigned to planner and plan-reviewer, an experimental model assigned without evaluation, and a gatekeeper tier decided by hand. All three are preventable by a validated profile plus policy. An earlier spike reported that a model swap needs only a profile change (reviewer GPT vs Claude, same role, runner and gates); its code is not in the repository, so Phase 2 reproduces it (F12). Experiments E1 to E4 (F32 to F36) showed how OpenCode really resolves a model, and decision #8 follows from them.
 
 **Runtime.** OpenCode only. The IDE Copilot uses `skills/` and the pre-push hook but does not run agents.
 
@@ -35,6 +37,7 @@ Status: proposed 2026-10-02, revised 2026-10-03 after review. Based on the Stage
   |---|---|
   | 0 | `chore/phase-0-baseline` (plan, merged as PR #34), then `chore/phase-0-evidence` |
   | 1 | `chore/phase-1-hardening` |
+  | 1b | `feat/phase-1b-model-routing` |
   | 2 | `feat/phase-2-reviewer-runner` |
   | 3A | `feat/phase-3a-verification` |
   | 3B | `feat/phase-3b-roles` |
@@ -42,7 +45,7 @@ Status: proposed 2026-10-02, revised 2026-10-03 after review. Based on the Stage
   | 4 | `feat/phase-4-generated-agents` |
 - **Repo hooks:** direct commits to `main` are blocked, and branch names need a prefix (`feat/ fix/ chore/ refactor/ docs/ hotfix/ release/`). Merging is done through a GitHub pull request, not a local merge.
 - **Merge rule:** `main` is what is installed, so only merge what you would be comfortable having live today. Merge at phase exit, when the phase's exit test passes.
-- **Phases that change live behavior (3A hooks, 4 generated agents):** verify in a throwaway clone with a fresh `setup.py` run before opening the PR.
+- **Phases that change live behavior (1b model routing, 3A hooks):** verify in a throwaway clone with a fresh `setup.py` run before opening the PR.
 - **Keep in sync:** `git merge main` into the phase branch if it lives longer than a few days.
 - **Cleanup after each merge:** `git worktree remove ../ai-framework-new`, delete the local and remote branch (enable "Automatically delete head branches" on GitHub), then start the next phase from the updated `main`.
 - **Shell:** Git Bash for all commands.
@@ -74,15 +77,31 @@ Status meaning: **verified** = observed in a test or spike run; **inferred** = d
 | F9 | Global `opencode.json` ends with `"*": "ask"`, which overrides the git allows and denies before it; a headless agent inheriting it cannot branch, commit or push | verified | Move the catch-all first when permissions are redefined (step 1.9). Evidence in `tests/bench/git-permissions-evidence.md` |
 | F10 | Windows: the opencode shim goes through `cmd.exe`; quotes, pipes, braces in arguments break | verified | Plain-text task messages; pass artifacts as files; avoid long argv |
 | F11 | `opencode run` loads skills from `~/.claude/skills`, adding about 20k cached tokens per run | verified | Part of per-run cost; account for it in comparisons |
-| F12 | Spike results: model swap works; policy rejects before any model call; reports valid in 31/31 completed runs; 0% verdict flips on easy benchmark cases | verified | Architecture claim proven for the reviewer on easy cases |
+| F12 | Spike results: model swap works; policy rejects before any model call; reports valid in 31/31 completed runs; 0% verdict flips on easy benchmark cases | verified (earlier run; code not in the repo) | Evidence, not proof: Phase 2 reproduces it. Architecture claim for the reviewer on easy cases |
 | F13 | In headless runs an `ask` rule is auto-rejected (`permission requested ... auto-rejecting`), so `ask` behaves like `deny` | verified | Anything that needs a human can stay `ask` in headless runs and fails safe |
 | F14 | The pre-push `branch_protection` check fails open: without `origin/HEAD` or `protectedBranches` in `.ai-framework.json` it warns and allows a push to `main`; the verify gate also skips when `.ai-framework.json` is missing | verified | Step 3A: read an explicit versioned list, fail closed, and fail the headless run when `.ai-framework.json` is missing. Server-side branch protection stays required |
 | F15 | `deny` on `edit`, `write` and `task` removes those tools from the model's tool list instead of returning a permission error | verified | Record it as tool unavailable in evidence; the working-tree check still decides |
 | F16 | The global config under `~/.config/opencode/` links into the framework repo (`opencode.json`, `AGENTS.md`, `agents`, `commands`, `hooks`, `scripts`, `skills`) | verified | A `git pull` on `main` changes live behavior for all projects. Test config changes in a throwaway setup before merging step 1.9 |
-| F17 | `opencode agent list` reads agents through the global links, so it shows the files in the main folder and ignores edits in a worktree. Copying the agents into a throwaway project's `.opencode/agents/` shows the edited versions. After step 1.5, the edited `architect` showed a `task` rule with `deny` and pattern `*` (OpenCode reads the scalar form), while the live list showed none | verified | Test agent changes in a throwaway project before trusting them; use it in steps 2.1 and 4.1 |
+| F17 | `opencode agent list` reads agents through the global links, so it shows the files in the main folder and ignores edits in a worktree. Copying the agents into a throwaway project's `.opencode/agents/` shows the edited versions. After step 1.5, the edited `architect` showed a `task` rule with `deny` and pattern `*` (OpenCode reads the scalar form), while the live list showed none | verified | Test agent changes in a throwaway project before trusting them; use it in steps 1b.5 and 2.1 |
 | F18 | A double-quoted Windows path in agent frontmatter (`"D:\ai-framework\...\*"`) was not registered as written: the live list for `code-reviewer` had no rule for the `linting-tools\references` folder, and the single-quoted version registers it. The loss is silent | verified | Keep the strict escape check (step 1.3). Compare derived agents against `opencode agent list` in tests where possible |
-| F19 | Setting `XDG_CONFIG_HOME` to a folder that holds `opencode/opencode.json` makes OpenCode read that file as its global config, so a global-config change can be tested without touching the live links. A probe rule (`git tag xdg-probe*`) shows the override is active. With the catch-all first, `git checkout -b`, `git switch -c` and the probe ran; `git commit`, `git push`, `git branch -D` and `gh pr ready` were denied by rule; `npm install` was auto-rejected | verified | Test every global-config change this way before merging (steps 1.9 and 4.x) |
+| F19 | Setting `XDG_CONFIG_HOME` to a folder that holds `opencode/opencode.json` makes OpenCode read that file as its global config, so a global-config change can be tested without touching the live links. A probe rule (`git tag xdg-probe*`) shows the override is active. With the catch-all first, `git checkout -b`, `git switch -c` and the probe ran; `git commit`, `git push`, `git branch -D` and `gh pr ready` were denied by rule; `npm install` was auto-rejected | verified | Test every global-config change this way before merging (steps 1.9, 1b.5 and 1b.6) |
 | F20 | An agent's own `"*"` rule comes after the global rules in the merged order, so it overrides every global rule before it: the global denies for `gh pr ready*`, `git branch -D *` and `git commit*--no-verify*` do not protect an agent whose block starts with `"*": ask`, such as the orchestrator | verified | Agents that can commit repeat the denies in their own block; the validator enforces it (`lint_commit_agents`, DEC-017) |
+| F21 | A "stay on this branch" option was offered on a branch that held another task's commits | verified | Fixed: the branch question uses the ahead-of-base count |
+| F22 | Implementer subagents asked the branch question themselves | verified | Fixed in `AGENTS.md` Check 2: only the orchestrator asks |
+| F23 | The reviewer needed `python -m lizard` and was denied | verified | Fixed: allow added |
+| F24 | Read-only git commands were denied for some agents | verified | Fixed: `git-context` allowed for the agents that fall back to ask |
+| F25 | `$env:USERPROFILE` expands to nothing in the OpenCode bash tool | verified | Agents call scripts with `$HOME`; the validator rejects `$env:` |
+| F26 | The jscpd report folder got committed | verified | Fixed: ignored |
+| F27 | The orchestrator edited files through `node -e` via an approved prompt | verified | Fixed: its bash fallback is `deny`; lint for every agent that can commit |
+| F28 | A subagent's own `"*": ask` overrode the `git-context` allow | verified | Fixed + lint (same mechanism as F20) |
+| F29 | jscpd analyzed 0 files on tiny inputs, so every earlier PASS was empty | verified | Fixed: the result is `PARTIAL` or `NOT_ANALYZED`, never PASS. A live example of why execution success is not workflow success (section 5.3) |
+| F30 | `qa` prompted on `node --test` | verified | Fixed + lint |
+| F31 | Whether an allow pattern such as `node --test *` also matches chained commands is not known | unverified | Test in a headless run (F13) before relying on any allow pattern for security |
+| F32 | An agent file's `model:` line beats an `agent.<name>.model` entry in `opencode.json` (`opencode debug agent` printed the frontmatter model) | verified | A leftover `model:` line silently defeats routing. The validator rejects `model:` lines in agent files |
+| F33 | An `agent.<name>.model` entry applies to a markdown agent that has no `model:` line, in `opencode debug agent` and at run time (the child session recorded the routed model) | verified | The profile can route models through config alone |
+| F34 | A subagent with no model anywhere runs on its caller's model (caller on haiku gave haiku, caller on gpt-5.4-mini gave gpt-5.4-mini) | verified | A role missing from the profile silently shares the caller's model: the DEC-014 incident. The validator requires an entry for every agent and checks the resolved model. A task result carries `metadata.model` and `sessionId` per child, so the runner can compare it with the profile |
+| F35 | Config precedence, highest first: agent frontmatter, `OPENCODE_CONFIG` file, project `opencode.json`, global `opencode.json`, global `config.json`. `OPENCODE_CONFIG` against the project file was not tested | verified | Anything above `config.json` silently overrides the routing; a project `opencode.json` can re-route any agent (decision #4) |
+| F36 | A file named `config.json` in the global config dir is read alongside `opencode.json` (permissions from one, model from the other); a file named `routing.json` was ignored; no deprecation warning in 1.19.3. The name may be a legacy one (not verified) | verified static, 1.19.3 only | Generated routing goes to `config.json`. The resolved-model check detects a version that stops reading it. Runtime use of `config.json` itself is tested in step 1b.5 |
 | U1 | `--session` can be used for retry | unverified | Do not rely on it in `report.py` |
 | U2 | `bash: "*": deny` in a derived agent is parsed exactly as assumed | verified | Step 0.5 evidence |
 | U3 | Cause of one failed GPT benchmark run | unverified | Step 2.4 |
@@ -91,39 +110,36 @@ Status meaning: **verified** = observed in a test or spike run; **inferred** = d
 
 ```text
 ai-framework/
-├── agents/                       # Phase 4: generated from roles/ + profile; never edited by hand afterwards
-├── roles/                        # NEW: model-agnostic role definitions
-│   ├── reviewer.json             # name, access intent (e.g. read-only), output contract
-│   ├── reviewer.prompt.md
-│   ├── qa.json / qa.prompt.md
-│   └── ...
-├── execution/                    # NEW
+├── agents/                       # role + prompt + permissions per agent; no `model:` line (validator-enforced)
+├── execution/                    # NEW: everything about running and verifying
 │   ├── policy.json               # { "models": {...}, "constraints": { "independence": [...], "protected_paths": [...] } }
 │   ├── profiles/
-│   │   ├── default.json          # role -> model routing
+│   │   ├── default.json          # agent -> model, the only place; optional `capability` note per agent (documentation only)
 │   │   └── bench-*.json          # benchmark profiles
-│   └── schemas/                  # the contracts between stages (role, profile, policy, review-report, qa-report, run-record)
-├── adws/                         # NEW: thin runner (OpenCode only)
-│   ├── runner.py                 # orchestrates one role run
-│   ├── resolve.py                # policy filter, constraints, live-model check, fallback
-│   ├── opencode_adapter.py       # access -> deny rules, derive agent file, run headless, parse events
-│   ├── report.py                 # envelope parse/validate, retry, success levels
-│   ├── record.py                 # RunRecord (JSONL)
-│   └── pipeline_review_qa.py     # Phase 3C: throwaway experiment (MAX_FIX_LOOPS=3)
-├── verification/                 # NEW: deterministic facts
-│   ├── checks/                   # branch_protection, dependency_change, protected_paths, diff_size, build, tests, format, ...
-│   ├── gates/                    # compose checks: pre_push, post_review
-│   └── run.py
-├── hooks/                        # existing; become thin entrypoints calling verification/
+│   ├── routing.json              # GENERATED from the default profile; linked as ~/.config/opencode/config.json
+│   ├── schemas/                  # contracts between stages (profile, routing, policy, review-report, qa-report, run-record)
+│   ├── runner/                   # thin runner, OpenCode only (replaces the unclear name adws)
+│   │   ├── runner.py             # orchestrates one run
+│   │   ├── resolve.py            # policy filter, constraints, resolved-model check, fallback
+│   │   ├── opencode_adapter.py   # derive primary-mode agent copy, benchmark routing via OPENCODE_CONFIG, run headless, parse events
+│   │   ├── report.py             # envelope parse/validate, retry, success levels
+│   │   ├── record.py             # RunRecord (JSONL)
+│   │   └── pipeline_review_qa.py # Phase 3C: throwaway experiment (MAX_FIX_LOOPS=3)
+│   └── execution/verification/             # deterministic facts
+│       ├── checks/               # branch_protection, dependency_change, protected_paths, diff_size, build, tests, format, ...
+│       ├── gates/                # compose checks: pre_push, post_review
+│       └── run.py
+├── hooks/                        # existing; become thin entrypoints calling execution/verification/
 ├── tools/
 │   ├── validate_framework.py     # renamed from validate_agents.py (wrapper kept for transition)
+│   ├── generate_routing.py       # NEW (step 1b.2): profile -> execution/routing.json
 │   └── lib/
 │       ├── frontmatter.py        # strict parse
 │       └── opencode_models.py    # provider-specific discovery (isolated here)
 ├── tests/
 │   ├── fixtures/                 # valid + intentionally invalid
 │   ├── test_*.py                 # unittest
-│   └── bench/                    # permissions-evidence.md, git-permissions-evidence.md, bench.py, bench_cases.py, baseline profile
+│   └── bench/                    # permissions-evidence.md, git-permissions-evidence.md, model-routing-evidence.md, bench.py, bench_cases.py, baseline profile
 ├── docs/
 │   ├── transition-plan.md        # this file
 │   └── decisions/
@@ -131,30 +147,30 @@ ai-framework/
 │       ├── DEC-013, DEC-014      # unchanged
 │       ├── DEC-015-deterministic-verification.md
 │       ├── DEC-016-role-profile-policy.md
-│       ├── MODEL-ASSIGNMENT-MATRIX.md  # Phase 4: generated from policy + profile
+│       ├── DEC-019-...md         # model routing (decisions #4 and #8); supersedes the roles/ and access-translation parts of DEC-016
+│       ├── MODEL-ASSIGNMENT-MATRIX.md  # step 4.3: generated from policy + profile, or replaced by a printed view
 │       └── evaluations/          # one file per experimental model that gets promoted
 ├── skills/ commands/ instructions/ scripts/   # unchanged; skills stay runtime-agnostic
 ├── git-template/                 # generated by setup.py (unchanged mechanism)
-└── setup.py                      # small additions only until Phase 5 (run generator, link adws if needed); simplified in Phase 5
+└── setup.py                      # small additions only until Phase 5 (link routing.json as config.json, step 1b.6); simplified in Phase 5
 ```
 
 Source of truth:
 
 | Information | Source of truth |
 |---|---|
-| Role responsibility, prompt | `roles/*.json`, `roles/*.prompt.md` |
-| Role access intent (for example `read-only`) | `roles/*.json` |
-| Concrete OpenCode permissions | Derived by `opencode_adapter.py`; generated into `agents/*.md` in Phase 4 |
-| Which model runs a role | `execution/profiles/` |
+| Role responsibility, prompt, permissions | `agents/*.md` (no model) |
+| Which model runs an agent | `execution/profiles/default.json` |
+| Routing as OpenCode reads it (derived) | `execution/routing.json`, generated by `tools/generate_routing.py`, linked as `config.json`; the validator fails on drift |
 | Which models are legal, families, experimental status | `execution/policy.json` (`models`) |
 | Independence rules, protected paths | `execution/policy.json` (`constraints`) |
 | Contracts between stages | `execution/schemas/` |
 | Workflow definition | The Phase 3C hardcoded pipeline (experiment only) |
-| Deterministic rules and gates | `verification/` |
-| Runtime invocation | `adws/opencode_adapter.py` |
-| Evidence of what ran | `adws/runs/*.jsonl` |
+| Deterministic rules and gates | `execution/verification/` |
+| Runtime invocation | `execution/runner/opencode_adapter.py` |
+| Evidence of what ran | `execution/runner/runs/*.jsonl` |
 | Why decisions were made | `docs/decisions/` |
-| Human-readable model matrix | Generated `MODEL-ASSIGNMENT-MATRIX.md` |
+| Human-readable model matrix | Generated from policy + profile, or a printed view (step 4.3) |
 
 ## 4. Phases
 
@@ -199,16 +215,32 @@ Exit criterion: 0.5 and 0.6 pass (or Phase 2 is re-planned), and 0.2 to 0.4 are 
 | 1.5 | Read-only rule: any agent with `edit: deny` must also deny `write` and `task`. Fix the real agents. Exemptions are recorded in `READ_ONLY_EXEMPTIONS` (qa: write, orchestrator: task) | fixture fails; real agents pass after fix; a throwaway project shows `task` denied for the edited agents (F17) |
 | 1.6 | `execution/policy.json` as data, grouped into `models` and `constraints`. Per model: `family` (`claude`, `gpt`, `gemini`; independent of provider, so `github-copilot/claude-sonnet-5` and `anthropic/claude-sonnet-5` are both `claude`), `status` (approved / experimental), `evaluation` path for promoted ones. Independence edges move from code into `constraints` | validator reads policy; DEC-014 fixtures (same model for planner and reviewer, experimental without evaluation) both fail |
 | 1.7 | Rename to `validate_framework.py`, keep `validate_agents.py` as a wrapper | both entry points pass |
-| 1.8 | Lint: framework-owned role and verification files (`roles/`, `verification/`, `execution/schemas/`) must not contain concrete model ids or provider names. Match ids (`claude-`, `gpt-`, `codex`, `o1`/`o3`-style, `gemini-`, and provider prefixes such as `anthropic/`, `github-copilot/`), not prose mentions such as "GPT models may..." | fixture with a model id fails; fixture with a prose mention passes |
+| 1.8 | Lint: framework-owned verification and schema files (`execution/verification/`, `execution/schemas/`) must not contain concrete model ids or provider names. Match ids (`claude-`, `gpt-`, `codex`, `o1`/`o3`-style, `gemini-`, and provider prefixes such as `anthropic/`, `github-copilot/`), not prose mentions such as "GPT models may..." | fixture with a model id fails; fixture with a prose mention passes |
 | 1.9 | Apply the git and dependency permission rules from section 6 to the global `opencode.json` (catch-all first) and add the human-in-the-loop rules to `AGENTS.md`. The global `opencode.json` and `AGENTS.md` are links into this repo (F16), so edit the repo copies and test them in a throwaway setup before merging. Move the catch-all first and tighten patterns such as `git push*main*` | rerun the 0.6 tests against an isolated copy of the config (`XDG_CONFIG_HOME`, F19); plus: on a `feat/x` branch, an unrelated request makes the agent ask "same branch or new one?" |
 
 Exit criterion: the validator rejects the first two DEC-014 incident types (the same model for planner and plan-reviewer, and an experimental model without an evaluation). The third (a gatekeeper tier decided by hand) is addressed in step 3A.4. This phase is valuable even if everything after it is abandoned. Merge to `main` at exit.
+
+### Phase 1b: model routing (2-3 days, changes live behavior)
+
+Added 2026-10-18 after experiments E1 to E4 (E1 missing model, E2 frontmatter against config, E3 extra config files, E4 precedence; F32 to F36) and decisions #4 and #8. Branch: `feat/phase-1b-model-routing`. This phase removes the model from the agent files. That is the one step that can silently put an agent on its caller's model (F34), so do the steps in order and test in a fake home (F19) before merging. It comes before Phase 2 because the Phase 2 benchmark swaps models through a generated routing file.
+
+| Step | Do | Test |
+|---|---|---|
+| 1b.1 | Record E1 to E4 in `tests/bench/model-routing-evidence.md` (setup, commands, results behind F32 to F36). Write DEC-019 (next free number): model routing through a generated `config.json`; supersedes the `roles/` and access-translation parts of DEC-016; records decisions #4 and #8 | each of F32 to F36 points to the evidence file; `grep -rn "DEC-019" .` resolves |
+| 1b.2 | `execution/profiles/default.json`, seeded from the current `model:` lines of all agents. An optional `capability` note per entry (for example `high_reasoning`, `coding`) is documentation only: nothing reads it. `tools/generate_routing.py` renders the profile into `execution/routing.json` (`{"agent": {"<name>": {"model": "<id>"}}}`). Add the profile and routing shapes to `execution/schemas/` | generator output equals a fixture; a second run changes nothing |
+| 1b.3 | The independence and experimental-model checks (steps 1.4 and 1.6) read the profile instead of the frontmatter | the DEC-014 fixtures still fail; the real profile passes |
+| 1b.4 | New validator checks: (a) no `model:` line in `agents/*.md`; (b) no `agent.*.model` entry in the repo's `opencode.json`; (c) every agent has a profile entry and every entry has an agent; (d) `execution/routing.json` equals the generated output; (e) resolved check: `opencode debug agent <name>` prints the profile's model for every agent (no model call; skipped with a clear message when `opencode` is not installed) | one failing fixture per check; the real repo passes after 1b.5 |
+| 1b.5 | In a fake home (F19, copy of the files): link `routing.json` as `config.json` and remove the `model:` lines. Compare `opencode debug agent` before and after for all 15 agents. Then one cheap headless delegation (a primary agent calling a subagent, as in E1) and read the model the child session recorded | resolved models are identical before and after; the child ran on its routed model, not its caller's. This is the runtime test of `config.json` itself, which E1 to E4 did not run |
+| 1b.6 | `setup.py` links `execution/routing.json` as `~/.config/opencode/config.json`, the same way as `opencode.json`; `--verify` runs check (e). One characterization test for this link only | fresh clone: `git pull` plus `python setup.py` gives a green validator; with the link removed, `--verify` fails and names the routing file |
+| 1b.7 | No per-project model overrides (decision #4): the validator, and from Phase 2 the runner preflight, flag `agent.*.model` in a project's `opencode.json` and in a file named by `OPENCODE_CONFIG`. The runner's own benchmark routing (Phase 2) is the only allowed use of `OPENCODE_CONFIG` | fixture: a project `opencode.json` that sets an agent model is flagged |
+
+Exit criterion: all 15 agents resolve to the same models as before, no agent can start without a profile entry, and the install bar from section 7 holds. Live-merge hazard: after `git pull` of this phase the agent files have no model, so every agent inherits its caller's model until `python setup.py` has linked `config.json`. Run `python setup.py` right after the pull; `--verify` fails loudly if the link is missing.
 
 ### Phase 2: reviewer runner inside the repo (3-4 days), decision gate
 
 | Step | Do | Test |
 |---|---|---|
-| 2.1 | Move the spike into `adws/`, `roles/reviewer.*`, `execution/profiles/`. `roles/reviewer.json` carries `access: read-only`; the adapter translates it into OpenCode deny rules; the validator checks the derived output. Split `runner.py` into `resolve.py`, `opencode_adapter.py`, `report.py`, `record.py` | offline unit tests: resolve rejections, event parsing, report validation, fallback warning caught, access-to-deny translation; derived agents checked with `opencode agent list` in a throwaway project (F17) |
+| 2.1 | Write the runner in `execution/runner/` (the earlier spike code is not in the repository, F12), split into `resolve.py`, `opencode_adapter.py`, `report.py` and `record.py`. The adapter derives a primary-mode copy of the agent from `agents/<name>.md` (F6) and applies the model through an `OPENCODE_CONFIG` file generated from a profile (F35). It checks the model that actually ran against the profile (F34); for delegations the task result carries `metadata.model`. Before writing the event parser, capture a real JSON sample from `opencode run --format json` in a throwaway project: the parser is not written from memory. The reviewer report is a schema in `execution/schemas/` and the task message states it | offline unit tests: resolve rejections, event parsing from the captured sample, report validation, fallback warning caught, model mismatch caught; derived agents checked with `opencode agent list` in a throwaway project (F17) |
 | 2.2 | Implement the three success levels (section 5.3) and the minimum `RunRecord` fields (section 5.4). On failure, records include the stderr tail and event tail. Add a runner preflight in code that requires `docs/project-overview/stack.md` with content and `.ai-framework.json` in the target repo, and fails with a readable message instead of skipping (see `docs/inventory.md`, section 4) | a forced failure produces a readable error; a repo without `.ai-framework.json` fails preflight with a readable message; a run with "I couldn't complete the review" is execution success but not artifact success |
 | 2.3 | Benchmark rework: replace the debatable `zero-division` fixture, add 4-6 harder cases (subtle logic error, bug hidden behind a passing test, cross-file context), tighten detection regexes, add a `baseline` profile that runs the real `code-reviewer` prompt in primary mode | fixtures build; offline summary works |
 | 2.4 | Investigate the failed GPT benchmark run (error not yet seen) | cause identified, handled or documented; U3 resolved |
@@ -231,7 +263,7 @@ Also check the acceptance criteria in section 7 at this gate.
 | Step | Do | Test |
 |---|---|---|
 | 3A.1 | Classify every gatekeeper checklist item as deterministic or judgment (table in DEC-015) | every item labeled |
-| 3A.2 | `verification/checks/*` (one file per fact) and `verification/gates/*` (compose checks). Includes `branch_protection` (explicit protected-branch list, fails closed when it cannot decide), `dependency_change` (flags diffs to `package.json`, `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `pom.xml`, `build.gradle*`, `requirements.txt`, `pyproject.toml`; blocks the push unless the commit carries a `Dependency-Approved:` trailer) and `protected_paths` (before/after tree diff against `constraints.protected_paths`). `hooks/` become thin entrypoints calling `verification/run.py`; keep the hard-link mechanism in `add_git_template` and add the new files to its tuple | per check: one passing and one failing fixture; a manifest change without the trailer is blocked at push; a commit with the `Lane: quick` trailer over the limits is blocked at push (DEC-018); fresh clone blocks a bad push on Windows |
+| 3A.2 | `execution/verification/checks/*` (one file per fact) and `execution/verification/gates/*` (compose checks). Includes `branch_protection` (explicit protected-branch list, fails closed when it cannot decide), `dependency_change` (flags diffs to `package.json`, `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `pom.xml`, `build.gradle*`, `requirements.txt`, `pyproject.toml`; blocks the push unless the commit carries a `Dependency-Approved:` trailer) and `protected_paths` (before/after tree diff against `constraints.protected_paths`). `hooks/` become thin entrypoints calling `execution/verification/run.py`; keep the hard-link mechanism in `add_git_template` and add the new files to its tuple | per check: one passing and one failing fixture; a manifest change without the trailer is blocked at push; a commit with the `Lane: quick` trailer over the limits is blocked at push (DEC-018); fresh clone blocks a bad push on Windows |
 | 3A.3 | Hook interpreter risk: hooks written in Python need `python3`/`python` resolvable from Git Bash. `setup.py` adds an "action required" entry if not | tested on this machine |
 | 3A.4 | Trim `gatekeeper` to judgment-only items; replay the baseline tasks | no more misses than baseline; then decide whether the tier can drop |
 
@@ -252,42 +284,45 @@ This is an experiment to learn whether multi-role execution is worth building. I
 
 | Step | Do | Test |
 |---|---|---|
-| 3C.1 | Permissions for implementation roles in the runner: write-allowed gate using `constraints.protected_paths` (decision #1) | only allowed paths change; protected paths (`hooks/`, `agents/`, `.ai-framework.json`, `execution/policy.json`, `setup.py`) never change |
+| 3C.1 | Permissions for implementation roles in the runner: write-allowed gate using `constraints.protected_paths` (decision #1) | only allowed paths change; protected paths (`hooks/`, `agents/`, `.ai-framework.json`, `execution/policy.json`, `execution/profiles/`, `execution/routing.json`, `setup.py`) never change |
 | 3C.2 | `pipeline_review_qa.py`: reviewer -> qa -> quality commands (argv lists from `.ai-framework.json`, exit code, last 50 lines) -> gates; `MAX_FIX_LOOPS = 3`; stop reason is readable and no LLM decides to stop | happy path accepted; injected failing test loops then stops at 3 |
 
 **Outcome (recorded in DEC-015):** keep as is, replace with a declarative definition, or remove, based on evidence.
 
-### Phase 4: single source of truth and migration (3-5 days)
+### Phase 4: soak and cleanup (2-3 days)
 
 | Step | Do | Test |
 |---|---|---|
-| 4.1 | Generator: `roles/` + profile -> `agents/*.md` frontmatter (model, mode `subagent` for interactive use, permissions derived from `access`). Header marks files as generated and "never edit by hand". Generated files stay committed so a fresh clone works even if generation fails. The runner still derives primary-mode agents at run time | validator fails on drift between generated and committed files; `opencode agent list` in a throwaway project shows the generated models and permissions (F17) |
-| 4.2 | `setup.py` runs the generator; handle the Windows copy fallback (`OUT OF DATE` warning already exists) | fresh clone: setup, generate, validator green |
-| 4.3 | `MODEL-ASSIGNMENT-MATRIX.md` generated from policy and profile; DEC-011 marked Superseded by DEC-016 | matrix equals generated output; the temporary matrix and policy sync tests (`RealPolicy` in `tests/test_policy.py`) are removed |
-| 4.4 | Compatibility check (temporary): old frontmatter models equal profile-resolved models | zero differences, then remove the check |
+| 4.1 | Moved to Phase 1b (steps 1b.2 to 1b.4). With no `roles/` layer, the generator renders only the routing file | covered by 1b.4 and 1b.5 |
+| 4.2 | Moved to step 1b.6 (`setup.py` links `routing.json` as `config.json`) | covered by 1b.6 |
+| 4.3 | `MODEL-ASSIGNMENT-MATRIX.md` becomes a view generated from policy and profile, or is removed if a printed view is enough (decide here); DEC-011 marked Superseded by DEC-016 | matrix equals generated output; the temporary matrix and policy sync tests (`RealPolicy` in `tests/test_policy.py`) are removed |
+| 4.4 | Done in step 1b.5 (resolved models before and after) | covered by 1b.5 |
 | 4.5 | Soak: 5 real PRs on the new path; compare with baseline (escapes, retries, time, tokens) using the parity classes from 0.4 | verdict recorded in DEC-015: keep, extend, or revert; section 7 criteria re-checked |
 | 4.6 | Bump `FRAMEWORK_VERSION`, `CHANGELOG.md`, update `docs/session-summary.md` | version consistent |
 | 4.7 | Instruction entry points for each tool: check how Copilot, Codex and Gemini CLI load `AGENTS.md`; add thin pointer files where a tool uses its own filename (for example `GEMINI.md`) | each tool picks up the same instructions |
-| 4.8 | Optional: `new-role <name>` scaffold command that creates the role files and a profile entry | a scaffolded role passes the validator |
+| 4.8 | Optional: `new-role <name>` scaffold command that creates `agents/<name>.md` from a template and a profile entry | a scaffolded agent passes the validator |
 
-Nothing is deleted before 4.5 passes. After it: remove hand-maintained model fields and obsolete matrix text.
+Nothing is deleted before 4.5 passes. After it: remove the obsolete matrix text and the temporary matrix and policy sync tests.
 
 ### Phase 5: documentation and setup cleanup (3-5 days, after the Phase 4 soak)
 
-Added 2026-10-17. These three jobs wait for Phase 4 because each one describes or edits something that Phases 3A and 4 still change: the README documents the final structure and the models-list procedure (step 4.3 changes it), and `setup.py` gets additions in steps 3A.3 and 4.2. Rules: nothing is deleted without a recorded reason, `docs/decisions/` is never touched, and the install bar from section 7 stays (`git pull` plus `python setup.py` reaches a green validator).
+Added 2026-10-17. These three jobs wait for Phase 4 because each one describes or edits something that Phases 3A and 4 still change: the README documents the final structure and the procedure for changing a model (Phase 1b changes it), and `setup.py` gets additions in steps 1b.6 and 3A.3. Rules: nothing is deleted without a recorded reason, `docs/decisions/` is never touched, and the install bar from section 7 stays (`git pull` plus `python setup.py` reaches a green validator).
 
 | Step | Do | Test |
 |---|---|---|
 | 5.1 | Evidence inventory (read-only, may run earlier). Extend `docs/inventory.md` with every README section; every `setup.py` function (what it does, and whether a test or the fresh-clone run exercises it); and every file in `docs/` outside `docs/decisions/`, with its `git grep` reference count and a verdict of keep, merge or delete. Also record what produces a per-agent usage table (model and consumption) today (decision #6) | you review the inventory; no other file changes |
 | 5.2 | Docs cleanup: apply the 5.1 verdicts. Always kept: all of `docs/decisions/`, `docs/transition-plan.md`, `docs/session-summary.md`, and any file the validator or a test reads | validator and `python -m unittest` green; `git grep` for each removed file name finds no live reference |
+| 5.2b | Folder and file merges, from the 5.1 inventory, one commit each with the evidence in the message. Candidates (`git grep` evidence of 2026-10-18): `monitoring/` holds one file (`monitoring/README.md`, 47 lines), referenced by the ccusage installer in `setup.py` and mentioned in `docs/session-summary.md`; decide together with decision #6 whether it moves into `docs/` or stays. Root `workflow-guide.md` (194 lines) is listed in the README structure and in `docs/session-summary.md`, and `skills/first-run-analysis/SKILL.md` mentions appending to a `workflow-guide.md`: check which file that skill means before moving anything. `scripts/` against `tools/` is probably a README clarification (scripts are linked into the OpenCode config, tools are framework-only). `instructions/`: together with step 4.7. Anything linked into the OpenCode config (`agents`, `commands`, `hooks`, `scripts`, `skills`) changes only together with `setup.py` and behind the 5.3 tests | validator and `python -m unittest` green; `git grep` for each moved or removed name finds no stale reference; the fresh-clone run is unchanged |
 | 5.3 | `setup.py` simplification. First add characterization tests, because `setup.py` has no tests today: a fresh clone in a throwaway folder, links created, hooks hard-linked, `--verify` output. Then decide per function from 5.1: keep, move the optional installers to their own script, or delete. The symlink, junction and hard-link logic changes only after the tests pin its behavior | fresh clone: `git pull` plus `python setup.py` gives a green validator and the same link set as before; `python setup.py --verify` passes on Windows |
-| 5.4 | README rewrite: the purpose of every top-level folder and the repo structure; install and update; how to update the models list (policy and profile, then the generated matrix); how to resolve common problems (permission prompts, headless `ask` auto-reject, Windows links, missing tools), taken from the F-numbers in section 2. Agent, skill, command and script lists are checked by the validator against the files | validator check: every folder, agent, skill, command and script path named in the README exists; a fresh-clone walkthrough that follows only the README works |
+| 5.4 | README rewrite: the purpose of every top-level folder and the repo structure; install and update; how to change a model (edit the profile, run `tools/generate_routing.py`, then `python setup.py --verify`); how to resolve common problems (permission prompts, headless `ask` auto-reject, Windows links, missing tools), taken from the F-numbers in section 2. Agent, skill, command and script lists are checked by the validator against the files | validator check: every folder, agent, skill, command and script path named in the README exists; a fresh-clone walkthrough that follows only the README works |
 | 5.5 | Usage view: a per-agent table of the model used and what each agent consumed, with its data source chosen in decision #6 and documented in the README | the table matches a known run |
 
 ## 5. Design rules
 
-### 5.1 Role access intent vs runtime permissions
-`roles/*.json` holds an intent such as `access: read-only`. The OpenCode adapter translates it into concrete deny rules (`edit`, `write`, `task`, and `bash` deny or a tight allow-list). The validator checks the derived output, not the intent alone.
+### 5.1 Role, model and permissions
+An agent file holds the role's responsibility, prompt and runtime permissions, and no model. The validator checks the permissions of the real files (read-only rule, commit-agent denies) and rejects a `model:` line. The model comes only from the profile, rendered into the generated routing file (section 3, F32 to F36). There is no separate `roles/` layer and no access-to-deny translation (decision #8): "read-only" is enforced by the validator rules from step 1.5, not by a second source of truth.
+
+An optional `capability` note per profile entry (for example `high_reasoning`, `coding`) is documentation only. No code reads it; capability-based routing stays deferred.
 
 ### 5.2 Contracts and artifact ownership
 `execution/schemas/` are the contracts between stages. Stages hand off through artifacts that validate against them, never through implicit agent context.
@@ -296,7 +331,7 @@ Added 2026-10-17. These three jobs wait for Phase 4 because each one describes o
 |---|---|
 | `review.json` | `reviewer` |
 | `qa.json` | `qa` |
-| Verification results | `verification/` |
+| Verification results | `execution/verification/` |
 | `RunRecord` | runner |
 
 No stage modifies another stage's artifact.
@@ -320,10 +355,10 @@ A response like "I couldn't complete the review" can pass the first level and mu
 Protected paths are versioned data (`constraints.protected_paths`), enforced by comparing the working tree before and after a run. The check does not rely on what the agent reports.
 
 ### 5.7 Provider boundary
-OpenCode-specific knowledge stays in `opencode_adapter.py`, the access-to-permission translation and `opencode_models.py`. The runner knows "the requested execution mode was not honored"; the adapter knows how OpenCode expresses that (F6). `roles/` and `verification/` contain no provider or runtime names.
+OpenCode-specific knowledge stays in `opencode_adapter.py`, `tools/generate_routing.py` (the `config.json` format), `opencode_models.py` and the resolved-model check. The runner knows "the requested execution mode was not honored"; the adapter knows how OpenCode expresses that (F6). `execution/verification/` contains no provider or runtime names.
 
 ### 5.8 Generated files
-After Phase 4, `agents/*.md` and `MODEL-ASSIGNMENT-MATRIX.md` are never edited by hand. The validator detects drift.
+`execution/routing.json` and `MODEL-ASSIGNMENT-MATRIX.md` are generated and never edited by hand (from steps 1b.2 and 4.3). The validator detects drift. `agents/*.md` stay hand-written.
 
 ## 6. Git and dependency permissions
 
@@ -341,7 +376,7 @@ Decided in DEC-017 and implemented in step 1.9.
 Checked at the Phase 2 gate and again at 4.5. A phase that breaks one is a reason to stop or simplify, the same way a failed benchmark is.
 
 - **Install and update stay simple.** A fresh clone reaches a green validator with no steps beyond today's (`git pull` + `python setup.py`).
-- **A new role is cheap and safe.** It touches at most 3 files (`roles/x.json`, `roles/x.prompt.md`, a profile entry) and is caught by the validator if misconfigured.
+- **A new role is cheap and safe.** It touches 2 files (`agents/x.md` and a profile entry) and is caught by the validator if misconfigured (a missing profile entry or a `model:` line).
 - **Health check is one command.** `validate_framework.py` covers schemas, policy, permissions, the lint and generated-file drift; `python -m unittest` is the second.
 - **No Claude-only assumption** in framework-owned files, and a reviewer run passes with one model per family (Claude, GPT, Gemini), changing only the profile.
 
@@ -361,17 +396,25 @@ Checked at the Phase 2 gate and again at 4.5. A phase that breaks one is a reaso
 | Pre-push hook fails open (F14) | Explicit protected-branch list, fail closed, server-side branch protection |
 | Broad deny patterns such as `git push*main*` also match unrelated branch names | Tighten the patterns in step 1.9 and retest |
 | Tools differ in instruction file names (`AGENTS.md`, `GEMINI.md`) | Step 4.7 pointer files |
-| Live install changes by accident while working | Worktree per phase; throwaway-clone test for 3A and 4 |
+| Live install changes by accident while working | Worktree per phase; throwaway-clone test for 1b and 3A |
+| An agent without a profile entry silently runs on its caller's model (F34) | The validator requires an entry for every agent and checks the resolved model with `opencode debug agent`; the runner compares the model that ran with the profile |
+| Anything above `config.json` overrides the routing (F35): a `model:` line, `OPENCODE_CONFIG`, a project `opencode.json` | The validator rejects `model:` lines and `agent.*.model` in the repo; the runner preflight and `--verify` flag project-level overrides (decision #4) |
+| `config.json` may be a legacy file name that a later OpenCode stops reading (F36) | The resolved-model check fails loudly on every `--verify`; revisit the file name when OpenCode is upgraded |
+| Pulling the routing change before `setup.py` links `config.json` leaves agents without a model | The PR description says to run `python setup.py`; `--verify` fails and names the missing link |
 
 ## 9. Decisions needed from you
 
 1. **Which paths may implementation roles write, and what must always be protected?** The git permission rules are decided (section 6). The path list decides the 3C.1 write-allowed gate. Answer before Phase 2 ends.
 2. **Hooks in Python.** Port `pre-commit`, `commit-msg`, `pre-push`, `build-verify.sh` to Python, or keep shell and call Python from them? Can wait until 3A.
 3. **Global `opencode.json` ordering.** Move `"*": "ask"` to the top of the bash block so your git allows take effect? Settled by step 0.6: yes, move it first (F9 verified).
-4. **Profile location.** Keep one default profile in the framework, or also support a per-project override such as `<project>/.ai-framework/execution-profile.json`? Can wait until Phase 4.
+4. **Profile location.** Decided 2026-10-18: one default profile in the framework, no per-project override. A project `opencode.json` beats the framework routing (F35), so the validator and the runner preflight flag any agent model in a project file or in `OPENCODE_CONFIG`. A per-project override can be added later together with a run-time re-check against `policy.json`.
 5. **Parity margin** for the Phase 2 gate (what difference from the baseline reviewer is acceptable on the directional metrics). Answer before Phase 2 ends.
 
 6. **Usage table.** What should the per-agent table show (model, tokens, cost) and where does its data come from: OpenCode session data, the RunRecords from Phase 2, or an existing tool such as ccusage? Answer before step 5.5; step 5.1 records what exists today.
+
+7. **Layout.** Decided 2026-10-18: the runner and the verification code live under `execution/` (`execution/runner/`, replacing the unclear name `adws`, and `execution/verification/`), so one folder holds everything about running and verifying.
+
+8. **Where models live.** Decided 2026-10-18 (E1 to E4, F32 to F36): the model lives only in `execution/profiles/default.json`. Agent files carry no `model:` line. `tools/generate_routing.py` renders `execution/routing.json`, which `setup.py` links as `config.json`. `roles/` and the access-to-deny translation are dropped. Recorded in DEC-019 (step 1b.1).
 
 ## 10. What is not changing
 
