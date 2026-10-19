@@ -1,0 +1,49 @@
+{
+  "agent": {
+    "api": {
+      "model": "github-copilot/claude-sonnet-5"
+    },
+    "architect": {
+      "model": "github-copilot/gpt-6-astra"
+    },
+    "backend": {
+      "model": "github-copilot/claude-sonnet-5"
+    },
+    "code-reviewer": {
+      "model": "github-copilot/gpt-5.6-terra"
+    },
+    "db": {
+      "model": "github-copilot/claude-sonnet-5"
+    },
+    "frontend": {
+      "model": "github-copilot/claude-sonnet-5"
+    },
+    "frontend-error-fixer": {
+      "model": "github-copilot/claude-sonnet-5"
+    },
+    "gatekeeper": {
+      "model": "github-copilot/claude-sonnet-5"
+    },
+    "orchestrator": {
+      "model": "github-copilot/claude-sonnet-5"
+    },
+    "plan-reviewer": {
+      "model": "github-copilot/claude-opus-5.5"
+    },
+    "product-manager": {
+      "model": "github-copilot/claude-sonnet-5"
+    },
+    "qa": {
+      "model": "github-copilot/gpt-5.6-sol"
+    },
+    "refactor-planner": {
+      "model": "github-copilot/gpt-6-astra"
+    },
+    "ui": {
+      "model": "github-copilot/claude-sonnet-5"
+    },
+    "web-research-specialist": {
+      "model": "github-copilot/claude-haiku-4.5"
+    }
+  }
+}
