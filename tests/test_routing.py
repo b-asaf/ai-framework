@@ -42,13 +42,20 @@ def write_json(path, data):
 class RenderRouting(unittest.TestCase):
     def test_output_has_one_sorted_entry_per_agent(self):
         routing = render_routing(make_profile(b="m/two", a="m/one"), make_policy("m/one", "m/two"))
-        self.assertEqual(routing, {"agent": {"a": {"model": "m/one"}, "b": {"model": "m/two"}}})
+        self.assertEqual(
+            routing,
+            {"$schema": "https://opencode.ai/config.json", "agent": {"a": {"model": "m/one"}, "b": {"model": "m/two"}}},
+        )
         self.assertEqual(list(routing["agent"]), ["a", "b"])
 
     def test_model_missing_from_policy_is_refused_naming_agent_and_model(self):
         with self.assertRaises(ProfileError) as ctx:
             render_routing(make_profile(a="m/nope"), make_policy("m/one"))
         self.assertIn("a (m/nope)", str(ctx.exception))
+
+    def test_schema_line_comes_first_so_opencode_does_not_rewrite_the_file(self):
+        text = routing_text(render_routing(make_profile(a="m/one"), make_policy("m/one")))
+        self.assertEqual(text.splitlines()[1], '  "$schema": "https://opencode.ai/config.json",')
 
     def test_text_is_stable_and_ends_with_newline(self):
         routing = render_routing(make_profile(a="m/one"), make_policy("m/one"))

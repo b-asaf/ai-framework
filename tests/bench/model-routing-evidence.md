@@ -68,7 +68,7 @@ Precedence, highest first: agent frontmatter, `OPENCODE_CONFIG`, project `openco
 ## Not tested
 
 - `OPENCODE_CONFIG` against a project `opencode.json`.
-- `config.json` at run time. E1 to E4 used `opencode.json` for the run-time check and `config.json` only with `debug agent`. Step 1b.5 runs it.
+- `config.json` at run time was not covered by E1 to E4. E5 covers it.
 - Whether `config.json` is a legacy name that a later OpenCode stops reading. 1.19.3 prints no warning.
 - A different OpenCode version. All results are 1.19.3 only.
 
@@ -80,3 +80,17 @@ HOME=$FH XDG_CONFIG_HOME=$FH/.config opencode debug agent probe-cfg | grep -A3 '
 HOME=$FH XDG_CONFIG_HOME=$FH/.config opencode run --agent boss --format json "Call the task tool once with subagent probe-none and prompt say probe. Then reply done"
 grep -o '"parentSessionId":"[^"]*","sessionId":"[^"]*","model":{[^}]*}' <output>
 ```
+
+## E5: routing through config.json alone (fake home, 2026-10-20)
+
+Setup: a copy of `opencode.json`, `agents/` (15 agents, all `model:` lines deleted) and `execution/routing.json` as `config.json` in a fake home (`/d/opencode-fake-home-routing`). No `AGENTS.md`, hooks or skills, so the first-run gate (F8) cannot stop a headless agent.
+
+| Step | Result |
+|---|---|
+| `validate_framework.py --resolved-models` with `config.json` | OpenCode resolved the profile's model for all 15 agents (the only issue was the unrelated `$schema` drift below) |
+| Control: `config.json` removed | 15 issues, "no model resolved" (F34). The check detects a missing routing file |
+| Runtime: `boss` (primary) routed to haiku, `probe-rt` (subagent) routed to gpt-5.4-mini, both with no `model:` line; `boss` delegates once through `task` | The child session recorded `gpt-5.4-mini`. A child that inherited its caller would have recorded haiku |
+
+Caveat: the event stream listed only the child's `modelID`. The parent's model (haiku) rests on `opencode debug agent boss`.
+
+Side finding: the first launch of OpenCode after `setup.py` linked `config.json` rewrote `execution/routing.json` through the link. The diff was one added line, `"$schema": "https://opencode.ai/config.json"`. A reproduction in a throwaway home (config.json without the line) showed the line being added as line 2. With the line already first, the file was left unchanged and the model still resolved. No model id changed.
