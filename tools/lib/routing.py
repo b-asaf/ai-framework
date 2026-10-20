@@ -11,6 +11,11 @@ import json
 from pathlib import Path
 
 
+# OpenCode adds this line to a config file that lacks it, and config.json is a link into the repo (E5).
+# Writing it here keeps the generated file stable. "$" sorts before letters, so it stays first.
+SCHEMA_URL = "https://opencode.ai/config.json"
+
+
 class ProfileError(Exception):
     """The model profile is missing, malformed, or names a model the policy does not know."""
 
@@ -57,7 +62,7 @@ def render_routing(profile, policy):
     unknown = [f"{name} ({models[name]})" for name in sorted(models) if models[name] not in policy["models"]]
     if unknown:
         raise ProfileError("model not in the model policy: " + ", ".join(unknown))
-    return {"agent": {name: {"model": models[name]} for name in sorted(models)}}
+    return {"$schema": SCHEMA_URL, "agent": {name: {"model": models[name]} for name in sorted(models)}}
 
 
 def routing_text(routing):

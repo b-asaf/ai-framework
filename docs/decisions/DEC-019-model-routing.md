@@ -56,7 +56,8 @@
 
 - A new role touches 2 files (`agents/x.md` and a profile entry), not the 3 files of DEC-016.
 - Live-merge hazard: after the pull of Phase 1b, agent files have no model until `python setup.py` has linked `config.json`. Run `python setup.py` right after the pull. `--verify` fails and names the missing link.
-- `config.json` at run time was not tested by E1 to E4 (they used `opencode.json`). Step 1b.5 tests it in a fake home before merging.
+- `config.json` at run time was tested in E5 (`tests/bench/model-routing-evidence.md`): with no `model:` line anywhere, a primary agent and a subagent were routed to different models and the child session recorded its routed model.
+- OpenCode adds a `$schema` line to a global `config.json` that lacks it (E5). Because `config.json` is a link into the repo, that rewrote `execution/routing.json` and made check (d) fail. The generator now writes the `$schema` line itself, and OpenCode leaves the file alone.
 - The benchmark swap uses `OPENCODE_CONFIG` with a generated bench profile. No edit to agent files and no derived copy.
 - All results are for OpenCode 1.19.3. Re-run the resolved-model check when OpenCode is upgraded.
 - `docs/transition-plan.md` already reflects this decision (PR #49).
