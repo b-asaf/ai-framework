@@ -541,6 +541,17 @@ def lint_read_only(agent: Agent) -> list[Issue]:
 
 # Model policy checks (step 1.6). Policy data lives in execution/policy.json; the logic is in tools/lib/policy.py.
 from lib.policy import PolicyError, check_experimental, check_independence, load_policy  # noqa: E402
+from lib.routing import (  # noqa: E402
+    ProfileError,
+    check_coverage,
+    check_frontmatter_conflicts,
+    check_routing_text,
+    load_profile,
+    profile_models,
+    render_routing,
+    routing_text,
+)
+from lib.opencode_resolved import ResolvedModelError, fetch_resolved_model, find_opencode  # noqa: E402
 
 
 def check_policy(repo_root: Path, agents: list[Agent]) -> list[Issue]:
@@ -552,7 +563,10 @@ def check_policy(repo_root: Path, agents: list[Agent]) -> list[Issue]:
         policy = load_policy(repo_root / "execution" / "policy.json")
     except PolicyError as error:
         return [Issue("(policy)", "policy", str(error))]
-    agent_models = {agent.name: agent.model for agent in agents if agent.model}
+    try:
+        agent_models = profile_models(load_profile(repo_root / "execution" / "profiles" / "default.json"))
+    except ProfileError as error:
+        return [Issue("(profile)", "profile", str(error))]
     issues = [
         Issue(name, "experimental", message)
         for name, message in check_experimental(agent_models, policy, repo_root)
@@ -562,6 +576,33 @@ def check_policy(repo_root: Path, agents: list[Agent]) -> list[Issue]:
         for label, message in check_independence(agent_models, policy)
     ]
     return issues
+
+
+# Model routing checks (steps 1b.3 and 1b.4, DEC-019). The profile is the only routing; logic is in tools/lib/routing.py.
+def check_routing(repo_root: Path, agents: list[Agent]) -> list[Issue]:
+    """Every agent has a profile entry, no model: line contradicts the profile, and routing.json is up to date."""
+    try:
+        profile = load_profile(repo_root / "execution" / "profiles" / "default.json")
+    except ProfileError as error:
+        return [Issue("(profile)", "profile", str(error))]
+    by_agent = profile_models(profile)
+    agent_models = {agent.name: agent.model for agent in agents if agent.model}
+    problems = check_coverage(by_agent, [agent.name for agent in agents])
+    problems += check_frontmatter_conflicts(by_agent, agent_models)
+    issues = [Issue(name, "profile", message) for name, message in problems]
+    return issues + check_routing_file(repo_root, profile)
+
+
+def check_routing_file(repo_root: Path, profile: dict) -> list[Issue]:
+    try:
+        expected = routing_text(render_routing(profile, load_policy(repo_root / "execution" / "policy.json")))
+    except PolicyError:
+        return []  # check_policy already reports an unreadable policy
+    except ProfileError as error:
+        return [Issue("(routing)", "routing", str(error))]
+    target = repo_root / "execution" / "routing.json"
+    actual = target.read_bytes().decode("utf-8", errors="replace") if target.is_file() else None
+    return [Issue("(routing)", "routing", message) for message in check_routing_text(actual, expected)]
 
 
 # Model-agnostic files (step 1.8). roles/, verification/ and execution/schemas/ must not name a concrete model.
@@ -756,6 +797,7 @@ def run_checks(repo_root: Path, agents_dir: Path, catalog_path: Path, dec_dir: P
         issues += lint_committer_fallback(agent)
 
     issues += check_policy(repo_root, agents)
+    issues += check_routing(repo_root, agents)
     issues += lint_model_strings(repo_root)
     issues += lint_opencode_config(repo_root)
     issues += lint_shell_syntax(repo_root)
@@ -790,10 +832,41 @@ def check_live_models(agents: list[Agent]) -> list[Issue]:
     ]
 
 
+def check_resolved_models(repo_root: Path) -> list[Issue]:
+    """Opt-in (--resolved-models): `opencode debug agent` must print the profile's model for every agent.
+
+    Fails closed: if opencode or the profile cannot be read, that is reported as an issue.
+    """
+    try:
+        profile = load_profile(repo_root / "execution" / "profiles" / "default.json")
+        executable = find_opencode()
+    except (ProfileError, ResolvedModelError) as error:
+        return [Issue("(resolved-models)", "resolved-model", str(error))]
+    issues: list[Issue] = []
+    for name, expected in sorted(profile_models(profile).items()):
+        issues += _resolved_issue(executable, name, expected)
+    return issues
+
+
+def _resolved_issue(executable: str, name: str, expected: str) -> list[Issue]:
+    try:
+        actual = fetch_resolved_model(executable, name)
+    except ResolvedModelError as error:
+        return [Issue(name, "resolved-model", str(error))]
+    if actual is None:
+        return [Issue(name, "resolved-model", "no model resolved; an agent without a model runs on its caller's model (F34)")]
+    if actual != expected:
+        return [Issue(name, "resolved-model", f"OpenCode resolves '{actual}' but the profile says '{expected}'")]
+    return []
+
+
 def main() -> int:
     live_models = "--live-models" in sys.argv
     if live_models:
         sys.argv.remove("--live-models")
+    resolved_models = "--resolved-models" in sys.argv
+    if resolved_models:
+        sys.argv.remove("--resolved-models")
     repo_root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path.cwd()
     agents_dir = repo_root / "agents"
     catalog_path = (
@@ -806,6 +879,8 @@ def main() -> int:
     issues = run_checks(repo_root, agents_dir, catalog_path, dec_dir)
     if live_models:
         issues += check_live_models(discover_agents(agents_dir))
+    if resolved_models:
+        issues += check_resolved_models(repo_root)
 
     if not issues:
         print("All agent validation checks passed.")

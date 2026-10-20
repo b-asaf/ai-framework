@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "agents": {
+    "architect": {
+      "model": "github-copilot/claude-opus-5.5"
+    },
+    "plan-reviewer": {
+      "model": "github-copilot/claude-opus-5.5"
+    }
+  }
+}

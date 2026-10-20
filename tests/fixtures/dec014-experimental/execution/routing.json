@@ -1,0 +1,7 @@
+{
+  "agent": {
+    "code-reviewer": {
+      "model": "github-copilot/gpt-6-sol"
+    }
+  }
+}
