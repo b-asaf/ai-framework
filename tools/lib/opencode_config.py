@@ -41,3 +41,21 @@ def catch_all_problems(permission):
                 "overrides the specific rules before it (F9)"
             )
     return problems
+
+
+def agent_model_problems(config):
+    """Return one message per agent whose model is set in opencode.json (check b, DEC-019).
+
+    The model of an agent comes only from the profile. A model in opencode.json
+    sits above the generated config.json (F35), so it would silently override
+    the profile.
+    """
+    agents = config.get("agent")
+    if not isinstance(agents, dict):
+        return []
+    return [
+        f"agent.{name}.model is set; the model belongs in execution/profiles/default.json "
+        "and this entry would override the generated routing (F35)"
+        for name, entry in sorted(agents.items())
+        if isinstance(entry, dict) and "model" in entry
+    ]

@@ -82,6 +82,7 @@ def build_links(det):
     if det["opencode"]:
         links += [
             (OPENCODE_DIR / "opencode.json", REPO / "opencode.json", "file"),
+            (OPENCODE_DIR / "config.json",   REPO / "execution" / "routing.json", "file"),
             (OPENCODE_DIR / "AGENTS.md",     REPO / "AGENTS.md",     "file"),
             (OPENCODE_DIR / "agents",        AGENTS,                  "dir"),
             (OPENCODE_DIR / "skills",        SKILLS,                  "dir"),
@@ -693,6 +694,30 @@ def check_pr_provider():
 
 # ── --verify (read-only) ────────────────────────────────────────────────────────
 
+def check_model_routing(det):
+    """Read-only: the validator plus the model OpenCode resolves for every agent, against the profile (DEC-019)."""
+    bold("Model routing:")
+    if not det["opencode"] or not shutil.which("opencode"):
+        warn("opencode not found on PATH - resolved models were not checked")
+        return
+    result = subprocess.run(
+        [sys.executable, str(REPO / "tools" / "validate_framework.py"), str(REPO), "--resolved-models"],
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+    )
+    if result.returncode == 0:
+        ok("validator passes and OpenCode resolves the profile's model for every agent")
+        return
+    warn("model routing check failed:")
+    lines = [line for line in (result.stdout + result.stderr).splitlines() if line.strip()]
+    for line in lines[:15]:
+        info(line)
+    _need_action(
+        "Model routing check failed",
+        "Run: python tools/validate_framework.py --resolved-models",
+        "If config.json is missing: python setup.py",
+    )
+
+
 def verify_only():
     """Read-only health check: no files are written, no links are touched.
     Lets a dev re-check status anytime (e.g. after setting GITHUB_TOKEN, or after IT
@@ -718,6 +743,9 @@ def verify_only():
                 ok(f"copy up to date: {link.name}")
             else:
                 warn(f"copy out of date: {link.name} — run 'python setup.py' to refresh")
+    print()
+
+    check_model_routing(det)
     print()
 
     check_pr_provider()

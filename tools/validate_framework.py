@@ -552,6 +552,7 @@ from lib.routing import (  # noqa: E402
     routing_text,
 )
 from lib.opencode_resolved import ResolvedModelError, fetch_resolved_model, find_opencode  # noqa: E402
+from dataclasses import replace  # noqa: E402
 
 
 def check_policy(repo_root: Path, agents: list[Agent]) -> list[Issue]:
@@ -623,7 +624,7 @@ def lint_model_strings(repo_root: Path) -> list[Issue]:
 
 
 # opencode.json permission order (step 1.9, F9). The last matching rule wins, so '*' must come first.
-from lib.opencode_config import ConfigError, catch_all_problems, load_config  # noqa: E402
+from lib.opencode_config import ConfigError, catch_all_problems, load_config, agent_model_problems  # noqa: E402
 
 
 def lint_opencode_config(repo_root: Path) -> list[Issue]:
@@ -635,7 +636,8 @@ def lint_opencode_config(repo_root: Path) -> list[Issue]:
         config = load_config(path)
     except ConfigError as error:
         return [Issue("opencode.json", "opencode-config", str(error))]
-    return [Issue("opencode.json", "opencode-config", message) for message in catch_all_problems(config.get("permission"))]
+    messages = catch_all_problems(config.get("permission")) + agent_model_problems(config)
+    return [Issue("opencode.json", "opencode-config", message) for message in messages]
 
 
 # Shell syntax that breaks in the bash tool (F25): `$env:X` expands to nothing there, and git-context.ps1 is gone.
@@ -785,8 +787,9 @@ def run_checks(repo_root: Path, agents_dir: Path, catalog_path: Path, dec_dir: P
     required_denies = extract_required_denies(dec_dir) if dec_dir.exists() else {}
 
     issues: list[Issue] = []
+    routed = {agent.name: agent for agent in routed_agents(repo_root, agents)}
     for agent in agents:
-        issues += validate_model_exists(agent, catalog)
+        issues += validate_model_exists(routed[agent.name], catalog)
         issues += lint_mode_value(agent, agents, repo_root)
         issues += validate_required_denies(agent, required_denies)
         issues += lint_agent_frontmatter(agent)
@@ -802,7 +805,7 @@ def run_checks(repo_root: Path, agents_dir: Path, catalog_path: Path, dec_dir: P
     issues += lint_opencode_config(repo_root)
     issues += lint_shell_syntax(repo_root)
 
-    cross_family_edges = find_cross_family_edges(agents, catalog)
+    cross_family_edges = find_cross_family_edges(list(routed.values()), catalog)
     if cross_family_edges:
         print("Cross-family delegation edges (informational, not failures):")
         for delegator, target_name, source_family, target_family in cross_family_edges:
@@ -814,6 +817,19 @@ def run_checks(repo_root: Path, agents_dir: Path, catalog_path: Path, dec_dir: P
 
 # Opt-in live model check (step 1.4). OpenCode-specific knowledge stays in tools/lib/opencode_models.py.
 from lib.opencode_models import LiveModelError, fetch_live_models, find_unknown_models  # noqa: E402
+
+
+def routed_agents(repo_root: Path, agents: list[Agent]) -> list[Agent]:
+    """Copies of the agents with the profile's model where the file has no model: line (DEC-019).
+
+    A model: line in the file wins, as in OpenCode (F32). If the profile cannot
+    be read the agents are returned unchanged; check_routing reports the error.
+    """
+    try:
+        by_agent = profile_models(load_profile(repo_root / "execution" / "profiles" / "default.json"))
+    except ProfileError:
+        return agents
+    return [replace(agent, model=agent.model or by_agent.get(agent.name)) for agent in agents]
 
 
 def check_live_models(agents: list[Agent]) -> list[Issue]:
@@ -878,7 +894,7 @@ def main() -> int:
 
     issues = run_checks(repo_root, agents_dir, catalog_path, dec_dir)
     if live_models:
-        issues += check_live_models(discover_agents(agents_dir))
+        issues += check_live_models(routed_agents(repo_root, discover_agents(agents_dir)))
     if resolved_models:
         issues += check_resolved_models(repo_root)
 
