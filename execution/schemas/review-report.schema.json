@@ -1,0 +1,33 @@
+{
+  "title": "ReviewReport",
+  "description": "The report a reviewer hands to the next stage. The rule that REQUEST CHANGES needs a BLOCKING finding is checked in code, not here.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["verdict", "summary", "findings"],
+  "properties": {
+    "verdict": {
+      "type": "string",
+      "enum": ["APPROVED", "APPROVED WITH ADVISORY NOTES", "REQUEST CHANGES"]
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Two or three sentences of overall assessment."
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["severity", "category", "message"],
+        "properties": {
+          "severity": {"type": "string", "enum": ["BLOCKING", "NON-BLOCKING"]},
+          "category": {"type": "string", "minLength": 1, "description": "For example SOLID/SRP or ERROR HANDLING."},
+          "message": {"type": "string", "minLength": 1},
+          "file": {"type": "string", "minLength": 1, "description": "Omit for cross-file findings."},
+          "line": {"type": "integer", "minimum": 1, "description": "Omit when the finding is not line-anchored."}
+        }
+      }
+    }
+  }
+}
