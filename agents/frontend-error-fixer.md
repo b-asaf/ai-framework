@@ -1,7 +1,6 @@
 ---
 description: Frontend error fixer. Diagnoses and resolves frontend errors — build-time (TypeScript, bundler, lint) and runtime (browser console, React errors, network). Specialises in JS/TS errors. Activates when the frontend stack is detected and a frontend error is reported.
 mode: subagent
-model: github-copilot/claude-sonnet-5
 permission:
   bash:
     "*": ask

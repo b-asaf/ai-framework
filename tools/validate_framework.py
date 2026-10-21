@@ -544,7 +544,7 @@ from lib.policy import PolicyError, check_experimental, check_independence, load
 from lib.routing import (  # noqa: E402
     ProfileError,
     check_coverage,
-    check_frontmatter_conflicts,
+    check_model_lines,
     check_routing_text,
     load_profile,
     profile_models,
@@ -581,7 +581,7 @@ def check_policy(repo_root: Path, agents: list[Agent]) -> list[Issue]:
 
 # Model routing checks (steps 1b.3 and 1b.4, DEC-019). The profile is the only routing; logic is in tools/lib/routing.py.
 def check_routing(repo_root: Path, agents: list[Agent]) -> list[Issue]:
-    """Every agent has a profile entry, no model: line contradicts the profile, and routing.json is up to date."""
+    """Every agent has a profile entry, no agent file has a model: line, and routing.json is up to date."""
     try:
         profile = load_profile(repo_root / "execution" / "profiles" / "default.json")
     except ProfileError as error:
@@ -589,7 +589,7 @@ def check_routing(repo_root: Path, agents: list[Agent]) -> list[Issue]:
     by_agent = profile_models(profile)
     agent_models = {agent.name: agent.model for agent in agents if agent.model}
     problems = check_coverage(by_agent, [agent.name for agent in agents])
-    problems += check_frontmatter_conflicts(by_agent, agent_models)
+    problems += check_model_lines(agent_models)
     issues = [Issue(name, "profile", message) for name, message in problems]
     return issues + check_routing_file(repo_root, profile)
 
@@ -822,7 +822,8 @@ from lib.opencode_models import LiveModelError, fetch_live_models, find_unknown_
 def routed_agents(repo_root: Path, agents: list[Agent]) -> list[Agent]:
     """Copies of the agents with the profile's model where the file has no model: line (DEC-019).
 
-    A model: line in the file wins, as in OpenCode (F32). If the profile cannot
+    A model: line in the file wins, as in OpenCode (F32), so what is checked is
+    what would run; check_routing reports the line itself. If the profile cannot
     be read the agents are returned unchanged; check_routing reports the error.
     """
     try:

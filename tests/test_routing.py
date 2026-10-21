@@ -12,7 +12,6 @@ import validate_framework  # noqa: E402
 from lib.policy import load_policy  # noqa: E402
 from lib.routing import (  # noqa: E402
     ProfileError,
-    check_profile_matches_agents,
     load_profile,
     profile_models,
     render_routing,
@@ -100,33 +99,14 @@ class LoadProfile(unittest.TestCase):
             self.load({"version": 1, "agents": {"qa": {"model": "m/one", "capability": 3}}})
 
 
-class CheckProfileMatchesAgents(unittest.TestCase):
-    def test_equal_is_clean(self):
-        self.assertEqual(check_profile_matches_agents({"a": "m/one"}, {"a": "m/one"}), [])
-
-    def test_different_model_is_flagged(self):
-        problems = check_profile_matches_agents({"a": "m/one"}, {"a": "m/two"})
-        self.assertEqual(problems[0][0], "a")
-        self.assertIn("m/two", problems[0][1])
-
-    def test_agent_without_entry_is_flagged(self):
-        problems = check_profile_matches_agents({}, {"a": "m/one"})
-        self.assertIn("no profile entry", problems[0][1])
-
-    def test_entry_without_agent_is_flagged(self):
-        self.assertEqual(len(check_profile_matches_agents({"a": "m/one"}, {})), 1)
-
-
 class RealRepo(unittest.TestCase):
     def test_committed_routing_equals_the_rendered_profile(self):
         expected = routing_text(render_routing(load_profile(PROFILE), load_policy(POLICY)))
         self.assertEqual(ROUTING.read_bytes().decode("utf-8"), expected)
 
-    def test_profile_equals_the_model_lines_in_agent_files(self):
-        # TEMPORARY: removed in step 1b.5 together with the model: lines.
+    def test_no_agent_file_has_a_model_line(self):
         agents = validate_framework.discover_agents(REPO / "agents")
-        agent_models = {agent.name: agent.model for agent in agents if agent.model}
-        self.assertEqual(check_profile_matches_agents(profile_models(load_profile(PROFILE)), agent_models), [])
+        self.assertEqual([agent.name for agent in agents if agent.model], [])
 
 
 class Cli(unittest.TestCase):

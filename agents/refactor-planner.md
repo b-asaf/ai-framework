@@ -1,7 +1,6 @@
 ---
 description: Produces a safe, incremental refactoring plan before any code changes. Invoked automatically by the orchestrator whenever the task type is a refactor, before any implementation agent begins work.
 mode: subagent
-model: github-copilot/gpt-6-astra
 permission:
   bash:
     "*": deny

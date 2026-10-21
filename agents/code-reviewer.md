@@ -1,7 +1,6 @@
 ---
 description: Code reviewer. Lints, scans, and reviews every diff after implementation. Applies clean code, SOLID, security, and project-pattern checks without mercy. Read-only — does not modify files.
 mode: subagent
-model: github-copilot/gpt-5.6-terra
 permission:
   bash:
     "*": ask

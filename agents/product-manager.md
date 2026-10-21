@@ -1,7 +1,6 @@
 ---
 description: Product Manager. Invoked at the start of every task to clarify requirements, surface ambiguities, and produce a confirmed spec with acceptance criteria before any design or code begins.
 mode: subagent
-model: github-copilot/claude-sonnet-5
 permission:
   bash:
     "*": deny

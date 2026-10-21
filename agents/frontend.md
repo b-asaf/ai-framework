@@ -1,7 +1,6 @@
 ---
 description: Frontend engineer. Implements pages, routing, state management, and API client integration following the stack and patterns discovered in the project.
 mode: subagent
-model: github-copilot/claude-sonnet-5
 permission:
   bash:
     "*": ask

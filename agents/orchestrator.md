@@ -1,7 +1,6 @@
 ---
 description: Lead orchestrator. Entry point for every task. Coordinates all agents, enforces the task flow, gates human approval at every checkpoint, and delivers the final handoff to the developer.
 mode: primary
-model: github-copilot/claude-sonnet-5
 permission:
   bash:
     "*": deny

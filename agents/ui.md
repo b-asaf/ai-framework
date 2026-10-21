@@ -1,7 +1,6 @@
 ---
 description: UI engineer. Implements shared components, design tokens, and styling. Activates when a design system or component library is detected in the project.
 mode: subagent
-model: github-copilot/claude-sonnet-5
 permission:
   bash:
     "*": ask
