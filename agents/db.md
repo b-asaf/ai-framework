@@ -1,7 +1,6 @@
 ---
 description: Database engineer. Implements the persistence layer — schema design, migrations, ORM configuration, and repository patterns. Activates when a database is detected in the project.
 mode: subagent
-model: github-copilot/claude-sonnet-5
 permission:
   bash:
     "*": ask

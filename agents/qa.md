@@ -1,7 +1,6 @@
 ---
 description: QA engineer. Detects the test framework in use, writes missing unit and integration tests for new implementation, and runs the full suite. Covers both frontend and backend.
 mode: subagent
-model: github-copilot/gpt-5.6-sol
 permission:
   bash:
     "*": ask

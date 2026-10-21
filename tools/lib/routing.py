@@ -70,25 +70,6 @@ def routing_text(routing):
     return json.dumps(routing, indent=2, sort_keys=True) + "\n"
 
 
-def check_profile_matches_agents(profile_by_agent, agent_models):
-    """TEMPORARY (removed with the model: lines in step 1b.5).
-
-    Return (agent, message) for each difference between the profile and the
-    model: lines still in the agent files.
-    """
-    problems = []
-    for name in sorted(set(profile_by_agent) | set(agent_models)):
-        in_profile = profile_by_agent.get(name)
-        in_agent = agent_models.get(name)
-        if in_profile is None:
-            problems.append((name, "agent has no profile entry"))
-        elif in_agent is None:
-            problems.append((name, "profile entry has no agent file model line to compare"))
-        elif in_profile != in_agent:
-            problems.append((name, f"profile says '{in_profile}' but the agent file says '{in_agent}'"))
-    return problems
-
-
 def check_coverage(profile_by_agent, agent_names):
     """Return (agent, message) for each agent without a profile entry and each entry without an agent.
 
@@ -102,16 +83,15 @@ def check_coverage(profile_by_agent, agent_names):
     return problems
 
 
-def check_frontmatter_conflicts(profile_by_agent, agent_models):
-    """TEMPORARY (removed with the model: lines in step 1b.5).
+def check_model_lines(agent_models):
+    """Return (agent, message) for each agent file that still has a model: line.
 
-    A model: line in an agent file beats the routing (F32), so a line that
-    differs from the profile makes the profile wrong.
+    The model lives only in execution/profiles/default.json (DEC-019). A model:
+    line in an agent file beats the routing (F32), so none is allowed.
     """
     return [
-        (name, f"profile says '{profile_by_agent[name]}' but the agent file has 'model: {model}', and the file wins (F32)")
+        (name, f"agent file has 'model: {model}'; the model belongs in execution/profiles/default.json (DEC-019)")
         for name, model in sorted(agent_models.items())
-        if name in profile_by_agent and profile_by_agent[name] != model
     ]
 
 

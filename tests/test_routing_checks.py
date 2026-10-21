@@ -19,7 +19,7 @@ from lib.opencode_resolved import (  # noqa: E402
 )
 from lib.routing import (  # noqa: E402
     check_coverage,
-    check_frontmatter_conflicts,
+    check_model_lines,
     check_routing_text,
     render_routing,
     routing_text,
@@ -73,13 +73,13 @@ class PureChecks(unittest.TestCase):
     def test_coverage_equal_is_clean(self):
         self.assertEqual(check_coverage({"a": "m/one"}, ["a"]), [])
 
-    def test_conflict_flags_a_different_model_line(self):
-        problems = check_frontmatter_conflicts({"a": "m/one"}, {"a": "m/two"})
-        self.assertEqual(len(problems), 1)
-        self.assertIn("F32", problems[0][1])
+    def test_model_lines_are_flagged_in_name_order(self):
+        problems = check_model_lines({"b": "m/two", "a": "m/one"})
+        self.assertEqual([p[0] for p in problems], ["a", "b"])
+        self.assertIn("DEC-019", problems[0][1])
 
-    def test_conflict_ignores_equal_lines_and_agents_without_a_line(self):
-        self.assertEqual(check_frontmatter_conflicts({"a": "m/one", "b": "m/two"}, {"a": "m/one"}), [])
+    def test_no_model_lines_is_clean(self):
+        self.assertEqual(check_model_lines({}), [])
 
     def test_routing_text_missing_stale_and_current(self):
         self.assertIn("missing", check_routing_text(None, "x")[0])
@@ -134,7 +134,7 @@ class CheckRouting(unittest.TestCase):
             return validate_framework.check_routing(root, agents)
 
     def test_clean(self):
-        issues = self.run_check([agent("a", "m/one"), agent("b")], {"a": "m/one", "b": "m/two"})
+        issues = self.run_check([agent("a"), agent("b")], {"a": "m/one", "b": "m/two"})
         self.assertEqual(issues, [])
 
     def test_agent_without_entry(self):
@@ -146,9 +146,10 @@ class CheckRouting(unittest.TestCase):
         issues = self.run_check([agent("a")], {"a": "m/one", "ghost": "m/two"}, routing="auto")
         self.assertIn("no agent file", texts(issues))
 
-    def test_model_line_that_contradicts_the_profile(self):
-        issues = self.run_check([agent("a", "m/two")], {"a": "m/one"})
-        self.assertIn("m/two", texts(issues))
+    def test_any_model_line_is_flagged(self):
+        issues = self.run_check([agent("a", "m/one")], {"a": "m/one"})
+        self.assertEqual(len(issues), 1)
+        self.assertIn("model: m/one", texts(issues))
 
     def test_missing_routing_file(self):
         self.assertIn("missing", texts(self.run_check([agent("a")], {"a": "m/one"}, routing=None)))

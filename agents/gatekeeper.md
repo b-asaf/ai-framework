@@ -1,7 +1,6 @@
 ---
 description: Gatekeeper. Final validation before handoff to the developer. Checks every gate against the original spec. Any failure reruns the relevant agent. Nothing is handed off until all gates pass.
 mode: subagent
-model: github-copilot/claude-sonnet-5
 permission:
   bash:
     "*": deny
