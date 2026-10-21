@@ -1,0 +1,48 @@
+{
+  "title": "RunRecord",
+  "description": "One record per runner execution. It answers why this model actually ran (plan section 5.4).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "run_id", "timestamp", "role", "profile", "runtime", "requested_model", "resolved_model",
+    "policy_result", "fallback", "input_artifacts", "output_artifacts", "status", "stop_reason",
+    "tokens", "cost", "duration_ms", "verification", "error"
+  ],
+  "properties": {
+    "run_id": {"type": "string", "minLength": 1},
+    "timestamp": {"type": "string", "minLength": 1, "description": "ISO 8601, UTC."},
+    "role": {"type": "string", "minLength": 1},
+    "profile": {"type": "string", "minLength": 1},
+    "runtime": {"type": "string", "minLength": 1, "description": "Name of the execution runtime."},
+    "requested_model": {"type": "string", "minLength": 1},
+    "resolved_model": {"type": ["string", "null"], "description": "The model that actually ran; null when none was reported."},
+    "policy_result": {"type": "string", "enum": ["pass", "fail", "not_checked"]},
+    "fallback": {"type": "boolean", "description": "True when the runtime did not honor the requested execution mode."},
+    "input_artifacts": {"type": "array", "items": {"type": "string"}},
+    "output_artifacts": {"type": "array", "items": {"type": "string"}},
+    "status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["execution", "artifact", "workflow"],
+      "properties": {
+        "execution": {"type": "string", "enum": ["success", "failure", "not_run"]},
+        "artifact": {"type": "string", "enum": ["success", "failure", "not_run"]},
+        "workflow": {"type": "string", "enum": ["success", "failure", "not_run"]}
+      }
+    },
+    "stop_reason": {"type": ["string", "null"]},
+    "tokens": {"type": ["object", "null"], "description": "Shape fixed once the adapter has a real event sample."},
+    "cost": {"type": ["number", "null"]},
+    "duration_ms": {"type": "integer", "minimum": 0},
+    "verification": {"type": ["object", "null"], "description": "Deterministic gate results; shape fixed in Phase 3A."},
+    "error": {
+      "type": ["object", "null"],
+      "required": ["message"],
+      "properties": {
+        "message": {"type": "string", "minLength": 1},
+        "stderr_tail": {"type": "string"},
+        "event_tail": {"type": "array", "items": {"type": "string"}}
+      }
+    }
+  }
+}
