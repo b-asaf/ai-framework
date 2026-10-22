@@ -10,13 +10,18 @@ and the model that really ran. An error event (real sample: bad-model.jsonl)
 keeps its text in error.data.message. OpenCode repeats the same error, so each
 distinct message is listed once.
 
-Everything here is a pure function. Running OpenCode is a later slice. The
+Everything here is a pure function except the two file helpers at the end
+(load_agent_text and prepare_run_dir). Running OpenCode is a later slice. The
 sample files in tests/fixtures/opencode-run/ come from real runs.
 """
 
 import json
 import re
 from dataclasses import dataclass
+from pathlib import Path
+
+from . import resolve as _tools_path  # noqa: F401  (puts tools/ on sys.path, as resolve.py does)
+from lib.routing import SCHEMA_URL, routing_text  # noqa: E402
 
 FALLBACK = re.compile(r"Falling back to default agent", re.I)
 EVENT_CHARS = 500
@@ -238,3 +243,126 @@ def assess(events, stderr, ran, agent, model, exit_code=0):
         cost=events.cost,
         reply=events.reply,
     )
+
+
+# Starting a run (plan step 2.1). A subagent started with --agent falls back (F6),
+# and an agent.<name>.mode entry in a config is ignored (checked on 1.19.3), so a
+# run uses a primary-mode copy of the agent, found through a per-run
+# OPENCODE_CONFIG_DIR (a same-name file there beats the global one). The model
+# comes from a per-run OPENCODE_CONFIG file (F33, F35), never from the copy.
+
+ROLE_NAME = re.compile(r"[A-Za-z0-9_-]+")
+UNSAFE_MESSAGE = re.compile("[\"'|&<>^%{}\\r\\n]")
+
+
+@dataclass(frozen=True)
+class RunSetup:
+    config_file: Path
+    config_dir: Path
+
+
+def _check_role(name):
+    if not isinstance(name, str) or not ROLE_NAME.fullmatch(name):
+        raise AdapterError(f"agent name {name!r} may only use letters, digits, '-' and '_'")
+
+
+def _frontmatter_end(lines):
+    """Index of the closing --- line of the frontmatter."""
+    if not lines or lines[0].lstrip("\ufeff").strip() != "---":
+        raise AdapterError("the agent file has no frontmatter")
+    for index in range(1, len(lines)):
+        if lines[index].strip() == "---":
+            return index
+    raise AdapterError("the agent file frontmatter is not closed")
+
+
+def _top_level(lines, end, key):
+    """Indexes of the frontmatter lines that start with `key:` at column 0."""
+    return [index for index in range(1, end) if lines[index].startswith(key + ":")]
+
+
+def derive_agent(text):
+    """The agent file as a primary agent: only the top-level mode line changes.
+
+    No model line is added, because the model comes from the run config
+    (DEC-019). A file that has one is refused, because a model line beats the
+    config (F32).
+    """
+    lines = text.splitlines(keepends=True)
+    end = _frontmatter_end(lines)
+    if _top_level(lines, end, "model"):
+        raise AdapterError("the agent file has a model: line; the model belongs in the profile (DEC-019)")
+    modes = _top_level(lines, end, "mode")
+    if len(modes) != 1:
+        raise AdapterError(f"the agent file needs exactly one top-level mode: line, found {len(modes)}")
+    line = lines[modes[0]]
+    lines[modes[0]] = "mode: primary" + line[len(line.rstrip("\r\n")):]
+    return "".join(lines)
+
+
+def check_message(message):
+    """The task message must survive the Windows shim (F10): plain text on one line."""
+    if not isinstance(message, str) or not message.strip():
+        raise AdapterError("the task message must be non-empty text")
+    if UNSAFE_MESSAGE.search(message):
+        raise AdapterError("the task message may not contain quotes, pipes, braces or line breaks (F10)")
+    return message
+
+
+def build_command(executable, agent, message, files):
+    """The `opencode run` command. The message comes first: -f takes several values and would swallow it."""
+    _check_role(agent)
+    command = [str(executable), "run", check_message(message), "--agent", agent, "--format", "json"]
+    for path in files:
+        command += ["-f", Path(path).as_posix()]
+    return command
+
+
+def build_environment(base, config_file, config_dir):
+    """A copy of the environment that points OpenCode at the per-run config file and folder."""
+    environment = dict(base)
+    environment["OPENCODE_CONFIG"] = Path(config_file).as_posix()
+    environment["OPENCODE_CONFIG_DIR"] = Path(config_dir).as_posix()
+    return environment
+
+
+def render_run_config(models):
+    """The OpenCode config for a run: the same format as the generated execution/routing.json."""
+    if not isinstance(models, dict) or not models:
+        raise AdapterError("a run config needs at least one role and model")
+    bad = [role for role, model in models.items() if not isinstance(model, str) or not model.strip()]
+    if bad:
+        raise AdapterError("no model given for: " + ", ".join(sorted(map(str, bad))))
+    return routing_text({"$schema": SCHEMA_URL, "agent": {role: {"model": models[role]} for role in sorted(models)}})
+
+
+def _write(path, text):
+    with open(path, "w", encoding="utf-8", newline="") as handle:
+        handle.write(text)
+
+
+def load_agent_text(repo_root, role):
+    """Read agents/<role>.md as it is on disk, line endings included."""
+    _check_role(role)
+    path = Path(repo_root) / "agents" / f"{role}.md"
+    try:
+        return path.read_bytes().decode("utf-8")
+    except (OSError, ValueError) as error:
+        raise AdapterError(f"{path.as_posix()} cannot be read: {error}") from error
+
+
+def prepare_run_dir(directory, role, agent_text, model):
+    """Write the per-run files under directory and return where OpenCode finds them.
+
+    Nothing is written unless the role, the agent text and the model are valid.
+    """
+    _check_role(role)
+    derived = derive_agent(agent_text)
+    routing = render_run_config({role: model})
+    root = Path(directory)
+    config_dir = root / "opencode-config"
+    (config_dir / "agents").mkdir(parents=True, exist_ok=True)
+    _write(config_dir / "agents" / f"{role}.md", derived)
+    config_file = root / "run-routing.json"
+    _write(config_file, routing)
+    return RunSetup(config_file=config_file, config_dir=config_dir)
