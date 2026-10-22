@@ -1,0 +1,3 @@
+{"type":"error","timestamp":1792667149039,"sessionID":"ses_e9cb6257fffeRWUzABhdbuLf3Z","error":{"name":"UnknownError","data":{"message":"Model not found: github-copilot/no-such-model-xyz. Did you mean: gpt-5.4-nano?"}}}
+{"type":"error","timestamp":1792667149040,"sessionID":"ses_e9cb6257fffeRWUzABhdbuLf3Z","error":{"name":"UnknownError","data":{"message":"Model not found: github-copilot/no-such-model-xyz. Did you mean: gpt-5.4-nano?"}}}
+{"type":"error","timestamp":1792667149074,"sessionID":"ses_e9cb6257fffeRWUzABhdbuLf3Z","error":{"name":"UnknownError","data":{"message":"Unexpected server error. Check server logs for details.","ref":"err_0cd12935"}}}
