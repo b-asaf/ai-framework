@@ -1,0 +1,51 @@
+{
+  "info": {
+    "id": "ses_e9d71c4f5ffeVnSOlPgSptN79x",
+    "agent": "sample-reviewer",
+    "model": {
+      "id": "claude-haiku-4.5",
+      "providerID": "github-copilot",
+      "variant": "default"
+    },
+    "version": "1.19.3",
+    "cost": 0.01213675
+  },
+  "messages": [
+    {
+      "info": {
+        "id": "msg_1628e3be3001WLBwdM1aVg6Yv6",
+        "sessionID": "ses_e9d71c4f5ffeVnSOlPgSptN79x",
+        "role": "user",
+        "agent": "sample-reviewer",
+        "model": {
+          "providerID": "github-copilot",
+          "modelID": "claude-haiku-4.5"
+        }
+      }
+    },
+    {
+      "info": {
+        "id": "msg_1628e42e5001aS0Y4lE53WRdOw",
+        "sessionID": "ses_e9d71c4f5ffeVnSOlPgSptN79x",
+        "parentID": "msg_1628e3be3001WLBwdM1aVg6Yv6",
+        "role": "assistant",
+        "mode": "sample-reviewer",
+        "agent": "sample-reviewer",
+        "cost": 0.01213675,
+        "tokens": {
+          "total": 9161,
+          "input": 3,
+          "output": 183,
+          "reasoning": 0,
+          "cache": {
+            "write": 8975,
+            "read": 0
+          }
+        },
+        "finish": "stop",
+        "providerID": "github-copilot",
+        "modelID": "claude-haiku-4.5"
+      }
+    }
+  ]
+}
