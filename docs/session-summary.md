@@ -84,9 +84,9 @@ ai-framework/
 | STRONG / VALIDATION | `github-copilot/gpt-5.6-terra` | code-reviewer |
 | EFFICIENT | `github-copilot/claude-haiku-4.5` | web-research-specialist |
 
-Per-agent, in `agents/*.md` frontmatter — there is no global default model.
-Each agent's `model:` line is authoritative (Model Assignment Matrix, section
-2). See `docs/decisions/DEC-014-model-reassignment.md` for the most recent
+Per-agent, in `execution/profiles/default.json` (DEC-019) — there is no global default model.
+Agent files carry no `model:` line. The Model Assignment Matrix (section
+2) lists the models. See `docs/decisions/DEC-014-model-reassignment.md` for the most recent
 change: `code-reviewer` moved off the ungoverned `gpt-6-sol` onto
 `gpt-5.6-terra`, and `gatekeeper` moved from `claude-haiku-4.5` to
 `claude-sonnet-5` now that a gatekeeper PASS triggers an automatic push and

@@ -19,7 +19,7 @@ The new path has parity with the current flow when it gives the **same verificat
 | Side | Source |
 |---|---|
 | Current flow | The private baseline file kept outside this repo (3 to 5 past tasks; "unknown" where not recorded) |
-| New path | `RunRecord` JSONL (`adws/runs/`) plus the gate results |
+| New path | `RunRecord` JSONL (`execution/runner/runs/`) plus the gate results |
 
 ## Rules
 
