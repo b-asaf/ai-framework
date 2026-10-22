@@ -6,8 +6,9 @@ text event, a last stop reason of "stop" and no error event. A subagent started
 with --agent falls back to the default agent and only warns on stderr (F6), and
 a model that is not the requested one must fail the run (F34), so the adapter
 also reads the assistant message of `opencode export`, which records the agent
-and the model that really ran. The error event shape has not been captured from
-a real run yet: any event of type "error" counts as an error.
+and the model that really ran. An error event (real sample: bad-model.jsonl)
+keeps its text in error.data.message. OpenCode repeats the same error, so each
+distinct message is listed once.
 
 Everything here is a pure function. Running OpenCode is a later slice. The
 sample files in tests/fixtures/opencode-run/ come from real runs.
@@ -115,6 +116,21 @@ def _total_cost(events):
     return sum(costs) if costs else None
 
 
+def _error_message(event):
+    error = event.get("error")
+    data = error.get("data") if isinstance(error, dict) else None
+    message = data.get("message") if isinstance(data, dict) else None
+    if isinstance(message, str) and message.strip():
+        return message.strip()[:EVENT_CHARS]
+    return json.dumps(event)[:EVENT_CHARS]
+
+
+def _error_messages(events):
+    """One message per distinct error event, in order."""
+    messages = [_error_message(event) for event in events if event.get("type") == "error"]
+    return tuple(dict.fromkeys(messages))
+
+
 def parse_events(text):
     """Read the JSON event stream of `opencode run --format json`.
 
@@ -128,7 +144,7 @@ def parse_events(text):
         reason=_last(events, "step_finish", "reason", str),
         tokens=_total_tokens(events),
         cost=_total_cost(events),
-        errors=tuple(json.dumps(e)[:EVENT_CHARS] for e in events if e.get("type") == "error"),
+        errors=_error_messages(events),
         bad_lines=bad,
     )
 
@@ -191,21 +207,32 @@ def _event_problems(events):
     return problems
 
 
-def assess(events, stderr, ran, agent, model):
+def _fell_back(warnings, ran, agent):
+    return bool(warnings) or (ran is not None and ran.agent != agent)
+
+
+def assess(events, stderr, ran, agent, model, exit_code=0):
     """The execution level of a run: success only when nothing above went wrong.
 
-    A fallback and a model mismatch count as failures. The result keeps the
-    model that really ran, so the record shows why.
+    A fallback, a model mismatch and a non-zero exit code count as failures. The
+    result keeps the model that really ran, so the record shows why. ran is None
+    when the session export was not read, as after a run that failed before any
+    reply; a run that looks fine otherwise but has no export fails closed (F34).
     """
     warnings = fallback_warnings(stderr)
     problems = _event_problems(events)
+    if exit_code != 0:
+        problems.append(f"OpenCode exited with code {exit_code}")
     problems += [f"stderr: {warning}" for warning in warnings]
-    problems += check_model_ran(ran, agent, model)
+    if ran is not None:
+        problems += check_model_ran(ran, agent, model)
+    elif not problems:
+        problems.append("the session export was not read, so the model that ran is unknown (F34)")
     return Assessment(
         status="failure" if problems else "success",
         problems=tuple(problems),
-        fallback=bool(warnings) or ran.agent != agent,
-        resolved_model=ran.model,
+        fallback=_fell_back(warnings, ran, agent),
+        resolved_model=ran.model if ran else None,
         stop_reason=events.reason,
         tokens=events.tokens,
         cost=events.cost,

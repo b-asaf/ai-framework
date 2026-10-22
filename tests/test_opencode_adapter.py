@@ -4,8 +4,9 @@ tests/fixtures/opencode-run/ holds output of real runs on OpenCode 1.19.3
 (captured 2026-10-22): review.jsonl is the event stream of a primary agent, the
 two session exports are trimmed to the fields the adapter reads, and
 fallback.stderr is the warning of a subagent started with --agent (F6).
-Synthetic events are used only where no real sample exists, for example the
-error event.
+Synthetic events are used only where no real sample exists. bad-model.jsonl is
+the real output of a run whose model id does not exist (OpenCode exited with 1,
+stderr was empty).
 """
 
 import json
@@ -75,8 +76,16 @@ class ParseEvents(unittest.TestCase):
     def test_an_empty_stream_has_nothing(self):
         self.assertEqual(adapter.parse_events(""), adapter.RunEvents(None, None, None, None, None, (), 0))
 
-    def test_an_error_event_is_kept(self):
-        # Synthetic: no real error sample has been captured yet.
+    def test_the_real_error_events_give_one_message_each(self):
+        events = adapter.parse_events(read("bad-model.jsonl"))
+        self.assertEqual(len(events.errors), 2)
+        self.assertIn("Model not found: github-copilot/no-such-model-xyz", events.errors[0])
+        self.assertIn("Unexpected server error", events.errors[1])
+        self.assertIsNone(events.reply)
+        self.assertIsNone(events.reason)
+
+    def test_an_error_event_of_an_unknown_shape_is_kept_as_text(self):
+        # Synthetic: the message is not where OpenCode puts it.
         events = adapter.parse_events(stream(json.dumps({"type": "error", "error": {"message": "boom"}})))
         self.assertEqual(len(events.errors), 1)
         self.assertIn("boom", events.errors[0])
@@ -241,6 +250,36 @@ class Assess(unittest.TestCase):
         result = assess(events=read("review.jsonl") + "warning: something\n")
         self.assertEqual(result.status, "failure")
         self.assertIn("not JSON", " ".join(result.problems))
+
+    def test_the_real_bad_model_run_is_a_failure_without_an_export(self):
+        events = adapter.parse_events(read("bad-model.jsonl"))
+        result = adapter.assess(events, "", None, AGENT, MODEL, exit_code=1)
+        self.assertEqual(result.status, "failure")
+        self.assertIsNone(result.resolved_model)
+        self.assertFalse(result.fallback)
+        text = " | ".join(result.problems)
+        self.assertIn("Model not found", text)
+        self.assertIn("exited with code 1", text)
+        self.assertNotIn("export was not read", text)
+
+    def test_the_failed_bad_model_run_fits_the_run_record(self):
+        events = adapter.parse_events(read("bad-model.jsonl"))
+        result = adapter.assess(events, "", None, AGENT, MODEL, exit_code=1)
+        fields = record_fields(result, error=record.error_info("; ".join(result.problems)))
+        built = record.build_record(**fields)
+        self.assertEqual(built["status"]["execution"], "failure")
+        self.assertIsNone(built["resolved_model"])
+
+    def test_a_clean_run_without_an_export_fails_closed(self):
+        result = adapter.assess(adapter.parse_events(read("review.jsonl")), "", None, AGENT, MODEL)
+        self.assertEqual(result.status, "failure")
+        self.assertIn("export was not read", " ".join(result.problems))
+
+    def test_a_non_zero_exit_code_is_a_failure_even_when_the_rest_is_clean(self):
+        ran = adapter.parse_export(read("review-session.json"))
+        result = adapter.assess(adapter.parse_events(read("review.jsonl")), "", ran, AGENT, MODEL, exit_code=1)
+        self.assertEqual(result.status, "failure")
+        self.assertIn("exited with code 1", " ".join(result.problems))
 
 
 if __name__ == "__main__":
