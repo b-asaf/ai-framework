@@ -1,4 +1,4 @@
-# Model routing evidence (E1 to E4)
+# Model routing evidence (E1 to E6)
 
 Date: 2026-10-18. OpenCode 1.19.3, Windows, Git Bash. Findings F32 to F36 in `docs/transition-plan.md` rest on this file.
 
@@ -94,3 +94,20 @@ Setup: a copy of `opencode.json`, `agents/` (15 agents, all `model:` lines delet
 Caveat: the event stream listed only the child's `modelID`. The parent's model (haiku) rests on `opencode debug agent boss`.
 
 Side finding: the first launch of OpenCode after `setup.py` linked `config.json` rewrote `execution/routing.json` through the link. The diff was one added line, `"$schema": "https://opencode.ai/config.json"`. A reproduction in a throwaway home (config.json without the line) showed the line being added as line 2. With the line already first, the file was left unchanged and the model still resolved. No model id changed.
+
+## E6: running a real reviewer as a primary agent (fake home, 2026-10-22)
+
+Setup: a fake home `/d/opencode-fake-home-capture` made of copies (no links) with two throwaway read-only agents without a `model:` line (`sample-reviewer`, primary; `sample-sub`, subagent), scratch repos `proj-a` to `proj-f`, and routing files that set haiku. Runs used `opencode run --format json` with the task and diff attached through `-f` (F10), OpenCode 1.19.3. The raw output of three runs is kept as fixtures in `tests/fixtures/opencode-run/`.
+
+| Step | Result |
+|---|---|
+| `agent.<name>.mode: "primary"` in the `OPENCODE_CONFIG` file; `debug agent` for the throwaway subagent and for the real `code-reviewer` | both stayed `mode: subagent`: the entry is ignored (F37) |
+| The same config, real run with `--agent sample-sub` | stderr warning "Falling back to default agent", exit 0; the export shows agent `build` on `gpt-6-astra`, not on the routed haiku (F37, F38) |
+| Primary agent `sample-reviewer` routed to haiku, JSON report requested by an attached task file | exit 0 in 20 s; events `step_start`, `text`, `step_finish`; the reply was a valid report; no event names the model (F43) |
+| `opencode export` of that session and of the fallback session | the assistant message records the agent and the model that ran (`sample-reviewer`, and `build` for the fallback); 4.3 to 5.6 s, 7.7 s cold, `--pure` no faster (F43, F44) |
+| Routing file with a model id that does not exist | exit 1 in about 10 s, empty stderr, error events with the text in `error.data.message`; both repos unchanged (F42) |
+| Project `.opencode/opencode.json` and project `opencode.json` that set an agent model; a project that sets none | the model resolved from both files; none for the project without one (F34, F41) |
+| Project `.opencode/agents/<name>.md` with a `model:` line | beat the routing (sonnet over haiku), also with a config-dir copy present (F40) |
+| `OPENCODE_CONFIG_DIR` with a same-name primary copy of the subagent, model from `OPENCODE_CONFIG` | `debug agent`: primary on haiku (without it: subagent). Real run: exit 0, empty stderr, export agent `sample-sub` on haiku (F39) |
+
+Not tested: whether the global `opencode.json` permissions apply when `OPENCODE_CONFIG_DIR` is set (U4); which fields of a project agent file and a config-dir copy win one by one; other OpenCode versions.
