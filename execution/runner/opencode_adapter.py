@@ -366,3 +366,13 @@ def prepare_run_dir(directory, role, agent_text, model):
     config_file = root / "run-routing.json"
     _write(config_file, routing)
     return RunSetup(config_file=config_file, config_dir=config_dir)
+
+
+SESSION_ID = re.compile(r"ses_[A-Za-z0-9]+")
+
+
+def build_export_command(executable, session_id):
+    """The command that exports a session: its assistant message says which agent and model ran (F43)."""
+    if not isinstance(session_id, str) or not SESSION_ID.fullmatch(session_id):
+        raise AdapterError(f"session id {session_id!r} is not an OpenCode session id")
+    return [str(executable), "export", session_id]
