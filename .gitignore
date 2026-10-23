@@ -6,3 +6,4 @@
 /skills/graphify/.graphify_version
 /.opencode/__pycache__/
 *.pyc
+/execution/runner/runs/
