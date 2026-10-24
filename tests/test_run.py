@@ -14,7 +14,7 @@ sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tools"))
 
 from execution.runner import opencode_adapter as adapter  # noqa: E402
-from execution.runner import record, report, resolve, run  # noqa: E402
+from execution.runner import preflight, record, report, resolve, run  # noqa: E402
 from lib.opencode_resolved import ResolvedModelError  # noqa: E402
 
 FIXTURES = REPO / "tests" / "fixtures" / "opencode-run"
@@ -88,6 +88,11 @@ class RunReview(unittest.TestCase):
         self.repo = make_repo(base)
         self.target = base / "target"
         self.target.mkdir()
+        (self.target / "docs" / "project-overview").mkdir(parents=True)
+        stack = self.target / "docs" / "project-overview" / "stack.md"
+        stack.write_text("# Stack\n\n- Language: JavaScript\n", encoding="utf-8")
+        (self.target / ".ai-framework.json").write_text("{}", encoding="utf-8")
+        self.target_files = sorted(p.relative_to(self.target).as_posix() for p in self.target.rglob("*"))
         self.diff = base / "sample.patch"
         self.diff.write_text(PATCH, encoding="utf-8")
 
@@ -132,7 +137,8 @@ class RunReview(unittest.TestCase):
 
     def test_nothing_is_written_into_the_target(self):
         self.go()
-        self.assertEqual(list(self.target.iterdir()), [])
+        after = sorted(p.relative_to(self.target).as_posix() for p in self.target.rglob("*"))
+        self.assertEqual(after, self.target_files)
 
     def test_a_fallback_warning_fails_the_run_without_an_export(self):
         outcome, fake = self.go(Fake(run_result=result(0, read("review.jsonl"), read("fallback.stderr"))))
@@ -201,6 +207,13 @@ class RunReview(unittest.TestCase):
         fake = Fake()
         with self.assertRaisesRegex(resolve.ResolveError, "F34"):
             self.go(fake, role="ghost")
+        self.assertEqual(fake.calls, [])
+
+    def test_a_target_that_is_not_ready_never_starts_opencode(self):
+        (self.target / ".ai-framework.json").unlink()
+        fake = Fake()
+        with self.assertRaisesRegex(preflight.PreflightError, "ai-framework.json is missing"):
+            self.go(fake)
         self.assertEqual(fake.calls, [])
 
     def test_a_missing_diff_never_starts_opencode(self):

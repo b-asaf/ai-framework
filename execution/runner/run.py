@@ -11,8 +11,9 @@ until the gates exist (Phase 3A).
 Nothing is written into the target repo, and the per-run folder is deleted
 afterwards. Appending the record is a separate call (record.append_record), so
 a test or a dry run writes nothing. The subprocess runner is injectable, so the
-tests replay recorded OpenCode output. A policy rejection, a missing diff and a
-missing opencode raise, because nothing ran; every other failure is a record.
+tests replay recorded OpenCode output. A policy rejection, a failed preflight, a
+missing diff and a missing opencode raise, because nothing ran; every other
+failure is a record.
 """
 
 import os
@@ -24,7 +25,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import opencode_adapter as adapter
-from . import record, report, resolve
+from . import preflight, record, report, resolve
 from lib.opencode_resolved import find_opencode  # noqa: E402
 
 RUNTIME = "opencode"
@@ -180,6 +181,7 @@ def run_review(
     if not diff.is_file():
         raise adapter.AdapterError(f"{diff.as_posix()} not found, so there is nothing to review")
     base = dict(os.environ if environ is None else environ)
+    preflight.require(target, role, base)
     work = Path(tempfile.mkdtemp(prefix="review-run-"))
     try:
         return _run(work, resolved, executable, agent_text, diff, Path(target), runner, timeout, base)
