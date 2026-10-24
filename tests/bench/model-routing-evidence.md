@@ -1,4 +1,4 @@
-# Model routing evidence (E1 to E7)
+# Model routing evidence (E1 to E8)
 
 Date: 2026-10-18. OpenCode 1.19.3, Windows, Git Bash. Findings F32 to F36 in `docs/transition-plan.md` rest on this file.
 
@@ -124,3 +124,16 @@ Setup: `run_review` with a copy of `policy.json` and of `agents/code-reviewer.md
 | Both runs | requested and resolved model were haiku, no fallback; no run folder left in the temp folder; the scratch repo stayed clean; the number of node processes was the same before and after |
 
 Caveats: one model and one run each, so F45 says nothing about GPT or Gemini. Both reports cite line 8 of a file that does not exist in the target: validity is not correctness, and correctness is measured in the benchmark (step 2.3). A timeout with a child process was not tested.
+
+## E8: the command line entry with the production model (2026-10-24)
+
+Setup: `python -m execution.runner.cli --role code-reviewer` with the real profile (`gpt-5.6-terra`), once on the scratch repo (no `.ai-framework.json`) and once on a copy of it with `.ai-framework.json` and a `src/total.ts` that holds the loop bug of the E6 sample patch on line 3. OpenCode 1.19.3. The record went to `execution/runner/runs/`, which is not versioned.
+
+| Step | Result |
+|---|---|
+| Target without `.ai-framework.json` | not run, exit 2, no model call; the message names the missing file (F14) |
+| Ready target | exit 0; execution and artifact success; one BLOCKING finding; 110 s, $0.089; requested and resolved model equal; a bare JSON object (F47) |
+| Line cited | line 8; the bug is on line 3 of the file, and line 8 of the sample patch is its added line (F48) |
+| Both targets afterwards | the scratch repo unchanged; the copy holds only the two files added for the run |
+
+Caveats: one run, one model, one diff. Gemini was not run. The line reading in F48 rests on three runs of the same patch.
