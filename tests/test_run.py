@@ -170,6 +170,14 @@ class RunReview(unittest.TestCase):
         self.assertIsNone(outcome.report)
         self.assertIn("not one JSON object", built["error"]["message"])
 
+    def test_a_reply_that_is_not_a_report_keeps_its_start_in_the_record(self):
+        reply = "## Analysis\n" + "x" * 3000
+        lines = [event("step_start"), event("text", text=reply), event("step_finish", reason="stop")]
+        outcome, _ = self.go(Fake(run_result=result(0, "\n".join(lines) + "\n")))
+        head = outcome.record["error"]["reply_head"]
+        self.assertTrue(head.startswith("## Analysis"))
+        self.assertEqual(len(head), record.REPLY_CHARS)
+
     def test_a_timeout_is_a_failure(self):
         outcome, fake = self.go(Fake(run_result=subprocess.TimeoutExpired(["oc"], 5)), timeout=5)
         self.assertEqual(len(fake.calls), 1)

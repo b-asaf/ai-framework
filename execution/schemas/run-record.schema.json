@@ -41,7 +41,8 @@
       "properties": {
         "message": {"type": "string", "minLength": 1},
         "stderr_tail": {"type": "string"},
-        "event_tail": {"type": "array", "items": {"type": "string"}}
+        "event_tail": {"type": "array", "items": {"type": "string"}},
+        "reply_head": {"type": "string", "description": "Start of the reply of a run that failed."}
       }
     }
   }

@@ -82,6 +82,11 @@ class BuildRecord(unittest.TestCase):
         )
         self.assertEqual(built["status"]["execution"], "failure")
 
+    def test_a_failed_run_with_a_reply_head_is_valid(self):
+        error = record.error_info("boom", reply="start of the reply")
+        built = record.build_record(**fields(status=record.status_levels("success", "failure"), error=error))
+        self.assertEqual(built["error"]["reply_head"], "start of the reply")
+
     def test_an_empty_error_message_is_rejected(self):
         with self.assertRaisesRegex(record.RecordError, "message"):
             record.build_record(**fields(status=record.status_levels("failure"), error=record.error_info("")))
@@ -94,6 +99,14 @@ class ErrorInfo(unittest.TestCase):
         info = record.error_info("boom", stderr, events)
         self.assertEqual(info["stderr_tail"].splitlines(), [f"line {i}" for i in range(10, 30)])
         self.assertEqual(info["event_tail"], [f"e{i}" for i in range(10, 30)])
+
+    def test_the_start_of_a_reply_is_kept_and_cut(self):
+        info = record.error_info("boom", reply="## Analysis" + "x" * 3000)
+        self.assertTrue(info["reply_head"].startswith("## Analysis"))
+        self.assertEqual(len(info["reply_head"]), record.REPLY_CHARS)
+
+    def test_no_reply_means_no_reply_head(self):
+        self.assertNotIn("reply_head", record.error_info("boom"))
 
     def test_long_lines_are_cut_and_events_become_text(self):
         info = record.error_info("boom", "", [{"type": "error"}, "x" * 600])
