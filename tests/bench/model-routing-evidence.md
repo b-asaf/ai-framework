@@ -1,4 +1,4 @@
-# Model routing evidence (E1 to E6)
+# Model routing evidence (E1 to E7)
 
 Date: 2026-10-18. OpenCode 1.19.3, Windows, Git Bash. Findings F32 to F36 in `docs/transition-plan.md` rest on this file.
 
@@ -111,3 +111,16 @@ Setup: a fake home `/d/opencode-fake-home-capture` made of copies (no links) wit
 | `OPENCODE_CONFIG_DIR` with a same-name primary copy of the subagent, model from `OPENCODE_CONFIG` | `debug agent`: primary on haiku (without it: subagent). Real run: exit 0, empty stderr, export agent `sample-sub` on haiku (F39) |
 
 Not tested: whether the global `opencode.json` permissions apply when `OPENCODE_CONFIG_DIR` is set (U4); which fields of a project agent file and a config-dir copy win one by one; other OpenCode versions.
+
+## E7: the real code-reviewer through the runner (fake home, 2026-10-23)
+
+Setup: `run_review` with a copy of `policy.json` and of `agents/code-reviewer.md`, a one-line profile that routes `code-reviewer` to haiku, and the scratch repo as target (it holds no `src/total.ts` and no `.ai-framework.json`). The patch was the sample diff of E6. The record went to the fake home, not to the repo. OpenCode 1.19.3.
+
+| Step | Result |
+|---|---|
+| `debug agent code-reviewer` with the live global config, and with the per-run config folder and run config | `subagent` on gpt-5.6-terra, and `primary` on haiku. 140 permission rules each, the same set, the same order outside the skill folders (the skill rules are in a different order); `edit`, `write` and `task` end in deny in both (U4) |
+| Run 1: the task file asks for JSON, the message says to follow it | execution success, artifact failure. The reply starts with `## Analysis` and ends with one fenced JSON block that passes the schema and the rules (REQUEST CHANGES, 2 BLOCKING). 101 s, 44k tokens, $0.040, seven tool calls that load skills (F11, F45) |
+| Run 2: the task file and the message say that the whole reply is the JSON and that it overrides the agent's output format | execution success, artifact success: a bare JSON object (REQUEST CHANGES, 1 BLOCKING). 52 s, $0.022 (F45, F46) |
+| Both runs | requested and resolved model were haiku, no fallback; no run folder left in the temp folder; the scratch repo stayed clean; the number of node processes was the same before and after |
+
+Caveats: one model and one run each, so F45 says nothing about GPT or Gemini. Both reports cite line 8 of a file that does not exist in the target: validity is not correctness, and correctness is measured in the benchmark (step 2.3). A timeout with a child process was not tested.
