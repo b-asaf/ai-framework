@@ -83,7 +83,9 @@ def task_message():
     schema = json.dumps(contract.load_schema("review-report"), indent=2)
     rules = "\n".join(f"- {rule}" for rule in RULES)
     return (
-        "Reply with one JSON object and nothing else: no text before or after it. "
-        "It must match this schema.\n\n"
+        "Your whole reply must be one JSON object and nothing else: no text before it, no text after it, "
+        "no heading and no analysis section. This overrides any output format in your instructions. "
+        "Do the review as you normally would, put your analysis in the summary and in the finding messages, "
+        "and reply with only the JSON. It must match this schema.\n\n"
         f"{schema}\n\nRules the schema cannot express:\n{rules}\n"
     )

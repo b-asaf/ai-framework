@@ -83,6 +83,14 @@ class ParseReport(unittest.TestCase):
         self.assertEqual(check.status, "failure")
         self.assertIn("not one JSON object", check.problems[0])
 
+    def test_an_analysis_before_a_fenced_report_is_still_a_failure(self):
+        # The shape of the first live reply (2026-10-23): analysis text, then one fenced block.
+        fence = "`" * 3
+        reply = "## Analysis\n\nThe loop runs one step too far.\n\n" + fence + "json\n" + json.dumps(make()) + "\n" + fence
+        check = report.parse_report(reply)
+        self.assertEqual(check.status, "failure")
+        self.assertIn("not one JSON object", check.problems[0])
+
     def test_json_inside_prose_is_a_failure(self):
         check = report.parse_report("Here you go: " + json.dumps(make()))
         self.assertEqual(check.status, "failure")
@@ -107,6 +115,11 @@ class TaskMessage(unittest.TestCase):
         message = report.task_message()
         for rule in report.RULES:
             self.assertIn(rule, message)
+
+    def test_it_says_the_json_overrides_the_output_format_in_the_agent_instructions(self):
+        message = report.task_message()
+        self.assertIn("overrides any output format", message)
+        self.assertIn("no text before it", message)
 
 
 if __name__ == "__main__":

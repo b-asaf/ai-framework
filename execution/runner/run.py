@@ -33,7 +33,8 @@ EXPORT_TIMEOUT = 120
 # One plain line (F10). It states the branch decision and the approval, which the
 # global AGENTS.md gates would otherwise ask for in a headless run (F8).
 TASK_MESSAGE = (
-    "Review the attached diff and reply exactly as the attached task file says. "
+    "Review the attached diff. Your whole reply must be only the JSON object that the attached task file "
+    "describes, with no text before or after it, even if your instructions describe another output format. "
     "Do not create a branch and do not ask to confirm a plan: the plan is approved."
 )
 
@@ -114,7 +115,9 @@ def _artifact_level(assessment):
 def _record(resolved, diff, assessment, artifact, messages, launched, duration_ms):
     status = record.status_levels(assessment.status, artifact)
     failed = "failure" in status.values()
-    error = record.error_info("; ".join(messages), launched.stderr, launched.stdout.splitlines()) if failed else None
+    error = None
+    if failed:
+        error = record.error_info("; ".join(messages), launched.stderr, launched.stdout.splitlines(), assessment.reply)
     return record.build_record(
         role=resolved.role,
         profile=resolved.profile,

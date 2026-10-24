@@ -21,6 +21,7 @@ LEVELS = ("execution", "artifact", "workflow")
 TIMESTAMP = re.compile(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ")
 TAIL_LINES = 20
 LINE_CHARS = 500
+REPLY_CHARS = 1500
 
 
 class RecordError(Exception):
@@ -36,13 +37,17 @@ def _tail(lines):
     return [line[:LINE_CHARS] for line in lines[-TAIL_LINES:]]
 
 
-def error_info(message, stderr="", events=()):
-    """The error object of a failed run: the message plus the last lines of stderr and of the events."""
-    return {
+def error_info(message, stderr="", events=(), reply=None):
+    """The error object of a failed run: the message, the last lines of stderr and of the events,
+    and the start of the reply when there is one (what a failed report check saw)."""
+    info = {
         "message": message,
         "stderr_tail": "\n".join(_tail(str(stderr).splitlines())),
         "event_tail": _tail([str(event) for event in events]),
     }
+    if reply:
+        info["reply_head"] = str(reply)[:REPLY_CHARS]
+    return info
 
 
 def _check_levels(status):
