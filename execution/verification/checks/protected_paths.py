@@ -12,11 +12,29 @@ being silently skipped (fail closed, DEC-015).
 """
 
 import hashlib
+import posixpath
 from pathlib import Path
 
 
 class ProtectedPathError(Exception):
     """A protected path exists but could not be read, or is unsafe."""
+
+
+def _normalize_protected_path(protected_path):
+    """Normalize protected_path and reject empty/root/escaping values (fail closed).
+
+    Rejects absolute protected_path values, anything that normalizes to "."
+    or "" (which would silently protect nothing while matching everything),
+    and anything that escapes root via `..` components.
+    """
+    if Path(protected_path).is_absolute():
+        raise ProtectedPathError(f"protected_path must be relative: {protected_path}")
+    normalized = posixpath.normpath(str(protected_path).replace("\\", "/"))
+    if normalized in (".", ""):
+        raise ProtectedPathError(f"protected_path must not be empty or '.': {protected_path!r}")
+    if normalized == ".." or normalized.startswith("../"):
+        raise ProtectedPathError(f"protected_path escapes root: {protected_path}")
+    return normalized
 
 
 def _resolve_within_root(root, protected_path):
@@ -25,17 +43,16 @@ def _resolve_within_root(root, protected_path):
     Rejects absolute protected_path values and any resolved location that
     falls outside root (e.g. via `..` components).
     """
-    if Path(protected_path).is_absolute():
-        raise ProtectedPathError(f"protected_path must be relative: {protected_path}")
+    normalized = _normalize_protected_path(protected_path)
     resolved_root = root.resolve()
-    candidate = root / protected_path
+    candidate = root / normalized
     # Resolve the parent directory (not the final component) so a protected
     # path that is itself a symlink isn't dereferenced during containment
     # checking; only `..`/junction-style escapes in the path itself matter.
     resolved_parent = candidate.parent.resolve()
     if resolved_root != resolved_parent and resolved_root not in resolved_parent.parents:
         raise ProtectedPathError(f"protected_path escapes root: {protected_path}")
-    return root / protected_path
+    return candidate
 
 
 def _iter_files(root, protected_path):
@@ -80,8 +97,8 @@ def snapshot(root, protected_paths):
 
 def _owning_protected_path(path, protected_paths):
     for protected_path in protected_paths:
-        protected_posix = Path(protected_path).as_posix()
-        if path == protected_posix or path.startswith(protected_posix.rstrip("/") + "/"):
+        normalized = _normalize_protected_path(protected_path)
+        if path == normalized or path.startswith(normalized + "/"):
             return protected_path
     return None
 
@@ -94,6 +111,8 @@ def find_violations(before, after, protected_paths):
     considered, so passing broader snapshots is safe.
     """
     violations = []
+    for protected_path in protected_paths:
+        _normalize_protected_path(protected_path)
     for path in sorted(set(before) | set(after)):
         owner = _owning_protected_path(path, protected_paths)
         if owner is None:

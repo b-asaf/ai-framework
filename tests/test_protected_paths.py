@@ -49,11 +49,43 @@ class Snapshot(unittest.TestCase):
             with self.assertRaises(ProtectedPathError):
                 snapshot(tmp, ["../sibling"])
 
+    def test_dot_protected_path_raises(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(ProtectedPathError):
+                snapshot(tmp, ["."])
+
+    def test_empty_string_protected_path_raises(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(ProtectedPathError):
+                snapshot(tmp, [""])
+
+    def test_dot_prefixed_protected_path_normalizes_and_behaves_like_plain(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write(tmp, "hooks/pre-push", "a")
+            result = snapshot(tmp, ["./hooks"])
+        self.assertEqual(set(result), {"hooks/pre-push"})
+
+    def test_protected_path_with_internal_dotdot_normalizes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            write(tmp, "b/file.txt", "a")
+            result = snapshot(tmp, ["a/../b"])
+        self.assertEqual(set(result), {"b/file.txt"})
+
+    def test_protected_path_escaping_via_internal_dotdot_raises(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(ProtectedPathError):
+                snapshot(tmp, ["a/../../b"])
+
     def test_absolute_protected_path_raises(self):
         with tempfile.TemporaryDirectory() as tmp:
             absolute = str(Path(tmp) / "hooks")
             with self.assertRaises(ProtectedPathError):
                 snapshot(tmp, [absolute])
+
+    def test_backslash_dotdot_protected_path_raises(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(ProtectedPathError):
+                snapshot(tmp, ["hooks\\.."])
 
     def test_recursive_nested_files_are_picked_up(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -161,6 +193,36 @@ class FindViolations(unittest.TestCase):
         before = {"other.txt": "x"}
         after = {"other.txt": "y"}
         self.assertEqual(find_violations(before, after, PROTECTED), [])
+
+    def test_dot_protected_path_raises(self):
+        with self.assertRaises(ProtectedPathError):
+            find_violations({}, {}, ["."])
+
+    def test_empty_string_protected_path_raises(self):
+        with self.assertRaises(ProtectedPathError):
+            find_violations({}, {}, [""])
+
+    def test_dot_prefixed_protected_path_normalizes_and_behaves_like_plain(self):
+        before = {"hooks/pre-push": "x"}
+        after = {"hooks/pre-push": "y"}
+        violations = find_violations(before, after, ["./hooks"])
+        self.assertEqual(len(violations), 1)
+        self.assertEqual(violations[0]["reason"], "modified")
+
+    def test_protected_path_with_internal_dotdot_normalizes(self):
+        before = {"b/file.txt": "x"}
+        after = {"b/file.txt": "y"}
+        violations = find_violations(before, after, ["a/../b"])
+        self.assertEqual(len(violations), 1)
+        self.assertEqual(violations[0]["reason"], "modified")
+
+    def test_protected_path_escaping_via_internal_dotdot_raises(self):
+        with self.assertRaises(ProtectedPathError):
+            find_violations({}, {}, ["a/../../b"])
+
+    def test_backslash_dotdot_protected_path_raises(self):
+        with self.assertRaises(ProtectedPathError):
+            find_violations({}, {}, ["hooks\\.."])
 
 
 if __name__ == "__main__":
