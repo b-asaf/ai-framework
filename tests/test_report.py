@@ -116,10 +116,17 @@ class TaskMessage(unittest.TestCase):
         for rule in report.RULES:
             self.assertIn(rule, message)
 
-    def test_it_says_the_json_overrides_the_output_format_in_the_agent_instructions(self):
+    def test_it_demands_only_the_json_and_says_why(self):
         message = report.task_message()
-        self.assertIn("overrides any output format", message)
         self.assertIn("no text before it", message)
+        self.assertIn("no analysis section", message)
+        self.assertIn("automated tool", message)
+        self.assertNotIn("overrides", message)
+
+    def test_it_says_which_line_numbers_to_cite(self):
+        message = report.task_message()
+        self.assertIn("line number in the changed file", message)
+        self.assertIn("not a position in the patch file", message)
 
 
 if __name__ == "__main__":

@@ -34,8 +34,9 @@ EXPORT_TIMEOUT = 120
 # One plain line (F10). It states the branch decision and the approval, which the
 # global AGENTS.md gates would otherwise ask for in a headless run (F8).
 TASK_MESSAGE = (
-    "Review the attached diff. Your whole reply must be only the JSON object that the attached task file "
-    "describes, with no text before or after it, even if your instructions describe another output format. "
+    "Review the attached diff. This review is run by an automated tool that parses your whole reply as JSON, "
+    "so reply with only the JSON object that the attached task file describes, with no text before or after it. "
+    "The attached files are already included in this message, so do not open them again. "
     "Do not create a branch and do not ask to confirm a plan: the plan is approved."
 )
 
