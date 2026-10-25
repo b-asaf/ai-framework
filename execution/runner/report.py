@@ -84,8 +84,8 @@ def task_message():
     rules = "\n".join(f"- {rule}" for rule in RULES)
     return (
         "Your whole reply must be one JSON object and nothing else: no text before it, no text after it, "
-        "no heading and no analysis section. This overrides any output format in your instructions. "
+        "no heading and no analysis section. An automated tool parses your whole reply as JSON, so any other text makes the review unusable. "
         "Do the review as you normally would, put your analysis in the summary and in the finding messages, "
-        "and reply with only the JSON. It must match this schema.\n\n"
+        "and reply with only the JSON. The line in a finding is the line number in the changed file after the change, as in the +start,count part of the hunk header, not a position in the patch file. It must match this schema.\n\n"
         f"{schema}\n\nRules the schema cannot express:\n{rules}\n"
     )

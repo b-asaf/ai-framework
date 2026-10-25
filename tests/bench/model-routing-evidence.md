@@ -1,4 +1,4 @@
-# Model routing evidence (E1 to E8)
+# Model routing evidence (E1 to E9)
 
 Date: 2026-10-18. OpenCode 1.19.3, Windows, Git Bash. Findings F32 to F36 in `docs/transition-plan.md` rest on this file.
 
@@ -137,3 +137,22 @@ Setup: `python -m execution.runner.cli --role code-reviewer` with the real profi
 | Both targets afterwards | the scratch repo unchanged; the copy holds only the two files added for the run |
 
 Caveats: one run, one model, one diff. Gemini was not run. The line reading in F48 rests on three runs of the same patch.
+
+## E9: reviewer benchmark, 63 runs (2026-10-24)
+
+Setup: `python -m execution.runner.benchmark --models github-copilot/claude-haiku-4.5,github-copilot/claude-sonnet-5 --repeats 3`. The baseline is the production model of `code-reviewer` (`gpt-5.6-terra`). 7 cases (5 with a planted bug, 2 clean), the real `code-reviewer` prompt, the JSON-only task of F45. OpenCode 1.19.3. The result files are in `execution/runner/runs/`, which is not versioned, so the numbers are copied here.
+
+| Model | Valid reports | Bugs found | False positives | Violations and fallbacks | Stable verdicts | Cost | Mean time |
+|---|---|---|---|---|---|---|---|
+| gpt-5.6-terra (baseline) | 21 of 21 | 15 of 15 | 0 of 6 | 0 | 7 of 7 | $1.578 | 47 s |
+| claude-haiku-4.5 | 20 of 21 | 15 of 15 | 0 of 6 | 0 | 7 of 7 | $0.510 | 35 s |
+| claude-sonnet-5 | 19 of 21 | 13 of 15 | 0 of 6 | 0 | 6 of 6 | $1.027 | 39 s |
+
+| Run | What happened |
+|---|---|
+| sonnet `retry-swallows-error` #1 and #2 | artifact failure: the reply was prose; it called the task file an injected instruction (F50) |
+| haiku `clean-guard-with-test` #3 | execution failure: stop reason tool-calls after a rejected `external_directory` request for the temp folder (F51) |
+
+Line cited by the runs that found the bug: the patch line in 37 of 43, the file line in none, neither in 6 (F49).
+
+Caveats: every model found every bug it produced a report for, so the cases do not rank the models. Two clean cases are weak evidence on false positives. No Gemini model was available.

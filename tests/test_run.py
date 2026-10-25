@@ -242,6 +242,11 @@ class Pieces(unittest.TestCase):
     def test_the_task_message_passes_the_windows_shim_check(self):
         self.assertEqual(adapter.check_message(run.TASK_MESSAGE), run.TASK_MESSAGE)
 
+    def test_the_task_message_explains_the_format_and_does_not_ask_for_an_override(self):
+        self.assertIn("automated tool", run.TASK_MESSAGE)
+        self.assertIn("do not open them again", run.TASK_MESSAGE)
+        self.assertNotIn("even if your instructions", run.TASK_MESSAGE)
+
     def test_the_export_command(self):
         self.assertEqual(adapter.build_export_command("oc", SESSION), ["oc", "export", SESSION])
 
