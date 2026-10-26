@@ -1,4 +1,4 @@
-# Model routing evidence (E1 to E10)
+# Model routing evidence (E1 to E11)
 
 Date: 2026-10-18. OpenCode 1.19.3, Windows, Git Bash. Findings F32 to F36 in `docs/transition-plan.md` rest on this file.
 
@@ -169,3 +169,17 @@ Setup: a fake home with one throwaway read-only agent `probe` (no `model:` line)
 | Run with no variant, `high`, `xhigh` | exit 0, 3 events, empty stderr each. Export: session `info.model.variant` default, high, default; assistant `info.variant` only for high; reasoning tokens 0, 47, 0 (F52) |
 
 Caveats: one model, one prompt. The `none` level and `options.reasoningEffort` were not run. Costs of the three runs are not comparable (cache state differed).
+
+## E11: do allow patterns match chained commands (fake home, 2026-10-26)
+
+Setup: a fake home with one throwaway agent whose bash rules were `"*": deny` and `"echo ok *": allow`, routed to claude-haiku-4.5, one headless run. The prompt was passed as an attached file because `&`, `|` and `>` break the Windows shim (F10). OpenCode 1.19.3.
+
+| Call | Result |
+|---|---|
+| `echo ok one` | ran |
+| `echo ok two; echo chained > chain-semicolon.txt` | denied by the rule, no file written |
+| `echo ok three && echo chained > chain-and.txt` | denied by the rule, no file written |
+| `echo ok four \| tee chain-pipe.txt` | denied by the rule, no file written |
+| `echo other` | denied by the rule (control) |
+
+Caveats: one model, one run, one pattern shape. Patterns with a `*` in the middle were not tested. The agent-level permission counts from the 3A pilot (42 `ask` hits in 12 sessions, mostly the Python test runners and `cd ... &&` chains) were computed with an approximate wildcard matcher whose denials all matched the real ones, so the `ask` counts are approximate.

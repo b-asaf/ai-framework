@@ -11,6 +11,10 @@ permission:
     "git log *": allow
     "git diff *": allow
     "hooks/build-verify.sh *": allow
+    "git status *": allow
+    "python -m unittest": allow
+    "python -m unittest *": allow
+    "python -m lizard *": allow
   edit:
     "*": allow
     "*package.json": ask
