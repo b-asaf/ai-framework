@@ -1,4 +1,4 @@
-# Model routing evidence (E1 to E9)
+# Model routing evidence (E1 to E10)
 
 Date: 2026-10-18. OpenCode 1.19.3, Windows, Git Bash. Findings F32 to F36 in `docs/transition-plan.md` rest on this file.
 
@@ -156,3 +156,16 @@ Setup: `python -m execution.runner.benchmark --models github-copilot/claude-haik
 Line cited by the runs that found the bug: the patch line in 37 of 43, the file line in none, neither in 6 (F49).
 
 Caveats: every model found every bug it produced a report for, so the cases do not rank the models. Two clean cases are weak evidence on false positives. No Gemini model was available.
+
+## E10: reasoning effort as a variant, and the model list (fake home, 2026-10-25)
+
+Setup: a fake home with one throwaway read-only agent `probe` (no `model:` line) routed to claude-haiku-4.5 through an `OPENCODE_CONFIG` file, three configs (no variant, `variant: high`, `variant: xhigh`), and `opencode models github-copilot --verbose`. OpenCode 1.19.3.
+
+| Step | Result |
+|---|---|
+| Model list from the Copilot picker against `opencode models github-copilot` | the same 18 models; the policy lacked claude-haiku-5.5, claude-sonnet-5.5 and gpt-6.1-sol and listed six that are not offered (claude-opus-4.7, claude-opus-4.7-fast, gpt-5-mini, gpt-5.4, gpt-5.4-mini, gpt-5.5); every model the profile uses is offered |
+| `--verbose` listing | each model has `variants`; most low, medium, high, xhigh, max; claude-haiku-4.5 only high and max; gpt-5.3-codex no max; five GPT models also none (F53) |
+| `debug agent probe` with `variant: high`, and with `options.reasoningEffort: high` | both keys are accepted and shown; the `"invalid": true` line is the tool entry named `invalid`, present without any variant |
+| Run with no variant, `high`, `xhigh` | exit 0, 3 events, empty stderr each. Export: session `info.model.variant` default, high, default; assistant `info.variant` only for high; reasoning tokens 0, 47, 0 (F52) |
+
+Caveats: one model, one prompt. The `none` level and `options.reasoningEffort` were not run. Costs of the three runs are not comparable (cache state differed).

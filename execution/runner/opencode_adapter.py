@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import resolve as _tools_path  # noqa: F401  (puts tools/ on sys.path, as resolve.py does)
-from lib.routing import SCHEMA_URL, routing_text  # noqa: E402
+from lib.routing import SCHEMA_URL, agent_entry, effort_problem, routing_text  # noqa: E402
 
 FALLBACK = re.compile(r"Falling back to default agent", re.I)
 EVENT_CHARS = 500
@@ -47,6 +47,7 @@ class RanInfo:
     agent: str | None
     model: str | None
     finish: str | None
+    variant: str | None = None
 
 
 @dataclass(frozen=True)
@@ -61,6 +62,7 @@ class Assessment:
     tokens: dict | None
     cost: float | None
     reply: str | None
+    resolved_effort: str | None = None
 
 
 def _is_number(value):
@@ -187,16 +189,22 @@ def parse_export(text):
     if not infos:
         raise AdapterError("the session export has no assistant message, so the model that ran is unknown")
     info = infos[-1]
-    return RanInfo(agent=info.get("agent"), model=_model_id(info), finish=info.get("finish"))
+    variant = info.get("variant") if isinstance(info.get("variant"), str) else None
+    return RanInfo(agent=info.get("agent"), model=_model_id(info), finish=info.get("finish"), variant=variant)
 
 
-def check_model_ran(ran, agent, model):
+def check_model_ran(ran, agent, model, effort=None):
     """Return one message per difference between what ran and what was requested."""
     problems = []
     if ran.agent != agent:
         problems.append(f"the run used agent '{ran.agent}', not '{agent}': OpenCode fell back to another agent (F6)")
     if ran.model != model:
         problems.append(f"the run used model '{ran.model}', not the requested '{model}' (F34)")
+    if effort is not None and ran.variant != effort:
+        problems.append(
+            f"the run used effort '{ran.variant or 'default'}', not the requested '{effort}': "
+            "OpenCode ignores an effort the model does not offer, without a warning (F52)"
+        )
     return problems
 
 
@@ -216,7 +224,7 @@ def _fell_back(warnings, ran, agent):
     return bool(warnings) or (ran is not None and ran.agent != agent)
 
 
-def assess(events, stderr, ran, agent, model, exit_code=0):
+def assess(events, stderr, ran, agent, model, exit_code=0, effort=None):
     """The execution level of a run: success only when nothing above went wrong.
 
     A fallback, a model mismatch and a non-zero exit code count as failures. The
@@ -230,7 +238,7 @@ def assess(events, stderr, ran, agent, model, exit_code=0):
         problems.append(f"OpenCode exited with code {exit_code}")
     problems += [f"stderr: {warning}" for warning in warnings]
     if ran is not None:
-        problems += check_model_ran(ran, agent, model)
+        problems += check_model_ran(ran, agent, model, effort)
     elif not problems:
         problems.append("the session export was not read, so the model that ran is unknown (F34)")
     return Assessment(
@@ -242,6 +250,7 @@ def assess(events, stderr, ran, agent, model, exit_code=0):
         tokens=events.tokens,
         cost=events.cost,
         reply=events.reply,
+        resolved_effort=ran.variant if ran else None,
     )
 
 
@@ -326,14 +335,25 @@ def build_environment(base, config_file, config_dir):
     return environment
 
 
-def render_run_config(models):
+def _checked_efforts(efforts):
+    """The efforts of a run config, or AdapterError when one is not a known level."""
+    efforts = efforts or {}
+    problems = [f"{role}: {effort_problem(effort)}" for role, effort in sorted(efforts.items()) if effort_problem(effort)]
+    if problems:
+        raise AdapterError("; ".join(problems))
+    return efforts
+
+
+def render_run_config(models, efforts=None):
     """The OpenCode config for a run: the same format as the generated execution/routing.json."""
     if not isinstance(models, dict) or not models:
         raise AdapterError("a run config needs at least one role and model")
     bad = [role for role, model in models.items() if not isinstance(model, str) or not model.strip()]
     if bad:
         raise AdapterError("no model given for: " + ", ".join(sorted(map(str, bad))))
-    return routing_text({"$schema": SCHEMA_URL, "agent": {role: {"model": models[role]} for role in sorted(models)}})
+    efforts = _checked_efforts(efforts)
+    agents = {role: agent_entry(models[role], efforts.get(role)) for role in sorted(models)}
+    return routing_text({"$schema": SCHEMA_URL, "agent": agents})
 
 
 def _write(path, text):
@@ -351,14 +371,14 @@ def load_agent_text(repo_root, role):
         raise AdapterError(f"{path.as_posix()} cannot be read: {error}") from error
 
 
-def prepare_run_dir(directory, role, agent_text, model):
+def prepare_run_dir(directory, role, agent_text, model, effort=None):
     """Write the per-run files under directory and return where OpenCode finds them.
 
     Nothing is written unless the role, the agent text and the model are valid.
     """
     _check_role(role)
     derived = derive_agent(agent_text)
-    routing = render_run_config({role: model})
+    routing = render_run_config({role: model}, {role: effort} if effort else None)
     root = Path(directory)
     config_dir = root / "opencode-config"
     (config_dir / "agents").mkdir(parents=True, exist_ok=True)
