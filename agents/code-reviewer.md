@@ -8,6 +8,7 @@ permission:
     "git status": allow
     "git log *": allow
     "git diff *": allow
+    "git status *": allow
     "git -C * status": allow
     "git -C * log *": allow
     "git -C * diff *": allow

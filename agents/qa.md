@@ -26,6 +26,10 @@ permission:
     "git status": allow
     "git log *": allow
     "git diff *": allow
+    "git status *": allow
+    "python -m unittest": allow
+    "python -m unittest *": allow
+    "python -m lizard *": allow
   edit: deny
   write: allow
   task: deny
