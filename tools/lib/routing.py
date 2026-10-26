@@ -16,6 +16,26 @@ from pathlib import Path
 SCHEMA_URL = "https://opencode.ai/config.json"
 
 
+# Reasoning effort levels, the names OpenCode uses for a model variant. Each model offers some of them; OpenCode
+# ignores a level the model does not offer, without a warning (F52), so a run checks the session export.
+EFFORTS = ("none", "low", "medium", "high", "xhigh", "max")
+
+
+def effort_problem(effort):
+    """None when effort is a known level, otherwise why it is not."""
+    if isinstance(effort, str) and effort in EFFORTS:
+        return None
+    return f"effort {effort!r} is not one of: {', '.join(EFFORTS)}"
+
+
+def agent_entry(model, effort=None):
+    """The agent entry of a routing file: the model, and the effort as OpenCode's variant when there is one."""
+    entry = {"model": model}
+    if effort:
+        entry["variant"] = effort
+    return entry
+
+
 class ProfileError(Exception):
     """The model profile is missing, malformed, or names a model the policy does not know."""
 
@@ -38,6 +58,9 @@ def _check_profile_entry(name, entry, filename):
     capability = entry.get("capability")
     if capability is not None and not isinstance(capability, str):
         raise ProfileError(f"agent '{name}' in {filename}: 'capability' must be a string (documentation only)")
+    effort = entry.get("effort")
+    if effort is not None and effort_problem(effort):
+        raise ProfileError(f"agent '{name}' in {filename}: {effort_problem(effort)}")
 
 
 def load_profile(path):
@@ -56,13 +79,20 @@ def profile_models(profile):
     return {name: entry["model"] for name, entry in profile["agents"].items()}
 
 
+def profile_efforts(profile):
+    """Map agent name to effort, for the agents that have one."""
+    return {name: entry["effort"] for name, entry in profile["agents"].items() if entry.get("effort")}
+
+
 def render_routing(profile, policy):
     """Return the OpenCode config for the profile. Every model must be in the policy."""
     models = profile_models(profile)
     unknown = [f"{name} ({models[name]})" for name in sorted(models) if models[name] not in policy["models"]]
     if unknown:
         raise ProfileError("model not in the model policy: " + ", ".join(unknown))
-    return {"$schema": SCHEMA_URL, "agent": {name: {"model": models[name]} for name in sorted(models)}}
+    efforts = profile_efforts(profile)
+    agents = {name: agent_entry(models[name], efforts.get(name)) for name in sorted(models)}
+    return {"$schema": SCHEMA_URL, "agent": agents}
 
 
 def routing_text(routing):

@@ -23,24 +23,21 @@ The framework uses a closed model list. An agent may only be assigned a model th
 | `github-copilot/claude-fable-5` | Claude | Frontier/experimental | Available; evaluate before default assignment |
 | `github-copilot/claude-fable-5.1` | Claude | Frontier/experimental | Available; evaluate before default assignment |
 | `github-copilot/claude-haiku-4.5` | Claude | Efficient | Lightweight support tasks |
-| `github-copilot/claude-opus-4.7` | Claude | Frontier | Available alternative |
-| `github-copilot/claude-opus-4.7-fast` | Claude | Frontier/fast | Available alternative |
+| `github-copilot/claude-haiku-5.5` | Claude | Efficient/experimental | Available; evaluate before default assignment |
 | `github-copilot/claude-opus-4.8` | Claude | Frontier | Available alternative |
 | `github-copilot/claude-opus-4.8-fast` | Claude | Frontier/fast | Available alternative |
 | `github-copilot/claude-opus-5` | Claude | Frontier | Available alternative |
 | `github-copilot/claude-opus-5.5` | Claude | Frontier | Independent planning/review validation |
 | `github-copilot/claude-sonnet-5` | Claude | Strong general | Requirements, orchestration, implementation, final gate |
-| `github-copilot/gpt-5-mini` | GPT | Efficient | Available alternative |
+| `github-copilot/claude-sonnet-5.5` | Claude | Strong general/experimental | Available; evaluate before default assignment |
 | `github-copilot/gpt-5.3-codex` | GPT | Coding-specialized | Available alternative; evaluate for coding-specific tasks |
-| `github-copilot/gpt-5.4` | GPT | Strong | Available alternative |
-| `github-copilot/gpt-5.4-mini` | GPT | Efficient | Available alternative |
-| `github-copilot/gpt-5.5` | GPT | Strong | Available alternative |
 | `github-copilot/gpt-5.6-luna` | GPT | Efficient | Available alternative |
 | `github-copilot/gpt-5.6-sol` | GPT | Frontier/strong reasoning | QA / deep validation |
 | `github-copilot/gpt-5.6-terra` | GPT | Strong | Implementation review |
 | `github-copilot/gpt-6-astra` | GPT | Frontier/agentic | Architecture and long-horizon planning |
 | `github-copilot/gpt-6-luna` | GPT | Efficient | Available alternative |
 | `github-copilot/gpt-6-sol` | GPT | Frontier/agentic | Available alternative; evaluate before default assignment |
+| `github-copilot/gpt-6.1-sol` | GPT | Frontier/experimental | Available; evaluate before default assignment |
 
 **Family rule:** `anthropic/claude-*` and `github-copilot/claude-*` are both Claude family. Provider prefix alone does not establish independence.
 
@@ -146,6 +143,9 @@ Examples:
 - `github-copilot/claude-fable-5.1`
 - `github-copilot/gpt-5.3-codex`
 - `github-copilot/gpt-6-sol`
+- `github-copilot/claude-haiku-5.5`
+- `github-copilot/claude-sonnet-5.5`
+- `github-copilot/gpt-6.1-sol`
 
 A model enters the default assignment only after explicit evaluation/approval,
 logged as its own DEC. (`gpt-6-sol` was briefly assigned to `code-reviewer`

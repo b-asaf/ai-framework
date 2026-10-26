@@ -16,6 +16,8 @@
     "runtime": {"type": "string", "minLength": 1, "description": "Name of the execution runtime."},
     "requested_model": {"type": "string", "minLength": 1},
     "resolved_model": {"type": ["string", "null"], "description": "The model that actually ran; null when none was reported."},
+    "requested_effort": {"type": ["string", "null"], "description": "The reasoning effort asked for in the run config; null when none was."},
+    "resolved_effort": {"type": ["string", "null"], "description": "The effort the session export says was used; null when it records none."},
     "policy_result": {"type": "string", "enum": ["pass", "fail", "not_checked"]},
     "fallback": {"type": "boolean", "description": "True when the runtime did not honor the requested execution mode."},
     "input_artifacts": {"type": "array", "items": {"type": "string"}},

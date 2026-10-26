@@ -35,6 +35,7 @@ class Resolved:
     model: str
     family: str
     status: str
+    effort: str | None = None
 
 
 def resolve_role(role, profile, policy, repo_root, profile_name="default"):
@@ -49,7 +50,10 @@ def resolve_role(role, profile, policy, repo_root, profile_name="default"):
     if problems:
         raise ResolveError(f"role '{role}': " + "; ".join(message for _, message in problems))
     entry = policy["models"][model]
-    return Resolved(role=role, profile=profile_name, model=model, family=entry["family"].lower(), status=entry["status"])
+    effort = profile["agents"][role].get("effort")
+    return Resolved(
+        role=role, profile=profile_name, model=model, family=entry["family"].lower(), status=entry["status"], effort=effort
+    )
 
 
 def resolve(role, repo_root, profile_name="default"):

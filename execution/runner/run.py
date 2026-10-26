@@ -126,6 +126,8 @@ def _record(resolved, diff, assessment, artifact, messages, launched, duration_m
         runtime=RUNTIME,
         requested_model=resolved.model,
         resolved_model=assessment.resolved_model,
+        requested_effort=resolved.effort,
+        resolved_effort=assessment.resolved_effort,
         policy_result="pass",
         fallback=assessment.fallback,
         input_artifacts=[diff.name],
@@ -142,7 +144,7 @@ def _record(resolved, diff, assessment, artifact, messages, launched, duration_m
 
 def _run(work, resolved, executable, agent_text, diff, target, runner, timeout, base):
     role, model = resolved.role, resolved.model
-    setup = adapter.prepare_run_dir(work, role, agent_text, model)
+    setup = adapter.prepare_run_dir(work, role, agent_text, model, resolved.effort)
     task_file = work / "task.md"
     task_file.write_text(report.task_message(), encoding="utf-8", newline="\n")
     command = adapter.build_command(executable, role, TASK_MESSAGE, [task_file, diff])
@@ -155,7 +157,7 @@ def _run(work, resolved, executable, agent_text, diff, target, runner, timeout, 
     if not launched.note and _events_look_clean(events, launched, resolved):
         ran, export_note = _export(runner, executable, events.session_id, target, base)
         notes += [export_note] if export_note else []
-    assessment = adapter.assess(events, launched.stderr, ran, role, model, launched.returncode)
+    assessment = adapter.assess(events, launched.stderr, ran, role, model, launched.returncode, effort=resolved.effort)
     artifact, checked, problems = _artifact_level(assessment)
     messages = notes + list(assessment.problems) + list(problems)
     duration_ms = int((time.monotonic() - started) * 1000)

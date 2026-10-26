@@ -56,16 +56,6 @@
       "status": "approved",
       "evaluation": null
     },
-    "github-copilot/claude-opus-4.7": {
-      "family": "claude",
-      "status": "approved",
-      "evaluation": null
-    },
-    "github-copilot/claude-opus-4.7-fast": {
-      "family": "claude",
-      "status": "approved",
-      "evaluation": null
-    },
     "github-copilot/claude-opus-4.8": {
       "family": "claude",
       "status": "approved",
@@ -86,34 +76,24 @@
       "status": "approved",
       "evaluation": null
     },
-    "github-copilot/claude-sonnet-5": {
+    "github-copilot/claude-haiku-5.5": {
       "family": "claude",
-      "status": "approved",
+      "status": "experimental",
       "evaluation": null
     },
-    "github-copilot/gpt-5-mini": {
-      "family": "gpt",
+    "github-copilot/claude-sonnet-5.5": {
+      "family": "claude",
+      "status": "experimental",
+      "evaluation": null
+    },
+    "github-copilot/claude-sonnet-5": {
+      "family": "claude",
       "status": "approved",
       "evaluation": null
     },
     "github-copilot/gpt-5.3-codex": {
       "family": "gpt",
       "status": "experimental",
-      "evaluation": null
-    },
-    "github-copilot/gpt-5.4": {
-      "family": "gpt",
-      "status": "approved",
-      "evaluation": null
-    },
-    "github-copilot/gpt-5.4-mini": {
-      "family": "gpt",
-      "status": "approved",
-      "evaluation": null
-    },
-    "github-copilot/gpt-5.5": {
-      "family": "gpt",
-      "status": "approved",
       "evaluation": null
     },
     "github-copilot/gpt-5.6-luna": {
@@ -139,6 +119,11 @@
     "github-copilot/gpt-6-luna": {
       "family": "gpt",
       "status": "approved",
+      "evaluation": null
+    },
+    "github-copilot/gpt-6.1-sol": {
+      "family": "gpt",
+      "status": "experimental",
       "evaluation": null
     },
     "github-copilot/gpt-6-sol": {

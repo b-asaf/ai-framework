@@ -147,7 +147,7 @@ class RunRecordSchema(unittest.TestCase):
     def test_requires_exactly_the_fields_of_plan_5_4(self):
         schema = contract.load_schema("run-record")
         self.assertEqual(sorted(schema["required"]), sorted(FIELDS))
-        self.assertEqual(sorted(schema["properties"]), sorted(FIELDS))
+        self.assertEqual(sorted(schema["properties"]), sorted(FIELDS + ["requested_effort", "resolved_effort"]))
 
     def test_a_complete_record_is_valid(self):
         self.assertEqual(self.problems(record()), [])

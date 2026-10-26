@@ -47,14 +47,27 @@ def snapshot(directory):
     return result
 
 
-def make_bench_root(repo_root, directory, model):
+def _write_policy(source, target, trial_model):
+    """Copy the policy. For a trial the model counts as approved in the copy only; the repo policy is untouched."""
+    if trial_model is None:
+        shutil.copyfile(source, target)
+        return
+    data = json.loads(source.read_text(encoding="utf-8-sig"))
+    entry = data.get("models", {}).get(trial_model)
+    if isinstance(entry, dict):
+        entry["status"] = "approved"
+    target.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8", newline="\n")
+
+
+def make_bench_root(repo_root, directory, model, effort=None, trial=False):
     """A framework folder that differs from repo_root only in the profile: the role runs on model."""
     source, root = Path(repo_root), Path(directory)
     (root / "execution" / "profiles").mkdir(parents=True)
     (root / "agents").mkdir()
-    shutil.copyfile(source / "execution" / "policy.json", root / "execution" / "policy.json")
+    _write_policy(source / "execution" / "policy.json", root / "execution" / "policy.json", model if trial else None)
     shutil.copyfile(source / "agents" / f"{ROLE}.md", root / "agents" / f"{ROLE}.md")
-    profile = {"version": 1, "agents": {ROLE: {"model": model}}}
+    entry = {"model": model, "effort": effort} if effort else {"model": model}
+    profile = {"version": 1, "agents": {ROLE: entry}}
     text = json.dumps(profile, indent=2) + "\n"
     (root / "execution" / "profiles" / "default.json").write_text(text, encoding="utf-8", newline="\n")
     return root
@@ -168,6 +181,17 @@ def run_one(root, case, model, repeat, work, runs_dir, review, timeout):
     return make_row(model, case, repeat, outcome, error, violation)
 
 
+def split_spec(spec):
+    """'model' or 'model@effort' -> (model, effort or None). The spec is also the label of the model in the results."""
+    model, _, effort = spec.partition("@")
+    return model, effort or None
+
+
+def _bench_root(repo_root, directory, spec, trial):
+    model, effort = split_spec(spec)
+    return make_bench_root(repo_root, directory, model, effort, trial)
+
+
 def schedule(cases, models, repeats):
     """Repeat by repeat, case by case, model by model, so slow drift hits every model alike."""
     return [(repeat, case, model) for repeat in range(1, repeats + 1) for case in cases for model in models]
@@ -196,7 +220,8 @@ def _append_row(path, row):
 
 
 def run_benchmark(
-    repo_root, models, case_ids, repeats, out_dir, review=run.run_review, timeout=run.RUN_TIMEOUT, progress=print
+    repo_root, models, case_ids, repeats, out_dir, review=run.run_review, timeout=run.RUN_TIMEOUT, progress=print,
+    trial_models=(),
 ):
     """Run every model on every case, repeats times. Returns the rows and writes results.jsonl under out_dir."""
     cases = [bench_cases.get_case(case_id) for case_id in case_ids]
@@ -205,7 +230,7 @@ def run_benchmark(
     base = Path(tempfile.mkdtemp(prefix="review-bench-"))
     rows = []
     try:
-        roots = {model: make_bench_root(repo_root, base / f"root-{number}", model) for number, model in enumerate(models)}
+        roots = {spec: _bench_root(repo_root, base / f"root-{number}", spec, spec in trial_models) for number, spec in enumerate(models)}
         for repeat, case, model in schedule(cases, models, repeats):
             work = Path(tempfile.mkdtemp(prefix="case-", dir=base))
             row = run_one(roots[model], case, model, repeat, work, out / "runs", review, timeout)
@@ -330,13 +355,14 @@ def build_parser():
     parser = argparse.ArgumentParser(
         prog="python -m execution.runner.benchmark", description="Compare models on the reviewer cases."
     )
-    parser.add_argument("--models", default="", help="comma separated model ids to compare with the baseline")
+    parser.add_argument("--models", default="", help="comma separated model ids to compare with the baseline; model@effort sets a reasoning effort")
     parser.add_argument("--cases", default="", help="comma separated case ids (default: all)")
     parser.add_argument("--repeats", type=int, default=DEFAULT_REPEATS, help="runs per model and case")
     parser.add_argument("--out", default="", help="folder for results.jsonl, summary.txt and the run records")
     parser.add_argument("--repo-root", default=str(REPO_ROOT), help="framework folder with the profile and the policy")
     parser.add_argument("--timeout", type=int, default=run.RUN_TIMEOUT, help="seconds before one run is stopped")
     parser.add_argument("--summarize", default="", help="print the summary of an earlier results.jsonl and stop")
+    parser.add_argument("--trial", action="store_true", help="count the --models as approved inside this benchmark only (for models the policy lists as experimental)")
     parser.add_argument("--list-cases", action="store_true", help="list the cases and stop")
     return parser
 
@@ -373,7 +399,12 @@ def _run_from_args(args, review):
     out = Path(args.out) if args.out else _default_out()
     total = len(models) * len(case_ids) * args.repeats
     print(f"planned {total} runs: {len(models)} models x {len(case_ids)} cases x {args.repeats} repeats; results in {out.as_posix()}")
-    rows = run_benchmark(args.repo_root, models, case_ids, args.repeats, out, review=review, timeout=args.timeout)
+    trial = set(_split(args.models)) if args.trial else set()
+    if trial:
+        print("trial models count as approved inside this benchmark only; execution/policy.json is not changed")
+    rows = run_benchmark(
+        args.repo_root, models, case_ids, args.repeats, out, review=review, timeout=args.timeout, trial_models=trial
+    )
     text = render_summary(rows, baseline)
     (out / "summary.txt").write_text(text + "\n", encoding="utf-8")
     print(text)
