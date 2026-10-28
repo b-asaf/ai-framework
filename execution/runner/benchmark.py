@@ -34,6 +34,7 @@ from .cli import NOT_RUN, REPO_ROOT
 
 ROLE = bench_cases.ROLE
 DEFAULT_REPEATS = 3
+EARLY_STOP_RUNS = 5
 
 
 def snapshot(directory):
@@ -158,6 +159,7 @@ def make_row(model, case, repeat, outcome, error, violation):
         "line_basis": score.line_basis,
         "false_positive": score.false_positive,
         "violation": violation,
+        "slept": bool(outcome and outcome.slept),
     }
     row.update(_from_record(outcome.record if outcome else None))
     message = row.pop("message")
@@ -219,24 +221,53 @@ def _append_row(path, row):
         handle.write(json.dumps(row, sort_keys=True) + "\n")
 
 
+def suspect(row):
+    """True for a run that hit the timeout or ran across a machine sleep: it says nothing about the model, so it is repeated."""
+    return bool(row.get("slept")) or "did not finish within" in str(row.get("error") or "")
+
+
+def _kept_rows(results, resume):
+    """The rows of an earlier run to keep when resuming; the file is rewritten without the rows to repeat."""
+    if not resume or not results.exists():
+        return []
+    kept = [row for row in load_rows(results) if not suspect(row)]
+    text = "".join(json.dumps(row, sort_keys=True) + "\n" for row in kept)
+    results.write_text(text, encoding="utf-8", newline="\n")
+    return kept
+
+
+def _setup_failed(fresh):
+    """True when the first runs all failed before any model answered: the setup is broken, so going on is pointless."""
+    return len(fresh) == EARLY_STOP_RUNS and all(row["cost"] is None and not row["valid"] for row in fresh)
+
+
 def run_benchmark(
     repo_root, models, case_ids, repeats, out_dir, review=run.run_review, timeout=run.RUN_TIMEOUT, progress=print,
-    trial_models=(),
+    trial_models=(), resume=False,
 ):
     """Run every model on every case, repeats times. Returns the rows and writes results.jsonl under out_dir."""
     cases = [bench_cases.get_case(case_id) for case_id in case_ids]
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
+    kept = _kept_rows(out / "results.jsonl", resume)
+    done = {(row["model"], row["case"], row["repeat"]) for row in kept}
     base = Path(tempfile.mkdtemp(prefix="review-bench-"))
-    rows = []
+    rows = list(kept)
+    fresh = []
     try:
         roots = {spec: _bench_root(repo_root, base / f"root-{number}", spec, spec in trial_models) for number, spec in enumerate(models)}
         for repeat, case, model in schedule(cases, models, repeats):
+            if (model, case.id, repeat) in done:
+                continue
             work = Path(tempfile.mkdtemp(prefix="case-", dir=base))
             row = run_one(roots[model], case, model, repeat, work, out / "runs", review, timeout)
             rows.append(row)
+            fresh.append(row)
             _append_row(out / "results.jsonl", row)
             progress(describe_row(row))
+            if _setup_failed(fresh):
+                progress(f"stopping: the first {EARLY_STOP_RUNS} runs all failed before any model answered; fix the setup first")
+                break
     finally:
         shutil.rmtree(base, ignore_errors=True)
     return rows
@@ -312,12 +343,13 @@ def review_flags(stats, base, margin):
 
 def summarize(rows, baseline):
     """(stats per model, flags per model, margin). Models keep the order of their first run."""
+    rows = [row for row in rows if not suspect(row)]
     by_model = {}
     for row in rows:
         by_model.setdefault(row["model"], []).append(row)
     stats = {model: model_stats(items) for model, items in by_model.items()}
     margin = repeats_of(rows)
-    base = stats.get(baseline) or next(iter(stats.values()))
+    base = stats.get(baseline) or next(iter(stats.values()), None)
     return stats, {model: review_flags(item, base, margin) for model, item in stats.items()}, margin
 
 
@@ -340,6 +372,9 @@ def render_summary(rows, baseline):
         f"Baseline: {baseline}",
         "Found = a BLOCKING finding in the right file whose text names the bug.",
     ]
+    excluded = sum(1 for row in rows if suspect(row))
+    if excluded:
+        lines.append(f"Excluded {excluded} run(s) that hit the timeout or ran across a machine sleep; repeat them with --resume")
     for model, item in stats.items():
         lines.append(_model_line(model, item))
         lines += [f"    REVIEW: {flag}" for flag in flags[model]]
@@ -363,6 +398,7 @@ def build_parser():
     parser.add_argument("--timeout", type=int, default=run.RUN_TIMEOUT, help="seconds before one run is stopped")
     parser.add_argument("--summarize", default="", help="print the summary of an earlier results.jsonl and stop")
     parser.add_argument("--trial", action="store_true", help="count the --models as approved inside this benchmark only (for models the policy lists as experimental)")
+    parser.add_argument("--resume", action="store_true", help="keep the good rows already in --out and repeat the rows that hit the timeout or slept")
     parser.add_argument("--list-cases", action="store_true", help="list the cases and stop")
     return parser
 
@@ -403,7 +439,8 @@ def _run_from_args(args, review):
     if trial:
         print("trial models count as approved inside this benchmark only; execution/policy.json is not changed")
     rows = run_benchmark(
-        args.repo_root, models, case_ids, args.repeats, out, review=review, timeout=args.timeout, trial_models=trial
+        args.repo_root, models, case_ids, args.repeats, out, review=review, timeout=args.timeout, trial_models=trial,
+        resume=args.resume,
     )
     text = render_summary(rows, baseline)
     (out / "summary.txt").write_text(text + "\n", encoding="utf-8")

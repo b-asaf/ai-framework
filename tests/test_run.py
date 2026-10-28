@@ -8,6 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
+from unittest import mock
 
 REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
@@ -183,6 +184,23 @@ class RunReview(unittest.TestCase):
         head = outcome.record["error"]["reply_head"]
         self.assertTrue(head.startswith("## Analysis"))
         self.assertEqual(len(head), record.REPLY_CHARS)
+
+    def test_opencode_is_started_with_an_empty_stdin(self):
+        _, fake = self.go()
+        self.assertEqual(len(fake.calls), 2)
+        for _, kwargs in fake.calls:
+            self.assertIs(kwargs["stdin"], subprocess.DEVNULL)
+
+    def test_a_wall_time_far_over_the_timeout_is_marked_as_a_machine_sleep(self):
+        with mock.patch.object(run, "_now", side_effect=[0.0, 5000.0]):
+            outcome, _ = self.go(timeout=600)
+        self.assertTrue(outcome.slept)
+        self.assertFalse(self.go(timeout=600)[0].slept)
+
+    def test_a_timeout_across_a_sleep_says_so_in_the_error(self):
+        with mock.patch.object(run, "_now", side_effect=[0.0, 5000.0]):
+            outcome, _ = self.go(Fake(run_result=subprocess.TimeoutExpired(["oc"], 5)), timeout=5)
+        self.assertIn("probably slept", outcome.record["error"]["message"])
 
     def test_a_timeout_is_a_failure(self):
         outcome, fake = self.go(Fake(run_result=subprocess.TimeoutExpired(["oc"], 5)), timeout=5)

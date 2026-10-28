@@ -31,6 +31,7 @@ from lib.opencode_resolved import find_opencode  # noqa: E402
 RUNTIME = "opencode"
 RUN_TIMEOUT = 600
 EXPORT_TIMEOUT = 120
+SLEEP_MARGIN = 60
 # One plain line (F10). It states the branch decision and the approval, which the
 # global AGENTS.md gates would otherwise ask for in a headless run (F8).
 TASK_MESSAGE = (
@@ -45,6 +46,7 @@ TASK_MESSAGE = (
 class Outcome:
     record: dict
     report: dict | None
+    slept: bool = False
 
 
 @dataclass(frozen=True)
@@ -53,6 +55,10 @@ class Launched:
     stdout: str
     stderr: str
     note: str | None
+
+
+def _now():
+    return time.monotonic()
 
 
 def _text(value):
@@ -68,6 +74,7 @@ def _launch(runner, command, cwd, environment, timeout):
             command,
             cwd=str(cwd),
             env=environment,
+            stdin=subprocess.DEVNULL,
             capture_output=True,
             encoding="utf-8",
             errors="replace",
@@ -149,7 +156,7 @@ def _run(work, resolved, executable, agent_text, diff, target, runner, timeout, 
     task_file.write_text(report.task_message(), encoding="utf-8", newline="\n")
     command = adapter.build_command(executable, role, TASK_MESSAGE, [task_file, diff])
     environment = adapter.build_environment(base, setup.config_file, setup.config_dir)
-    started = time.monotonic()
+    started = _now()
     launched = _launch(runner, command, target, environment, timeout)
     events = adapter.parse_events(launched.stdout)
     ran = None
@@ -159,10 +166,17 @@ def _run(work, resolved, executable, agent_text, diff, target, runner, timeout, 
         notes += [export_note] if export_note else []
     assessment = adapter.assess(events, launched.stderr, ran, role, model, launched.returncode, effort=resolved.effort)
     artifact, checked, problems = _artifact_level(assessment)
+    elapsed = _now() - started
+    slept = elapsed > timeout + EXPORT_TIMEOUT + SLEEP_MARGIN
+    if slept:
+        notes.append(
+            f"the run took {int(elapsed)} s against a timeout of {timeout} s: the machine probably slept, "
+            "so this run says nothing about the model"
+        )
     messages = notes + list(assessment.problems) + list(problems)
-    duration_ms = int((time.monotonic() - started) * 1000)
+    duration_ms = int(elapsed * 1000)
     built = _record(resolved, diff, assessment, artifact, messages, launched, duration_ms)
-    return Outcome(record=built, report=checked)
+    return Outcome(record=built, report=checked, slept=slept)
 
 
 def run_review(
