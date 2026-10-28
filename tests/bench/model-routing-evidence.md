@@ -1,4 +1,4 @@
-# Model routing evidence (E1 to E11)
+# Model routing evidence (E1 to E12)
 
 Date: 2026-10-18. OpenCode 1.19.3, Windows, Git Bash. Findings F32 to F36 in `docs/transition-plan.md` rest on this file.
 
@@ -183,3 +183,23 @@ Setup: a fake home with one throwaway agent whose bash rules were `"*": deny` an
 | `echo other` | denied by the rule (control) |
 
 Caveats: one model, one run, one pattern shape. Patterns with a `*` in the middle were not tested. The agent-level permission counts from the 3A pilot (42 `ask` hits in 12 sessions, mostly the Python test runners and `cd ... &&` chains) were computed with an approximate wildcard matcher whose denials all matched the real ones, so the `ask` counts are approximate.
+
+## E12: candidate models on the reviewer benchmark (2026-10-26)
+
+Setup: `python -m execution.runner.benchmark --trial --repeats 3`, run in the background with `< /dev/null` (F56). The baseline is the production model of `code-reviewer` (`gpt-5.6-terra`); the candidates are claude-haiku-5.5, claude-sonnet-5.5, gpt-6-luna and gpt-6.1-sol, which the policy lists as experimental and which count as approved inside the benchmark only. 7 cases, 3 repeats, 105 runs, the real `code-reviewer` prompt, the JSON-only task of F45. OpenCode 1.19.3. The result files are in `execution/runner/runs/`, which is not versioned, so the numbers are copied here. Earlier attempts failed or were interrupted and are not counted (F56).
+
+| Model | Valid reports | Bugs found | False positives | Cost | File line / patch line cited |
+|---|---|---|---|---|---|
+| gpt-5.6-terra (baseline) | 20 of 21 | 14 of 15 | 0 of 6 | $0.476 | 4 / 9 |
+| claude-haiku-5.5 | 20 of 21 | 14 of 15 | 0 of 6 | $0.068 | 14 / 0 |
+| claude-sonnet-5.5 | 21 of 21 | 15 of 15 | 0 of 6 | $1.273 | 8 / 5 |
+| gpt-6-luna | 18 of 21 | 7 of 15 | 5 of 6 | $0.126 | 0 / 7 |
+| gpt-6.1-sol | 21 of 21 | 15 of 15 | 0 of 6 | $1.759 | 13 / 0 |
+
+Invalid runs: baseline `retry-swallows-error` #1, haiku-5.5 `sql-string-concat` #1, luna `off-by-one-loop` #1 and `null-from-repository` #1 did not finish within 600 s after 1,114 to 16,288 s (F55); luna `retry-swallows-error` #2 stopped with stop reason tool-calls after 100 s. Without the four runs across a sleep, the baseline and haiku-5.5 are valid in 20 of 20 runs and found 14 of 14 bugs.
+
+Per case for luna (F found, M missed, FP false positive, ok approved, x invalid): off-by-one x,F,F; leap-year F,F,M; retry M,x,M; null x,M,M; sql F,F,F; clean-rename FP,FP,FP; clean-guard FP,FP,ok (F57). The other four models had no M and no FP.
+
+Luna reproduction on the two clean cases (a temporary bench root, one run each): `clean-rename-helper` gave REQUEST CHANGES with one BLOCKING STATIC ANALYSIS finding, because the static analysis could not find the changed files in the workspace; `clean-guard-with-test` ended with stop reason tool-calls and no reply.
+
+Caveats: the timing columns are not usable (F55). Four models are close, so the cases screen out a bad model and do not rank the good ones; cost is the clearest difference. Two clean cases are weak evidence on false positives. The static-analysis message may mean that the precheck cannot analyse the benchmark targets for any model; this was not investigated. No Gemini model was available.
