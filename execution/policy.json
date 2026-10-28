@@ -79,12 +79,12 @@
     "github-copilot/claude-haiku-5.5": {
       "family": "claude",
       "status": "experimental",
-      "evaluation": null
+      "evaluation": "tests/bench/model-routing-evidence.md"
     },
     "github-copilot/claude-sonnet-5.5": {
       "family": "claude",
       "status": "experimental",
-      "evaluation": null
+      "evaluation": "tests/bench/model-routing-evidence.md"
     },
     "github-copilot/claude-sonnet-5": {
       "family": "claude",
@@ -124,7 +124,7 @@
     "github-copilot/gpt-6.1-sol": {
       "family": "gpt",
       "status": "experimental",
-      "evaluation": null
+      "evaluation": "tests/bench/model-routing-evidence.md"
     },
     "github-copilot/gpt-6-sol": {
       "family": "gpt",

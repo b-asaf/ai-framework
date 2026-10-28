@@ -152,6 +152,8 @@ logged as its own DEC. (`gpt-6-sol` was briefly assigned to `code-reviewer`
 without that record — DEC-014 reverts it to this experimental list and moves
 `code-reviewer` to `gpt-5.6-terra`, which was already non-experimental.)
 
+Evaluation records (2026-10-26): `claude-haiku-5.5`, `claude-sonnet-5.5` and `gpt-6.1-sol` have an evaluation record (the reviewer benchmark, E12 in `tests/bench/model-routing-evidence.md`) and stay experimental. The record covers the reviewer role only, so none of them is approved for a default assignment. `gpt-6-luna` has no record (F57).
+
 ## 8. Keeping this in sync with the live model list
 
 This table can drift from reality in two independent ways: (a) the framework
