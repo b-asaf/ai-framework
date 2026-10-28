@@ -82,6 +82,16 @@ class Snapshot(unittest.TestCase):
             with self.assertRaises(ProtectedPathError):
                 snapshot(tmp, [absolute])
 
+    def test_leading_slash_protected_path_raises(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(ProtectedPathError):
+                snapshot(tmp, ["/etc"])
+
+    def test_leading_slash_hooks_protected_path_raises(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(ProtectedPathError):
+                snapshot(tmp, ["/hooks"])
+
     def test_backslash_dotdot_protected_path_raises(self):
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaises(ProtectedPathError):
