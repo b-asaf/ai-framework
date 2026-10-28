@@ -29,7 +29,10 @@ def _normalize_protected_path(protected_path):
     """
     if Path(protected_path).is_absolute():
         raise ProtectedPathError(f"protected_path must be relative: {protected_path}")
-    normalized = posixpath.normpath(str(protected_path).replace("\\", "/"))
+    slashed = str(protected_path).replace("\\", "/")
+    if slashed.startswith("/"):
+        raise ProtectedPathError(f"protected_path must be relative: {protected_path}")
+    normalized = posixpath.normpath(slashed)
     if normalized in (".", ""):
         raise ProtectedPathError(f"protected_path must not be empty or '.': {protected_path!r}")
     if normalized == ".." or normalized.startswith("../"):
