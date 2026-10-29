@@ -1,4 +1,4 @@
-# Model routing evidence (E1 to E12)
+# Model routing evidence (E1 to E13)
 
 Date: 2026-10-18. OpenCode 1.19.3, Windows, Git Bash. Findings F32 to F36 in `docs/transition-plan.md` rest on this file.
 
@@ -203,3 +203,27 @@ Per case for luna (F found, M missed, FP false positive, ok approved, x invalid)
 Luna reproduction on the two clean cases (a temporary bench root, one run each): `clean-rename-helper` gave REQUEST CHANGES with one BLOCKING STATIC ANALYSIS finding, because the static analysis could not find the changed files in the workspace; `clean-guard-with-test` ended with stop reason tool-calls and no reply.
 
 Caveats: the timing columns are not usable (F55). Four models are close, so the cases screen out a bad model and do not rank the good ones; cost is the clearest difference. Two clean cases are weak evidence on false positives. The static-analysis message may mean that the precheck cannot analyse the benchmark targets for any model; this was not investigated. No Gemini model was available.
+
+## E13: the framework's own flow on plan step 3A (pilots, 2026-10)
+
+Setup: in a git worktree, `/task` implemented the `protected_paths` check of step 3A.2 and a fix for empty and dot paths; a second pilot step (leading-slash paths on Windows) ran later in the terminal UI. OpenCode 1.19.3 on the live global config. The first table comes from `opencode export` of the 12 sessions of the first pilot; the permission counts come from the bash rules resolved with `opencode debug agent` and an approximate wildcard matcher (its 12 denials all matched the real ones, so the `ask` counts are approximate).
+
+| Agent | Sessions | Wall time | Tool time | Messages | Tokens | Reasoning tokens | Skill calls | Cost |
+|---|---|---|---|---|---|---|---|---|
+| orchestrator | 1 | 19,144 s | 2,677 s | 35 | 2,440,373 | 5,393 | 0 | $1.609 |
+| backend | 5 | 1,633 s | 1,191 s | 64 | 1,934,910 | 2,695 | 0 | $0.881 |
+| code-reviewer | 4 | 551 s | 559 s | 26 | 854,237 | 7,356 | 68 | $0.672 |
+| qa | 1 | 208 s | 139 s | 6 | 138,729 | 2,719 | 4 | $0.242 |
+| gatekeeper | 1 | 133 s | 66 s | 12 | 414,859 | 166 | 0 | $0.234 |
+
+- Total cost about $3.64. The four child agents took 2,525 s together, which matches the orchestrator's 2,677 s of task calls; the rest of its 19,144 s was waiting (for people, permission prompts or a sleeping machine; the export cannot tell which).
+- Reasoning tokens are under 1% of the tokens for every agent except qa (2%); almost all tokens are re-read context. Lowering the reasoning effort would save little.
+- Slowest tool calls: six orchestrator `task` calls of 208 to 483 s; backend `python -m unittest` 145 s and `cd ... && python tools/validate_framework.py` 135 s. The validator takes 6 s directly, so most of the 135 s was probably a permission prompt (inferred).
+- Bash calls in the first pilot: 102. backend 5 allow and 29 ask; code-reviewer 25 allow, 9 ask, 1 deny; qa 1 allow and 4 ask; gatekeeper 6 allow and 8 deny; orchestrator 8 allow and 6 deny. The orchestrator's and gatekeeper's denials are by design (deny-by-default). After PR 72 the Python test runners are allowed for backend and qa.
+- Second pilot: the user approved six commands once (a `find` with a `python -c` fallback, a `grep` through bash, `python -m unittest tests.test_protected_paths`, `python tools/validate_framework.py`, a mistyped `python lizard` and `python -m lizard`); which agent asked is not recorded. The result: one commit of 5 changed lines in `protected_paths.py` and 10 test lines; 503 tests, validator green, lizard clean, only `execution/verification/` and `tests/` changed.
+
+Test suite (F60): 82 s for 501 tests; seconds per module from the 600 slowest tests: quick_lane_check 20.0 (16 tests), git_context 10.7 (9), benchmark 10.2 (16), entry_points 6.5 (2), static_analysis 5.5 (5), bench_resume 5.4 (6).
+
+Retest failures of 2026-10-25 (F58, F59): sonnet-5 `off-by-one-loop` #2 ended after an auto-rejected `echo done`; haiku-4.5 `clean-guard-with-test` #3 wrote prose before a fenced JSON block.
+
+Caveats: one task, one repository, two pilots; the `ask` counts are approximate; waiting time cannot be split into prompts, thinking and sleep.
