@@ -30,7 +30,8 @@ branch being deleted is caught separately by the branch_protection check.
 
 import fnmatch
 import posixpath
-import subprocess
+
+from ..git_runner import run_git as _run_git
 
 
 class DependencyChangeError(Exception):
@@ -39,29 +40,26 @@ class DependencyChangeError(Exception):
 
 
 MANIFEST_NAMES = (
+    # The files the agents ask about before editing (agents/backend.md and agents/api.md).
     "package.json",
     "package-lock.json",
     "yarn.lock",
     "pnpm-lock.yaml",
     "pom.xml",
     "build.gradle*",
-    "requirements.txt",
+    "requirements*.txt",
     "pyproject.toml",
+    "poetry.lock",
+    "Pipfile",
+    "Pipfile.lock",
 )
 
 _ZERO_SHA = "0000000000000000000000000000000000000000"
 
 
 def run_git(argv, cwd=None):
-    try:
-        result = subprocess.run(
-            ["git", *argv], cwd=cwd, capture_output=True, text=True, check=False
-        )
-    except OSError as error:
-        raise DependencyChangeError(f"failed to run git {argv}: {error}") from error
-    if result.returncode != 0:
-        raise DependencyChangeError(f"git {argv} failed: {result.stderr}")
-    return result.stdout
+    """git through the shared helper, raising this check's own error."""
+    return _run_git(argv, cwd=cwd, error=DependencyChangeError)
 
 
 def find_violations(changed_paths, commit_messages, trailer="Dependency-Approved:"):
@@ -160,7 +158,8 @@ def read_commit_messages(old_sha, new_sha, protected_branch=None, *, run_git=run
     range_spec = _read_commit_range(old_sha, new_sha, protected_branch, run_git=run_git)
     output = run_git(["log", "--format=%B%x00", range_spec])
 
+    # git adds a newline after each terminator, so the last piece is "\n", not "": it is not a message.
     parts = output.split("\0")
-    if parts and parts[-1] == "":
+    if parts and not parts[-1].strip():
         parts = parts[:-1]
     return parts

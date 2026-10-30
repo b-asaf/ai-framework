@@ -16,6 +16,7 @@ permission:
     "python3 *scripts*git-context.py*": allow
     "python *scripts*static-analysis.py*": allow
     "python3 *scripts*static-analysis.py*": allow
+    "python -m lizard *": allow
   external_directory:
     'D:\ai-framework\skills\linting-tools\references\*': allow
   edit: deny

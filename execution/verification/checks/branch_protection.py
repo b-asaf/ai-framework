@@ -19,7 +19,8 @@ remote side and remains fully subject to protection.
 """
 
 import fnmatch
-import subprocess
+
+from ..git_runner import run_git as _run_git
 
 
 class BranchProtectionError(Exception):
@@ -27,15 +28,8 @@ class BranchProtectionError(Exception):
 
 
 def run_git(argv, cwd=None):
-    try:
-        result = subprocess.run(
-            ["git", *argv], cwd=cwd, capture_output=True, text=True, check=False
-        )
-    except OSError as error:
-        raise BranchProtectionError(f"failed to run git {argv}: {error}") from error
-    if result.returncode != 0:
-        raise BranchProtectionError(f"git {argv} failed: {result.stderr}")
-    return result.stdout
+    """git through the shared helper, raising this check's own error."""
+    return _run_git(argv, cwd=cwd, error=BranchProtectionError)
 
 
 def find_violations(pushed_branches, protected_branches):

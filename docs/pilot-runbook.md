@@ -32,7 +32,8 @@ Then run `opencode` in `/d/ai-framework-new`, type `/task` (or `/quick`) and pas
 
 ## 3. While it runs
 
-- Expected prompts: `python tools/validate_framework.py` (repo specific, deliberately not allowed in the generic agents), and the test runner and `python -m lizard` for `code-reviewer` (read-only by design).
+- Expected prompts: `python tools/validate_framework.py` (repo specific, deliberately not allowed in the generic agents), and the test runner for `code-reviewer` (read-only by design; `python -m lizard` is allowed for it).
+- Never pipe a command into tail, head or grep: each part of a chain is checked separately (F54), so the pipe asks for permission. Read the whole output instead.
 - Any other command that asks is an agent mistake. Allow it once, note it, and tighten the prompt next time.
 - Answer the clarifying questions of the first steps; "follow the plan" is usually enough.
 
