@@ -30,9 +30,17 @@ Then run `opencode` in `/d/ai-framework-new`, type `/task` (or `/quick`) and pas
 
 ## 2. Prompt template
 
+```
+Implement STEP of docs/transition-plan.md. Read: the plan rows and sections it names, the decision it cites, and an existing file to copy the style from.
+Scope: new files under PATHS only. Do not touch hooks, agents, commands, skills, scripts, opencode.json, AGENTS.md, setup.py, execution/policy.json or execution/profiles.
+Requirements: pure Python 3.14 standard library; the deciding function is pure; file and git reads only at the edges; fail closed; no model or provider names in execution/verification.
+Working rules: do not use cd, the working directory is already this worktree. Use the read, grep and glob tools to search and read files, not bash. Never pipe a command into tail, head or grep: each part of a chain is checked separately (F54), so the pipe asks for permission; read the whole output instead. While iterating run only the relevant test module (python -m unittest tests.test_NAME) and run the full suite once, right before committing. The orchestrator may only use git status, git diff, git log, git add . and git commit: do not try pwd, echo, grep, find or python -c. Delegate everything else. Do not create or switch branches, do not push. Before finishing run python tools/validate_framework.py, python -m unittest and python -m lizard -C 10 -w on the new files. Commit with type(scope): description, at most 100 characters. Stop and summarize when done; stop and ask me if the plan is ambiguous.
+```
+
 ## 3. While it runs
 
-- Expected prompts: `python tools/validate_framework.py` (repo specific, deliberately not allowed in the generic agents), and the test runner and `python -m lizard` for `code-reviewer` (read-only by design).
+- Expected prompts: `python tools/validate_framework.py` (repo specific, deliberately not allowed in the generic agents), and the test runner for `code-reviewer` (read-only by design; `python -m lizard` is allowed for it).
+- Never pipe a command into tail, head or grep: each part of a chain is checked separately (F54), so the pipe asks for permission. Read the whole output instead.
 - Any other command that asks is an agent mistake. Allow it once, note it, and tighten the prompt next time.
 - Answer the clarifying questions of the first steps; "follow the plan" is usually enough.
 

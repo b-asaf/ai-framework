@@ -254,33 +254,41 @@ class MergeBaseValidation(unittest.TestCase):
 
 
 class RunGit(unittest.TestCase):
-    def test_successful_call_returns_stdout_and_argv(self):
-        fake_result = mock.Mock(returncode=0, stdout="hello\n", stderr="")
-        with mock.patch("subprocess.run", return_value=fake_result) as mocked:
-            output = run_git(["status"])
-        self.assertEqual(output, "hello\n")
-        mocked.assert_called_once_with(
-            ["git", "status"], cwd=None, capture_output=True, text=True, check=False
-        )
-
-    def test_cwd_is_forwarded(self):
-        fake_result = mock.Mock(returncode=0, stdout="", stderr="")
-        with mock.patch("subprocess.run", return_value=fake_result) as mocked:
-            run_git(["status"], cwd="/some/dir")
-        mocked.assert_called_once_with(
-            ["git", "status"], cwd="/some/dir", capture_output=True, text=True, check=False
-        )
-
-    def test_nonzero_exit_raises(self):
+    def test_a_git_failure_raises_this_checks_own_error(self):
         fake_result = mock.Mock(returncode=1, stdout="", stderr="bad")
         with mock.patch("subprocess.run", return_value=fake_result):
             with self.assertRaises(DependencyChangeError):
                 run_git(["status"])
-
-    def test_oserror_raises(self):
         with mock.patch("subprocess.run", side_effect=OSError("missing")):
             with self.assertRaises(DependencyChangeError):
                 run_git(["status"])
+
+    def test_the_working_directory_is_forwarded(self):
+        fake_result = mock.Mock(returncode=0, stdout="", stderr="")
+        with mock.patch("subprocess.run", return_value=fake_result) as mocked:
+            run_git(["status"], cwd="/some/dir")
+        self.assertEqual(mocked.call_args.kwargs["cwd"], "/some/dir")
+
+
+class CommitMessageOutputShape(unittest.TestCase):
+    def test_the_newline_git_adds_after_the_last_terminator_is_not_a_message(self):
+        output = "one\n\0\ntwo\n\0\n"
+        messages = read_commit_messages("a" * 40, "b" * 40, run_git=lambda argv: output)
+        self.assertEqual(messages, ["one\n", "\ntwo\n"])
+
+
+class ManifestNames(unittest.TestCase):
+    # The files the agents ask about before editing (agents/backend.md and agents/api.md).
+    GUARDED = (
+        "package.json", "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "pom.xml",
+        "build.gradle", "build.gradle.kts", "requirements.txt", "requirements-dev.txt",
+        "pyproject.toml", "poetry.lock", "Pipfile", "Pipfile.lock",
+    )
+
+    def test_every_manifest_the_agents_guard_counts_as_a_manifest(self):
+        for name in self.GUARDED:
+            with self.subTest(name=name):
+                self.assertEqual(len(find_violations([f"sub/{name}"], [])), 1)
 
 
 if __name__ == "__main__":

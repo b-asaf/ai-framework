@@ -14,7 +14,9 @@ sys.path.insert(0, str(REPO / "tools"))
 import validate_framework  # noqa: E402
 
 AGENTS = {agent.name: agent for agent in validate_framework.discover_agents(REPO / "agents")}
-PYTHON_RUNNERS = ("python -m unittest", "python -m unittest *", "python -m lizard *")
+TEST_RUNNERS = ("python -m unittest", "python -m unittest *")
+LIZARD = "python -m lizard *"
+PYTHON_RUNNERS = TEST_RUNNERS + (LIZARD,)
 
 
 def bash(name):
@@ -50,8 +52,13 @@ class PythonRunners(unittest.TestCase):
     def test_the_read_only_reviewer_still_asks_before_running_repo_code(self):
         rules = bash("code-reviewer")
         self.assertEqual(rules["*"], "ask")
-        for rule in PYTHON_RUNNERS:
+        for rule in TEST_RUNNERS:
             self.assertNotEqual(rules.get(rule), "allow", rule)
+
+    def test_the_reviewer_may_run_lizard_which_only_reads_source_files(self):
+        rules = bash("code-reviewer")
+        self.assertEqual(rules.get(LIZARD), "allow")
+        self.assertTrue(comes_after(rules, LIZARD, "*"))
 
     def test_the_repo_validator_is_not_allowed_in_the_generic_agents(self):
         for name in ("backend", "qa", "code-reviewer"):
