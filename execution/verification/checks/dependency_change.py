@@ -118,7 +118,7 @@ def _resolve_new_branch_range(new_sha, protected_branch, *, run_git):
     return f"{merge_base}..{new_sha}"
 
 
-def _read_commit_range(old_sha, new_sha, protected_branch=None, *, run_git=run_git):
+def commit_range(old_sha, new_sha, protected_branch=None, *, run_git=run_git):
     if not old_sha:
         raise DependencyChangeError("old_sha is missing or empty; cannot determine commit range")
 
@@ -139,7 +139,7 @@ def read_changed_paths(old_sha, new_sha, protected_branch=None, *, run_git=run_g
     if new_sha == _ZERO_SHA:
         return []
 
-    range_spec = _read_commit_range(old_sha, new_sha, protected_branch, run_git=run_git)
+    range_spec = commit_range(old_sha, new_sha, protected_branch, run_git=run_git)
     output = run_git(["diff", "--name-only", "--no-renames", "-z", range_spec, "--"])
 
     parts = output.split("\0")
@@ -155,7 +155,7 @@ def read_commit_messages(old_sha, new_sha, protected_branch=None, *, run_git=run
     if new_sha == _ZERO_SHA:
         return []
 
-    range_spec = _read_commit_range(old_sha, new_sha, protected_branch, run_git=run_git)
+    range_spec = commit_range(old_sha, new_sha, protected_branch, run_git=run_git)
     output = run_git(["log", "--format=%B%x00", range_spec])
 
     # git adds a newline after each terminator, so the last piece is "\n", not "": it is not a message.

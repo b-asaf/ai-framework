@@ -13,7 +13,7 @@ being silently skipped (fail closed, DEC-015).
 
 import hashlib
 import posixpath
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 
 class ProtectedPathError(Exception):
@@ -28,6 +28,9 @@ def _normalize_protected_path(protected_path):
     and anything that escapes root via `..` components.
     """
     if Path(protected_path).is_absolute():
+        raise ProtectedPathError(f"protected_path must be relative: {protected_path}")
+    windows_path = PureWindowsPath(protected_path)
+    if windows_path.drive or windows_path.root:
         raise ProtectedPathError(f"protected_path must be relative: {protected_path}")
     slashed = str(protected_path).replace("\\", "/")
     if slashed.startswith("/"):

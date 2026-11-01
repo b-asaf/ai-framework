@@ -97,6 +97,21 @@ class Snapshot(unittest.TestCase):
             with self.assertRaises(ProtectedPathError):
                 snapshot(tmp, ["hooks\\.."])
 
+    def test_drive_relative_protected_path_raises(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(ProtectedPathError):
+                snapshot(tmp, ["C:foo"])
+
+    def test_drive_absolute_protected_path_raises(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(ProtectedPathError):
+                snapshot(tmp, ["C:/foo"])
+
+    def test_unc_style_protected_path_raises(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(ProtectedPathError):
+                snapshot(tmp, ["//server/share/x"])
+
     def test_recursive_nested_files_are_picked_up(self):
         with tempfile.TemporaryDirectory() as tmp:
             write(tmp, "hooks/sub/deep/file.txt", "a")
