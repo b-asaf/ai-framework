@@ -20,6 +20,7 @@ remote side and remains fully subject to protection.
 
 import fnmatch
 
+from .. import push_input
 from ..git_runner import run_git as _run_git
 
 
@@ -61,23 +62,22 @@ def read_pushed_branches(stdin_text):
     Impure in the sense that it parses externally-sourced text, but it does
     not read sys.stdin itself -- the caller passes the text. Any malformed
     record raises BranchProtectionError (fail closed), even if other lines
-    in the same input are well-formed.
+    in the same input are well-formed. Parsing itself is shared with the
+    other checks via push_input.parse_push_records; this function adds the
+    refs/heads/ filtering and branch-name extraction on top.
     """
-    if not stdin_text.strip():
-        return []
+    try:
+        records = push_input.parse_push_records(stdin_text)
+    except push_input.PushInputError as error:
+        raise BranchProtectionError(str(error)) from error
+
     branches = []
-    for line in stdin_text.splitlines():
-        if not line.strip():
-            raise BranchProtectionError(f"malformed pre-push input line: {line!r}")
-        fields = line.split()
-        if len(fields) != 4:
-            raise BranchProtectionError(f"malformed pre-push input line: {line!r}")
-        _local_ref, _local_sha, remote_ref, _remote_sha = fields
-        if not remote_ref.startswith("refs/heads/"):
+    for record in records:
+        if not record.remote_ref.startswith("refs/heads/"):
             continue
-        branch = remote_ref[len("refs/heads/") :]
+        branch = record.remote_ref[len("refs/heads/") :]
         if not branch:
-            raise BranchProtectionError(f"empty branch name in remote_ref: {remote_ref!r}")
+            raise BranchProtectionError(f"empty branch name in remote_ref: {record.remote_ref!r}")
         branches.append(branch)
     return branches
 
