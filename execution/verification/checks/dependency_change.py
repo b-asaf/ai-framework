@@ -57,6 +57,16 @@ MANIFEST_NAMES = (
 _ZERO_SHA = "0000000000000000000000000000000000000000"
 
 
+def is_manifest_path(path, patterns=MANIFEST_NAMES):
+    """True if the file name of `path` matches a pattern, ignoring case.
+
+    Case is ignored on every OS, not only where the file system does: a push from a
+    case-insensitive checkout must not slip a `Package.json` change past the gate.
+    """
+    name = posixpath.basename(path).lower()
+    return any(fnmatch.fnmatchcase(name, pattern.lower()) for pattern in patterns)
+
+
 def run_git(argv, cwd=None):
     """git through the shared helper, raising this check's own error."""
     return _run_git(argv, cwd=cwd, error=DependencyChangeError)
@@ -67,14 +77,7 @@ def find_violations(changed_paths, commit_messages, trailer="Dependency-Approved
 
     Pure function: no filesystem/git access.
     """
-    matched = [
-        path
-        for path in changed_paths
-        if any(
-            fnmatch.fnmatchcase(posixpath.basename(path), pattern)
-            for pattern in MANIFEST_NAMES
-        )
-    ]
+    matched = [path for path in changed_paths if is_manifest_path(path)]
     if not matched:
         return []
 

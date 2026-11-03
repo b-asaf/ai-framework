@@ -22,11 +22,9 @@ positive integer is a violation, not a silent fallback to the default
 (DEC-015, fail closed).
 """
 
-import fnmatch
-import posixpath
 
 from ..git_runner import run_git as _run_git
-from .dependency_change import MANIFEST_NAMES
+from .dependency_change import MANIFEST_NAMES, is_manifest_path
 
 LANE_TRAILER = "Lane: quick"
 DEFAULT_MAX_FILES = 3
@@ -65,10 +63,7 @@ def find_violations(measurements, restricted_patterns, max_files, max_lines):
         restricted = [
             path
             for path in measurement["paths"]
-            if any(
-                fnmatch.fnmatchcase(posixpath.basename(path), pattern)
-                for pattern in restricted_patterns
-            )
+            if is_manifest_path(path, restricted_patterns)
         ]
         if restricted:
             reasons.append("a manifest, lockfile or .ai-framework.json changed")
