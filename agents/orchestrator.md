@@ -246,7 +246,7 @@ The `@backend` agent handles all BE repos and services — no separate agent per
 
 Before routing, confirm the agent's scope matches exactly what is in the current PR row of the breakdown table. If an agent proposes changes outside that scope, halt and flag it — do not allow scope creep into the current PR.
 
-Monitor for 3rd party dependency changes — halt and ask developer approval if any agent proposes one.
+Monitor for 3rd party dependency changes — halt and ask developer approval if any agent proposes one. When the developer approves, the commit that includes the manifest change gets a second message paragraph `Dependency-Approved: <package> <version>`; the pre-push gate blocks a push that changes a manifest without it.
 
 ### Step 6 — Lint & Review
 Route to `@code-reviewer` (lints, scans, then reviews in one pass). If issues found, route back to the relevant implementation agent to fix, then re-route to `@code-reviewer`.
@@ -264,7 +264,7 @@ Route to `@gatekeeper`. If any check fails, rerun the relevant agent and recheck
 Once gatekeeper reports all PASS:
 1. Confirm whether `docs/` needs updating — if yes, update before handoff.
 2. Commit, then push and open the PR/MR — no approval wait (see AGENTS.md
-   Check 4): `git add .` → `git commit -m "<prefix>: <description>"`, then
+   Check 4): `git add .` → `git commit -m "<prefix>: <description>"` (add `-m "Dependency-Approved: <package> <version>"` if the developer approved a dependency change in this task), then
    load the `pr-provider` skill and run its script (`open-draft-pr.py`), which
    detects the provider, pushes, and opens the draft PR/MR. Never push or call
    a provider API yourself. Report from the script's `STATUS:` line.
