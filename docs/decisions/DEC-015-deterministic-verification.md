@@ -43,9 +43,52 @@ Comparison is per task, not by averages. A task with an "unknown" baseline value
 
 ### To be completed
 
-- **Gatekeeper classification (step 3A.1):** every gatekeeper checklist item labeled deterministic or judgment.
+- **Gatekeeper classification (step 3A.1):** done 2026-11-03, see the table below.
 - **Pipeline experiment outcome (after Phase 3C):** keep, replace with a declarative definition, or remove, with the evidence.
 - **Soak verdict (step 4.5):** keep, extend or revert, based on 5 real PRs compared with the baseline.
+
+### Gatekeeper classification (step 3A.1, 2026-11-03)
+
+Every checklist item of `agents/gatekeeper.md`, labeled. "Decided by" names what decides the fact today. "3A.4" says what the trim does with the item.
+
+| # | Item | Class | Decided by | 3A.4 |
+|---|---|---|---|---|
+| 1 | Lane: the diff matches the declared description | judgment | gatekeeper | keep |
+| 2 | Lane: the diff delivers the description and the tests pass | judgment (the test part is row 20) | gatekeeper | keep |
+| 3 | Lane: `quick-lane-check.py` STATUS OK, no manifest, lockfile or `.ai-framework.json` in the diff | deterministic | `quick_lane` check at push (commits with the `Lane: quick` trailer) | trim |
+| 4 | Atomicity: matches exactly one row of the PR breakdown | judgment | gatekeeper | keep |
+| 5 | Atomicity: one concern, no mixed scope | judgment | gatekeeper | keep |
+| 6 | Atomicity: no refactor bundled with a feature | judgment | gatekeeper | keep |
+| 7 | Atomicity: no FE and BE in one PR unless the architect justified it | judgment (open: path globs per project) | gatekeeper | keep |
+| 8 | Atomicity: no unapproved dependency update bundled | deterministic | `dependency_change` at push | trim |
+| 9 | Atomicity: independently revertable | judgment | gatekeeper | keep |
+| 10 | Spec: implementation matches the confirmed spec | judgment | gatekeeper | keep |
+| 11 | Spec: all acceptance criteria satisfied | judgment | gatekeeper | keep |
+| 12 | Spec: nothing out of scope implemented | judgment | gatekeeper | keep |
+| 13 | Branch: a feature branch with the correct prefix | deterministic | `pre-commit` hook (it allows 7 prefixes; the gatekeeper lists 5, without `hotfix/` and `release/`) | trim |
+| 14 | Branch: no changes on `main` or `master` | deterministic | `pre-commit` (no direct commits) and `branch_protection` at push | trim |
+| 15 | Lint scan reported zero violations | deterministic | `build-verify` lint at push, only where `.ai-framework.json` has the command | trim once `build-verify` blocks without config |
+| 16 | Xray scan: zero issues with CVSS 8 or higher | deterministic | no code (the scan is run by `code-reviewer`) | keep, no code yet |
+| 17 | Xray blocker resolved and the scan rerun clean | deterministic | no code | keep, no code yet |
+| 18 | Xray warnings are present in the report | deterministic, informational (never blocks) | no code | candidate to drop |
+| 19 | `code-reviewer` last verdict was APPROVE | deterministic once the report is a stored artifact | no code: the verdict exists only in the session | keep until the runner stores it |
+| 20 | `qa` last run reported zero failures | deterministic | `build-verify` test at push, only where configured | trim with row 15 |
+| 21 | Coverage did not decrease | deterministic | no code (needs a coverage command and a stored baseline) | keep, open |
+| 22 | No dependency change without documented approval | deterministic (approval is made visible, not proven: point 7) | `dependency_change` at push | trim |
+| 23 | `docs/` updated when a flow, the architecture, an API or an integration changed | judgment (whether the trigger applies) | gatekeeper | keep |
+| 24 | Memory: check for new patterns, conventions or facts | judgment | gatekeeper | keep |
+| 25 | Memory: report proposed updates instead of writing them | judgment | gatekeeper | keep |
+| 26 | Memory: each proposal cites the file and line | judgment (format only) | gatekeeper | keep |
+| 27 | Memory: the gatekeeper does not modify files | deterministic | the agent's `edit: deny` and `write: deny` | drop from the checklist |
+
+Totals: 14 judgment, 13 deterministic. Of the 13, rows 3, 8, 13, 14, 22 and 27 are decided by code unconditionally, rows 15 and 20 only where `.ai-framework.json` configures the commands, and rows 16 to 19 and 21 by no code yet.
+
+Notes for 3A.4:
+
+- The gatekeeper's bash is limited to `git status`, `git log` and `git diff`, so rows 15 to 21 only read what other agents reported. Point 4 (inspect the tree, not the report) is not met for them.
+- `build-verify` skips with a warning when `.ai-framework.json` is missing (F14), which point 3 forbids. Rows 15 and 20 can be trimmed only after that is changed.
+- Trimmed checks now fail at push, after the gatekeeper has reported. The orchestrator has to treat a blocked push as a failed gate.
+- Rows 16 to 19 and 21 stay in the gatekeeper until code decides them.
 
 ## Reasoning
 
