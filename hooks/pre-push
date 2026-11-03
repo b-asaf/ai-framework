@@ -240,15 +240,15 @@ HOOK_DIR=$(dirname "$0")
 VERIFY_SCRIPT="$HOOK_DIR/build-verify.sh"
 
 if [ ! -x "$VERIFY_SCRIPT" ]; then
-  echo "build-verify.sh not found in hooks - skipping verify gate"
-  echo "  (re-run: python setup.py, from the ai-framework folder)"
-  exit 0
+  block "build-verify.sh is missing next to the hook ($HOOK_DIR)." \
+    "Fix: python <ai-framework>/setup.py --install-hooks <this repository>"
 fi
 
 if [ ! -f "$COMMANDS_FILE" ]; then
-  echo "WARNING: .ai-framework.json not found - skipping verify gate"
-  echo "  (run first-run analysis in your agent session to generate it)"
-  exit 0
+  block ".ai-framework.json not found: lint and tests cannot be verified." \
+    "Fix: run the first-run analysis in an agent session, or create the file with a \"test\" command." \
+    "A repository with nothing to verify can set \"test\": \"true\"." \
+    "Once only: SKIP_BUILD_VERIFY=1 git push"
 fi
 
 LINT_CMD=$(json_get lint "$COMMANDS_FILE")
@@ -256,8 +256,9 @@ FORMAT_CMD=$(json_get format "$COMMANDS_FILE")
 TEST_CMD=$(json_get test "$COMMANDS_FILE")
 
 if [ -z "$LINT_CMD" ] && [ -z "$FORMAT_CMD" ] && [ -z "$TEST_CMD" ]; then
-  echo "WARNING: .ai-framework.json has no commands configured - skipping verify gate"
-  exit 0
+  block ".ai-framework.json has no lint, format or test command." \
+    "Fix: add at least a \"test\" command; \"test\": \"true\" if there is nothing to run." \
+    "Once only: SKIP_BUILD_VERIFY=1 git push"
 fi
 
 echo ""

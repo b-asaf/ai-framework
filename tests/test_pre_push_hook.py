@@ -91,6 +91,7 @@ class PrePushHookTest(unittest.TestCase):
         return self.git("rev-parse", "refs/heads/main", cwd=self.remote)
 
     def test_plain_feature_push_passes(self):
+        self.write_config('{"test": "true"}\n')
         self.start_feature()
         code, out = self.push("-u", "origin", "feature/x")
         self.assertEqual(code, 0, out)
@@ -119,6 +120,7 @@ class PrePushHookTest(unittest.TestCase):
         self.assertNotIn("refs/heads/temp-dev", self.remote_heads())
 
     def test_dependency_change_needs_the_trailer(self):
+        self.write_config('{"test": "true"}\n')
         self.git("checkout", "-q", "-b", "feature/dep", cwd=self.clone)
         self.commit("package.json", '{"dependencies": {"left-pad": "1.0.0"}}\n')
         code, out = self.push("-u", "origin", "feature/dep")
@@ -170,6 +172,36 @@ class PrePushHookTest(unittest.TestCase):
         code, out = self.push("-u", "origin", "feature/x")
         self.assertNotEqual(code, 0, out)
         self.assertIn("build-verify failed", out)
+        self.assertNotIn("refs/heads/feature/x", self.remote_heads())
+
+    def test_missing_config_blocks_the_push(self):
+        self.start_feature()
+        code, out = self.push("-u", "origin", "feature/x")
+        self.assertNotEqual(code, 0, out)
+        self.assertIn(".ai-framework.json not found", out)
+        self.assertNotIn("refs/heads/feature/x", self.remote_heads())
+
+    def test_config_without_commands_blocks_the_push(self):
+        self.write_config('{"maxDiffLines": 400}\n')
+        self.start_feature()
+        code, out = self.push("-u", "origin", "feature/x")
+        self.assertNotEqual(code, 0, out)
+        self.assertIn("no lint, format or test command", out)
+        self.assertNotIn("refs/heads/feature/x", self.remote_heads())
+
+    def test_skip_build_verify_lets_a_repo_without_config_through(self):
+        self.start_feature()
+        code, out = self.push("-u", "origin", "feature/x", SKIP_BUILD_VERIFY="1")
+        self.assertEqual(code, 0, out)
+        self.assertIn("refs/heads/feature/x", self.remote_heads())
+
+    def test_missing_build_verify_script_blocks_the_push(self):
+        self.write_config('{"test": "true"}\n')
+        (self.clone / ".git" / "hooks" / "build-verify.sh").unlink()
+        self.start_feature()
+        code, out = self.push("-u", "origin", "feature/x")
+        self.assertNotEqual(code, 0, out)
+        self.assertIn("build-verify.sh is missing", out)
         self.assertNotIn("refs/heads/feature/x", self.remote_heads())
 
 
