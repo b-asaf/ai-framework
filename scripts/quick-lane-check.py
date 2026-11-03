@@ -31,7 +31,7 @@ DEFAULT_MAX_FILES = 3
 DEFAULT_MAX_LINES = 60
 RESTRICTED_PATTERNS = (
     "package.json", "package-lock.json", "yarn.lock", "pnpm-lock.yaml",
-    "pom.xml", "build.gradle", "build.gradle.kts",
+    "pom.xml", "build.gradle*",
     "requirements*.txt", "pyproject.toml", "poetry.lock", "Pipfile", "Pipfile.lock",
     ".ai-framework.json",
 )
@@ -104,7 +104,7 @@ def restricted(paths):
     found = []
     for path in sorted(paths):
         name = PurePosixPath(path).name
-        if any(fnmatch.fnmatch(name, pattern) for pattern in RESTRICTED_PATTERNS):
+        if any(fnmatch.fnmatchcase(name.lower(), pattern.lower()) for pattern in RESTRICTED_PATTERNS):
             found.append(path)
     return found
 
