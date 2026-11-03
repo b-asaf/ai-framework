@@ -14,8 +14,8 @@ Labels: **KEEP** (unchanged), **MOVE** (logic goes elsewhere), **SPLIT** (become
 | `hooks/build-verify.sh` | 98 | MOVE | 3A | Build and test facts go to `verification/checks/`. Stays shell or becomes Python per decision #2 |
 | `hooks/pre-commit` | 15 | KEEP | revisit with decision #2 | Commit-time rules (no direct commits to `main`, branch prefixes) were observed at the first plan commit. Confirm whether the rule lives here or in `commit-msg` |
 | `hooks/commit-msg` | 15 | KEEP | Phase 1 | Confirm which message format it enforces before the first Phase 1 commit |
-| `hooks/install-hooks.sh` | 21 | KEEP | confirm | Check its overlap with `add_git_template` in `setup.py`. A fresh test repo contained each hook plus a `.bak` copy (observed in step 0.6), so find out why |
-| `hooks/session-end.js` | 0 | REMOVE | 4 | Empty file. Confirm that nothing references it, then delete it in Phase 4 |
+| `hooks/install-hooks.sh` | 21 | REMOVED | done (PR #80) | Its paths were relative, so it worked only from the framework folder, and it printed a false protected-branch list. Replaced by `python setup.py --install-hooks <repo>`. It was not the source of the `.bak` hooks (F65) |
+| `hooks/session-end.js` | 0 | REMOVE | 4 | Tracked as a symlink (mode 120000); without symlink support a checkout holds the 36-byte link text, not an empty file. Only `CHANGELOG.md` and this file mention it (checked 2026-11-03). Delete it in Phase 4 |
 | `agents/gatekeeper.md` | 139 | SPLIT | 3A.4 | Deterministic items move to `verification/`; judgment-only items stay. Then decide whether the tier can drop |
 | `tools/validate_agents.py` | 533 | SPLIT | 1.3 to 1.8 | Becomes `validate_framework.py` plus `tools/lib/frontmatter.py` and `tools/lib/opencode_models.py`. The 16 cross-family edges move to `policy.json` (`constraints.independence`). `validate_agents.py` stays as a wrapper |
 | `setup.py` | 864 | KEEP | 4.2 | Small additions only (run the generator, link `adws/` if needed). Large file, so no refactor. The Windows copy fallback (`OUT OF DATE` warning) already exists |
@@ -69,4 +69,4 @@ To confirm: read the gate text in `AGENTS.md`, and check that the approval sente
 | Is `session-end.js` referenced anywhere? | `grep -rn "session-end" . -I \| grep -v "^./.git/"` and `git log --oneline -3 -- hooks/session-end.js` |
 | Which hook enforces the main-branch and prefix rules? | `grep -n -i "not allowed" hooks/*` |
 | What do the pre-push checks need? | `grep -n "protectedBranches\|diffBaseBranch\|ai-framework.json" hooks/pre-push` |
-| Why do fresh repos contain `.bak` hooks? | `cat hooks/install-hooks.sh` and search `setup.py` for `add_git_template` |
+| Why do fresh repos contain `.bak` hooks? | Answered in F65: `remove_existing` in `add_git_template` renamed each template hook on every run; fixed in PR #80 |
