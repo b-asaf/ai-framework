@@ -1,24 +1,27 @@
 #!/bin/sh
-# pre-push: prevent direct push to protected branches, enforce the atomic-
-# changes diff-size limit, then run the deterministic build-verify gate
-# (lint/format/test) before the push completes.
+# pre-push: thin shell edge in front of the Python push gate.
 #
-# Protected branches and diff-size logic implement DEC-007 and DEC-009.
+#   1. Reads the push lines from stdin once.
+#   2. Runs the Python gate ($aiFramework.root/execution/verification/run.py):
+#      branch protection, dependency approval, quick-lane checks.
+#   3. Runs the shell diff-size check (atomic changes, DEC-007 / DEC-009).
+#   4. Runs the project's own build-verify (lint/format/test) from
+#      .ai-framework.json.
+#
+# "aiFramework.root" is a global git setting written by `python setup.py`. If it,
+# or a working Python 3, is missing, the push is blocked with a fix message: a
+# gate that cannot run must not pass silently.
+#
 # Mutation testing (DEC-006/DEC-008) is a separate, agent-side gate in
 # code-reviewer.md Stage 4 and is intentionally NOT part of this hook.
 #
-# DEC-009's core point: "protected branches" and "diff base" are two
-# distinct questions, resolved independently and deterministically.
-#   - Protected branches = origin/HEAD (always) + .ai-framework.json's
-#     "protectedBranches" array (additive). Never a hardcoded guess list.
-#   - Diff base = explicit "diffBaseBranch" config, OR an unambiguous
-#     git reflog "Created from" entry. If neither exists: skip honestly,
-#     never guess (Principle 4 - determinism where possible, else skip/ask).
-#
 # Escape hatches for emergencies:
-#   SKIP_DIFF_SIZE_CHECK=1 git push   (diff-size check only)
-#   SKIP_BUILD_VERIFY=1 git push      (build-verify only)
-# (branch protection above still applies regardless of either)
+#   git push --no-verify             (skips this whole hook)
+#   SKIP_VERIFICATION=1 git push     (Python gate: dependency and quick-lane
+#                                     checks only; branch protection stays on)
+#   SKIP_DIFF_SIZE_CHECK=1 git push  (diff-size check only)
+#   SKIP_BUILD_VERIFY=1 git push     (build-verify only)
+#   AI_FRAMEWORK_PYTHON=<path>       (use this interpreter for the gate)
 
 REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
 COMMANDS_FILE="$REPO_ROOT/.ai-framework.json"
@@ -29,49 +32,93 @@ json_get() {
     | sed -E 's/.*:[[:space:]]*"(.*)"/\1/'
 }
 
-json_get_array() {
-  # Extracts string entries from a flat JSON array, e.g.
-  # "protectedBranches": ["main", "temp-dev"]
-  grep -o "\"$1\"[[:space:]]*:[[:space:]]*\[[^]]*\]" "$2" 2>/dev/null \
-    | grep -o '"[^"]*"' \
-    | grep -v "^\"$1\"$" \
-    | tr -d '"'
+# --- Push gate (Python) -------------------------------------------------------
+
+block() {
+  echo ""
+  echo "BLOCKED pre-push: $1"
+  shift
+  for line in "$@"; do
+    echo "  $line"
+  done
+  echo "  Bypass once (reviewed exception only): git push --no-verify"
+  echo ""
+  exit 1
 }
 
-# --- Protected branches: origin/HEAD + config (DEC-009) --------------------
+runs_python() {
+  # Succeeds only if the given command really starts a Python 3. The Windows
+  # Store "python3" stub prints a message and exits non-zero, so it never passes.
+  "$@" -c 'import sys; sys.exit(0 if sys.version_info[0] == 3 else 1)' >/dev/null 2>&1
+}
 
-ORIGIN_DEFAULT=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||')
+run_python() {
+  if [ "$PYTHON" = "py -3" ]; then
+    py -3 "$@"
+  else
+    "$PYTHON" "$@"
+  fi
+}
 
-PROTECTED=""
-[ -n "$ORIGIN_DEFAULT" ] && PROTECTED="$ORIGIN_DEFAULT"
+# Git sends the push lines on stdin and they cannot be read twice.
+PUSH_INPUT=$(cat)
 
-if [ -f "$COMMANDS_FILE" ]; then
-  CONFIGURED_PROTECTED=$(json_get_array protectedBranches "$COMMANDS_FILE")
-  [ -n "$CONFIGURED_PROTECTED" ] && PROTECTED="$PROTECTED $CONFIGURED_PROTECTED"
-fi
-
-if [ -z "$PROTECTED" ]; then
-  echo ""
-  echo "WARNING: could not determine protected branches (no origin/HEAD set,"
-  echo "  no \"protectedBranches\" in .ai-framework.json). Branch-protection"
-  echo "  check is being skipped this push."
-  echo "  Fix: git remote set-head origin -a"
-  echo "  or add \"protectedBranches\": [...] to .ai-framework.json."
-  echo ""
-fi
-
-while read local_ref local_sha remote_ref remote_sha; do
-  BRANCH=$(echo "$remote_ref" | sed 's|refs/heads/||')
-  for protected in $PROTECTED; do
-    if [ "$BRANCH" = "$protected" ]; then
-      echo ""
-      echo "ERROR: Direct push to '$BRANCH' is not allowed."
-      echo "  Push to your feature branch and open a Pull Request."
-      echo ""
-      exit 1
-    fi
-  done
+# Local repository variables must not leak into the gate or into the project's
+# own lint and test commands (a test that runs git in a temp folder would
+# otherwise act on this repository).
+for var in $(git rev-parse --local-env-vars 2>/dev/null); do
+  unset "$var"
 done
+
+FRAMEWORK_ROOT=$(git config --global --get aiFramework.root 2>/dev/null)
+GATE_SCRIPT="execution/verification/run.py"
+
+if [ -z "$FRAMEWORK_ROOT" ]; then
+  block "the ai-framework folder is not configured on this machine." \
+    "Fix: run 'python setup.py' in the ai-framework folder," \
+    "or: git config --global aiFramework.root <path to the ai-framework folder>"
+fi
+if [ ! -f "$FRAMEWORK_ROOT/$GATE_SCRIPT" ]; then
+  block "gate script not found: $FRAMEWORK_ROOT/$GATE_SCRIPT" \
+    "The ai-framework folder was moved or deleted." \
+    "Fix: run 'python setup.py' in its new location."
+fi
+
+PYTHON=""
+if [ -n "${AI_FRAMEWORK_PYTHON:-}" ]; then
+  runs_python "$AI_FRAMEWORK_PYTHON" && PYTHON="$AI_FRAMEWORK_PYTHON"
+elif runs_python python; then
+  PYTHON="python"
+elif runs_python py -3; then
+  PYTHON="py -3"
+elif runs_python python3; then
+  PYTHON="python3"
+fi
+if [ -z "$PYTHON" ]; then
+  block "no working Python 3 found (tried python, py -3, python3)." \
+    "Fix: install Python 3 and put it on PATH," \
+    "or pin one: export AI_FRAMEWORK_PYTHON=<path to python>"
+fi
+
+run_gate() {
+  # Same call as the documented command: from the framework folder, with the
+  # absolute path of the repository being pushed.
+  (cd "$FRAMEWORK_ROOT" && run_python -B "$GATE_SCRIPT" "$REPO_ROOT")
+}
+
+if [ -n "$PUSH_INPUT" ]; then
+  printf '%s\n' "$PUSH_INPUT" | run_gate
+else
+  run_gate < /dev/null
+fi
+GATE_EXIT=$?
+if [ "$GATE_EXIT" -ne 0 ]; then
+  echo ""
+  echo "ERROR: push gate failed - push blocked (see the lines above)."
+  echo "  Bypass once (reviewed exception only): git push --no-verify"
+  echo ""
+  exit 1
+fi
 
 # --- Diff-size backstop (atomic-changes) — DEC-007 / DEC-009 ---------------
 
