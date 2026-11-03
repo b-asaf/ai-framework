@@ -36,7 +36,7 @@ Verification below.
 If they're missing (repo predates `setup.py`, or it hasn't been run on
 this machine yet), re-apply manually from the ai-framework checkout:
 ```bash
-bash <path-to-ai-framework>/hooks/install-hooks.sh
+python <path-to-ai-framework>/setup.py --install-hooks <repo>
 ```
 Hook scripts live in `hooks/` at the ai-framework repo root — this skill
 folder doesn't carry its own copy.
@@ -44,7 +44,7 @@ folder doesn't carry its own copy.
 > ⚠️ Plain `.git/hooks/` scripts are not committed to the repo, and
 > `init.templateDir` only applies at `git init`/`git clone` time.
 > Add to README: run `python setup.py` from the ai-framework checkout
-> (once per machine), or `bash <ai-framework>/hooks/install-hooks.sh`
+> (once per machine), or `python <ai-framework>/setup.py --install-hooks <repo>`
 > as a one-off fallback for a repo that already exists.
 
 ## Verification

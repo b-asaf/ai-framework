@@ -363,7 +363,7 @@ cat .ai-framework.json    # should exist after first-run analysis, with real lin
 Then try pushing a commit that deliberately fails lint (or temporarily set `"test": "exit 1"` in `.ai-framework.json`) and run `git push`.
 
 ✅ Pass: the push is blocked with `❌ build-verify failed — push blocked.`, independent of whether any agent is even running.
-❌ Fail: the push succeeds — `.git/hooks/pre-push` is stale. Delete `.git/hooks/pre-push` in the project, then run `git init` there (it adds missing hooks but never overwrites an existing one).
+❌ Fail: the push succeeds — `.git/hooks/pre-push` is stale. Run `python <ai-framework>/setup.py --install-hooks <project>` (an existing hook is saved as `.bak`).
 
 ---
 
@@ -397,9 +397,9 @@ Use `/task` for anything that needs a spec or touches dependencies.
 
 **Running `/review` — no arguments, no separate setup:**
 
-1. `git checkout` your **feature branch** (the source branch — not `main`/`develop`). The command reviews "the current branch," so it needs to be the one with your changes checked out.
+1. `git checkout` your **feature branch** (the source branch — not `main`). The command reviews "the current branch," so it needs to be the one with your changes checked out.
 2. Commit locally first, even if you haven't pushed. `code-reviewer` reads the diff via `git diff`, and an uncommitted working tree is not a reliable diff source.
-3. Type `/review` — no branch names, no flags. It diffs your current branch against the repo's protected base (`main`/`master`/`develop`) automatically.
+3. Type `/review` — no branch names, no flags. It diffs your current branch against the repo's base branch (`origin/HEAD`, else `main`, else `master`) automatically.
 4. Same session as your implementation or a brand-new one both work — git state lives on disk, not in the conversation. For a long/noisy implementation session, a fresh session (or `/handoff` first) keeps the review's context cleaner and cheaper.
 5. Read the verdict: **PASS** or **FAIL**. Findings are grouped **by file, then by line** — read it like inline PR comments rather than a flat list.
 
@@ -447,7 +447,7 @@ opencode.json               ← OpenCode global config (model: sonnet-5, permiss
 agents/                     ← 15 agent definitions (models are set in `execution/profiles/default.json`)
 skills/                     ← 45 skill folders (most have a ## Quick reference section)
 commands/                   ← slash commands (/task, /quick, /review, /first-run, /handoff)
-hooks/                      ← git hooks (pre-commit, commit-msg, pre-push, build-verify.sh, install-hooks.sh — wired via git init.templateDir, fire on git events)
+hooks/                      ← git hooks (pre-commit, commit-msg, pre-push, build-verify.sh — copied into new repos via git init.templateDir; `python setup.py --install-hooks <repo>` installs them in an existing repo)
 scripts/                    ← graphify-smart-viz.sh (node-count-aware graph visualization)
 
 instructions/
@@ -590,4 +590,4 @@ or by telling the orchestrator directly:
 | Token Optimizer not installing                                   | See "Token usage reduction" section above                                                                                                                                                                                                                                                                    |
 | Graphify not installing                                          | Install manually: `uv tool install graphifyy` (or `pipx install graphifyy`), then re-run `python setup.py`                                                                                                                                                                                                   |
 | `graph.html` too large / slow to open                            | Use `scripts/graphify-smart-viz.sh` instead of raw `graphify` — it skips HTML generation past ~5000 nodes automatically                                                                                                                                                                                      |
-| Git hooks not firing                                             | Delete the old hook (`.git/hooks/pre-push`), then run `git init` in the repo: it adds missing hooks but never overwrites an existing one                                                                                                                                                                                                                                                   |
+| Git hooks not firing                                             | Run `python <ai-framework>/setup.py --install-hooks <repo>` (git init never overwrites an existing hook)                                                                                                                                                                                                                                                   |

@@ -5,9 +5,9 @@ description: Git hook setup and enforcement. Detects hook managers (husky, lefth
 
 ## Quick reference
 
-- **Three hooks:** `pre-commit` (not on protected branch), `commit-msg` (conventional commits), `pre-push` (cannot push to main/master/develop) — applies to both repos (`[XXX]-be` and `[XXX]-fe`)
+- **Three hooks:** `pre-commit` (not on protected branch), `commit-msg` (conventional commits), `pre-push` (cannot push to a protected branch; runs the Python push gate) — applies to both repos (`[XXX]-be` and `[XXX]-fe`)
 - **Detection order:** husky → lefthook → pre-commit → plain shell scripts
-- **Plain-script fallback:** scripts live in ai-framework's own `hooks/` folder, not a copy in this skill. If `setup.py` has been run on this machine, they're already wired automatically via git's `init.templateDir` — nothing to do. Otherwise, one-off: `bash <ai-framework>/hooks/install-hooks.sh`
+- **Plain-script fallback:** scripts live in ai-framework's own `hooks/` folder, not a copy in this skill. If `setup.py` has been run on this machine, they're already wired automatically via git's `init.templateDir` — nothing to do. Otherwise, one-off: `python <ai-framework>/setup.py --install-hooks <repo>`
 - **After detecting:** tell developer which manager was found and how to install (see `references/manager-installation.md`)
 - **If not installed:** warn on every task handoff — "⚠️ Git hooks not installed in [repo]. Branch and commit rules enforced by convention only."
 

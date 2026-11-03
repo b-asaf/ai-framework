@@ -62,6 +62,7 @@ AGENTS       = REPO / "agents"
 COMMANDS     = REPO / "commands"
 HOOKS        = REPO / "hooks"
 SCRIPTS      = REPO / "scripts"
+HOOK_NAMES   = ("pre-commit", "commit-msg", "pre-push", "build-verify.sh")
 
 # ── Tool detection ─────────────────────────────────────────────────────────────
 
@@ -384,51 +385,166 @@ def add_git_template():
     try:
         template_hooks = template_dir / "hooks"
         template_hooks.mkdir(parents=True, exist_ok=True)
-        # Hard-link each hook into the template dir — NOT a symlink, NOT a
-        # copy. A hard link is the same inode/bytes as hooks/*, so hooks/
-        # stays the single source of truth with zero drift (editing
-        # hooks/pre-push updates the template instantly, no re-run of
-        # setup.py needed) — but unlike a symlink, git.exe sees it as an
-        # ordinary file. That matters because git's init.templateDir
-        # recreates whatever it finds in the template dir on the *new*
-        # repo: a symlink there means every `git clone`, on every
-        # developer's machine, needs Developer Mode/admin AND working
-        # symlink support inside git.exe's own MSYS layer — not something
-        # we can assume, and it breaks clone with
-        # "fatal: cannot symlink ...: Function not implemented" the moment
-        # it isn't there. A hard link just gets copied like any other
-        # file, so cloning never needs any special privilege.
-        # build-verify.sh is linked here too (not in a separate scripts/
-        # dir) specifically so it's co-located with pre-push, which finds
-        # it via "$(dirname "$0")" at runtime — works in any project,
-        # regardless of where ai-framework itself is installed on disk.
-        linked = 0
-        for hook_name in ("pre-commit", "commit-msg", "pre-push", "build-verify.sh"):
+        # Plain copies, refreshed on every run. Hard links to hooks/ looked like one
+        # source of truth but do not survive `git pull` (git writes a new file and
+        # the link keeps the old bytes). The *.bak files that remove_existing() used
+        # to leave here were copied into every new repo by `git init`: deleted.
+        for stale in template_hooks.glob("*.bak"):
+            stale.unlink()
+        copied = 0
+        for hook_name in HOOK_NAMES:
             src = hooks_src / hook_name
             if not src.exists():
-                warn(f"hooks/{hook_name} not found — not included in template")
+                warn(f"hooks/{hook_name} not found - not included in template")
                 continue
             dst = template_hooks / hook_name
-            remove_existing(dst)
-            src.chmod(src.stat().st_mode | 0o111)  # ensure executable at the source
-            try:
-                os.link(src, dst)  # hard link: same file, zero privilege needed
-            except OSError as exc:
-                # Cross-device (git-template/ and hooks/ on different
-                # volumes) or a filesystem without hard-link support —
-                # fall back to a plain copy rather than fail setup.
-                shutil.copy2(src, dst)
-                info(f"copied (hard link unavailable: {exc.strerror or exc}): {hook_name}")
-            linked += 1
+            dst.unlink(missing_ok=True)
+            shutil.copy2(src, dst)
+            dst.chmod(dst.stat().st_mode | 0o111)
+            copied += 1
         subprocess.run(
             ["git", "config", "--global", "init.templateDir", str(template_dir)],
             check=True, capture_output=True
         )
-        ok(f"git init.templateDir -> {template_dir} ({linked} hooks linked)")
+        ok(f"git init.templateDir -> {template_dir} ({copied} hooks copied)")
         info("Git hooks will apply to every new clone automatically")
         info("Existing repos keep their old hooks: git init adds only missing hooks and never overwrites one")
+        info("Install the hooks in an existing repo: python setup.py --install-hooks <repo>")
     except Exception as exc:
         warn(f"Could not set git templateDir: {exc}")
+
+# --- Push gate wiring ---------------------------------------------------------
+
+def _git_global(*args):
+    """Run `git config --global <args>`; return (exit code, stdout)."""
+    r = subprocess.run(["git", "config", "--global", *args], capture_output=True, text=True)
+    return r.returncode, r.stdout.strip()
+
+def _root_is_here(value):
+    return Path(value).resolve() == REPO.resolve()
+
+def set_framework_root():
+    """Record this folder as aiFramework.root: the thin pre-push hook reads it to find the gate."""
+    if (REPO / ".git").is_file():
+        warn("running from a git worktree: aiFramework.root not recorded (run setup.py from the main checkout)")
+        return
+    code, _ = _git_global("aiFramework.root", REPO.as_posix())
+    if code == 0:
+        ok(f"git aiFramework.root -> {REPO.as_posix()}")
+    else:
+        warn("could not set git aiFramework.root: the pre-push hook blocks every push until it is set")
+
+def unset_framework_root():
+    code, current = _git_global("--get", "aiFramework.root")
+    if code == 0 and current and _root_is_here(current):
+        _git_global("--unset", "aiFramework.root")
+        ok("git config --global aiFramework.root unset")
+
+def _install_one_hook(src, dst):
+    if dst.exists() and _file_hash(dst) == _file_hash(src):
+        ok(f"{dst.name}: already up to date")
+        return
+    if dst.exists():
+        bak = dst.with_name(dst.name + ".bak")
+        if bak.exists():
+            info(f"{dst.name}: replaced ({bak.name} already holds an earlier hook)")
+        else:
+            dst.rename(bak)
+            info(f"{dst.name}: existing hook saved as {bak.name}")
+    shutil.copy2(src, dst)
+    dst.chmod(dst.stat().st_mode | 0o111)
+    ok(f"{dst.name}: installed")
+
+def _repo_hooks_dir(repo):
+    """Return (hooks folder, None) for a repository root, or (None, why not)."""
+    def git(*args):
+        return subprocess.run(["git", "-C", str(repo), *args], capture_output=True, text=True)
+    if not (repo / ".git").exists():
+        return None, f"{repo} is not the root of a git repository"
+    path = git("config", "--get", "core.hooksPath").stdout.strip()
+    if path:
+        return None, (f"core.hooksPath is set ({path}), so git ignores .git/hooks. "
+                      "Add the hook through that hook manager (see skills/git-hooks).")
+    out = git("rev-parse", "--git-path", "hooks").stdout.strip()
+    if not out:
+        return None, "git could not locate the hooks folder"
+    return repo / out, None
+
+def install_hooks(target):
+    """--install-hooks <repo>: copy the framework hooks into one existing repository."""
+    repo = Path(target).resolve()
+    hooks_dir, problem = _repo_hooks_dir(repo)
+    if problem:
+        return fail(problem)
+    bold(f"Installing git hooks into {repo}")
+    hooks_dir.mkdir(parents=True, exist_ok=True)
+    for name in HOOK_NAMES:
+        _install_one_hook(HOOKS / name, hooks_dir / name)
+    code, root = _git_global("--get", "aiFramework.root")
+    if code != 0 or not root:
+        warn("aiFramework.root is not set: pushes are blocked until 'python setup.py' runs in the framework folder")
+    return True
+
+def _hook_python():
+    """The interpreter the pre-push hook will pick (same order), or None."""
+    probe = "import sys; sys.exit(0 if sys.version_info[0] == 3 else 1)"
+    for cmd in (["python"], ["py", "-3"], ["python3"]):
+        try:
+            if subprocess.run(cmd + ["-c", probe], capture_output=True, timeout=30).returncode == 0:
+                return cmd
+        except (OSError, subprocess.SubprocessError):
+            continue
+    return None
+
+def _stale_hooks(folder):
+    """Names of hooks in `folder` that are missing or differ from hooks/."""
+    return [n for n in HOOK_NAMES if _file_hash(folder / n) != _file_hash(HOOKS / n)]
+
+def _check_lizard(python):
+    r = subprocess.run(python + ["-m", "lizard", "--version"], capture_output=True, text=True)
+    if r.returncode == 0:
+        ok(f"lizard {r.stdout.strip()} for {' '.join(python)}")
+    else:
+        warn(f"lizard is not installed for {' '.join(python)}: pip install lizard")
+
+def _check_framework_root():
+    code, root = _git_global("--get", "aiFramework.root")
+    if code == 0 and root and _root_is_here(root):
+        ok(f"git aiFramework.root -> {root}")
+    elif code == 0 and root:
+        warn(f"git aiFramework.root points at {root}, not at {REPO.as_posix()}")
+    else:
+        warn("git aiFramework.root is not set: hooks block every push; run 'python setup.py'")
+
+def _check_hook_drift():
+    places = [("git-template", REPO / "git-template" / "hooks", "python setup.py")]
+    own = REPO / ".git" / "hooks"
+    if own.is_dir():
+        places.append(("this repository's .git/hooks", own, f"python setup.py --install-hooks {REPO}"))
+    for label, folder, fix in places:
+        stale = _stale_hooks(folder)
+        if stale:
+            warn(f"{label}: missing or out of date: {', '.join(stale)}")
+            info(f"Fix: {fix}")
+        else:
+            ok(f"{label}: hooks up to date")
+
+def check_hooks():
+    bold("Push gate:")
+    python = _hook_python()
+    if python is None:
+        warn("no working Python 3 for the pre-push hook (tried python, py -3, python3)")
+        _need_action("pre-push hook cannot find Python",
+                     "Put Python 3 on PATH, or pin one: export AI_FRAMEWORK_PYTHON=<path to python>")
+    else:
+        ok(f"hook interpreter: {' '.join(python)}")
+        _check_lizard(python)
+    if shutil.which("jscpd"):
+        ok("jscpd found")
+    else:
+        warn("jscpd not found: static analysis skips duplication checks")
+    _check_framework_root()
+    _check_hook_drift()
 
 def uninstall_git_template():
     """Cleanly undo add_git_template(). Run this — not a manual `rmdir` —
@@ -441,8 +557,7 @@ def uninstall_git_template():
     ai-framework. This unsets the config (only if it's still pointing at
     our template dir — never touches it if you've since pointed
     init.templateDir elsewhere) and removes the folder.
-    Already-cloned repos are unaffected: their hooks are already sitting
-    in their own .git/hooks/, independent of this config.
+    Already-cloned repos keep the hooks they have (see the note printed at the end).
     """
     bold("Removing git hook template...")
     template_dir = REPO / "git-template"
@@ -464,7 +579,9 @@ def uninstall_git_template():
         info(f"{template_dir} already gone")
     print()
     info("New `git clone`/`git init` on this machine will no longer install hooks.")
-    info("Already-cloned repos keep the hooks they already have.")
+    unset_framework_root()
+    info("Already-cloned repos keep their hooks. Repos with the thin pre-push hook block")
+    info("every push until you run 'python setup.py' again or delete .git/hooks/pre-push there.")
     print()
 
 # ── Token Optimizer ────────────────────────────────────────────────────────────
@@ -751,6 +868,9 @@ def verify_only():
     check_pr_provider()
     print()
 
+    check_hooks()
+    print()
+
     bold("Graphify status:")
     if shutil.which("graphify"):
         r = subprocess.run(["graphify", "--version"], capture_output=True, text=True)
@@ -793,6 +913,11 @@ def main():
     if "--uninstall" in sys.argv:
         uninstall_git_template()
         return
+    if "--install-hooks" in sys.argv:
+        args = sys.argv[sys.argv.index("--install-hooks") + 1:]
+        if len(args) != 1:
+            sys.exit("usage: python setup.py --install-hooks <repo>")
+        sys.exit(0 if install_hooks(args[0]) else 1)
 
     print()
     bold("ai-framework setup")
@@ -835,6 +960,7 @@ def main():
 
     # 3. Git hooks
     add_git_template()
+    set_framework_root()
     print()
 
     # 4. Token Optimizer
