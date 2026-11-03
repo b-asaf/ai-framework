@@ -53,14 +53,14 @@ def find_violations(
         changed_paths = per_ref_changed_paths.get(branch, [])
         commit_messages = per_ref_commit_messages.get(branch, [])
         violations.extend(
-            dict(item, check="dependency_change")
+            dict(item, check="dependency_change", pushed_branch=branch)
             for item in dependency_change.find_violations(changed_paths, commit_messages)
         )
 
     for branch in pushed_branches:
         measurements = per_ref_quick_lane_measurements.get(branch, [])
         violations.extend(
-            dict(item, check="quick_lane")
+            dict(item, check="quick_lane", pushed_branch=branch)
             for item in quick_lane.find_violations(
                 measurements, quick_lane.RESTRICTED_PATTERNS, max_files, max_lines
             )

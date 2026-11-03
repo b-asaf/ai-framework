@@ -249,10 +249,11 @@ def _describe(violation):
     """
     if "branch" in violation:
         return f"push to protected branch '{violation['branch']}' (matches '{violation['matched_pattern']}')"
+    where = f" (branch {violation['pushed_branch']})" if "pushed_branch" in violation else ""
     if "manifests" in violation:
-        return f"dependency manifest changed without an approval trailer: {', '.join(violation['manifests'])}"
+        return f"dependency manifest changed without an approval trailer: {', '.join(violation['manifests'])}{where}"
     if "sha" in violation:
-        return f"commit {violation['sha'][:8]} exceeds the quick-lane limits: {violation['details']}"
+        return f"commit {violation['sha'][:8]} exceeds the quick-lane limits: {violation['details']}{where}"
     return violation["reason"]
 
 
