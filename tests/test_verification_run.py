@@ -60,7 +60,7 @@ class FakeRunGitUnit(unittest.TestCase):
     """Drive main() with a scripted fake run_git, no real git process."""
 
     def test_clean_push_is_not_blocked(self):
-        stdin_text = "refs/heads/feature/x abc refs/heads/feature/x def\n"
+        stdin_text = "refs/heads/feature/x aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa refs/heads/feature/x dddddddddddddddddddddddddddddddddddddddd\n"
 
         def fake_run_git(argv, cwd=None, *, error):
             if argv[:2] == ["symbolic-ref", "--short"]:

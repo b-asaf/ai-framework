@@ -426,7 +426,7 @@ def add_git_template():
         )
         ok(f"git init.templateDir -> {template_dir} ({linked} hooks linked)")
         info("Git hooks will apply to every new clone automatically")
-        info("For existing repos: cd your-repo && git init  (safe, just refreshes hooks)")
+        info("Existing repos keep their old hooks: git init adds only missing hooks and never overwrites one")
     except Exception as exc:
         warn(f"Could not set git templateDir: {exc}")
 

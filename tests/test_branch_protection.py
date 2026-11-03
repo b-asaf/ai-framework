@@ -53,8 +53,8 @@ class FindViolations(unittest.TestCase):
 class ReadPushedBranches(unittest.TestCase):
     def test_multiple_valid_branch_records(self):
         text = (
-            "refs/heads/main abc123 refs/heads/main def456\n"
-            "refs/heads/feature/x 111 refs/heads/feature/x 222\n"
+            "refs/heads/main aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa refs/heads/main dddddddddddddddddddddddddddddddddddddddd\n"
+            "refs/heads/feature/x 1111111111111111111111111111111111111111 refs/heads/feature/x 2222222222222222222222222222222222222222\n"
         )
         self.assertEqual(read_pushed_branches(text), ["main", "feature/x"])
 
@@ -65,27 +65,27 @@ class ReadPushedBranches(unittest.TestCase):
         self.assertEqual(read_pushed_branches("   \n  \n"), [])
 
     def test_tag_only_stdin(self):
-        text = "refs/tags/v1.0 abc123 refs/tags/v1.0 def456\n"
+        text = "refs/tags/v1.0 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa refs/tags/v1.0 dddddddddddddddddddddddddddddddddddddddd\n"
         self.assertEqual(read_pushed_branches(text), [])
 
     def test_mixed_tag_and_branch_records(self):
         text = (
-            "refs/tags/v1.0 abc123 refs/tags/v1.0 def456\n"
-            "refs/heads/main 111 refs/heads/main 222\n"
+            "refs/tags/v1.0 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa refs/tags/v1.0 dddddddddddddddddddddddddddddddddddddddd\n"
+            "refs/heads/main 1111111111111111111111111111111111111111 refs/heads/main 2222222222222222222222222222222222222222\n"
         )
         self.assertEqual(read_pushed_branches(text), ["main"])
 
     def test_three_fields_raises(self):
         with self.assertRaises(BranchProtectionError):
-            read_pushed_branches("refs/heads/main abc123 refs/heads/main\n")
+            read_pushed_branches("refs/heads/main aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa refs/heads/main\n")
 
     def test_five_fields_raises(self):
         with self.assertRaises(BranchProtectionError):
-            read_pushed_branches("refs/heads/main abc123 refs/heads/main def456 extra\n")
+            read_pushed_branches("refs/heads/main aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa refs/heads/main dddddddddddddddddddddddddddddddddddddddd extra\n")
 
     def test_malformed_record_mixed_with_valid_raises(self):
         text = (
-            "refs/heads/main abc123 refs/heads/main def456\n"
+            "refs/heads/main aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa refs/heads/main dddddddddddddddddddddddddddddddddddddddd\n"
             "bad record here\n"
         )
         with self.assertRaises(BranchProtectionError):
@@ -93,25 +93,25 @@ class ReadPushedBranches(unittest.TestCase):
 
     def test_interior_blank_line_raises(self):
         text = (
-            "refs/heads/main abc123 refs/heads/main def456\n"
+            "refs/heads/main aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa refs/heads/main dddddddddddddddddddddddddddddddddddddddd\n"
             "\n"
-            "refs/heads/feature/x 111 refs/heads/feature/x 222\n"
+            "refs/heads/feature/x 1111111111111111111111111111111111111111 refs/heads/feature/x 2222222222222222222222222222222222222222\n"
         )
         with self.assertRaises(BranchProtectionError):
             read_pushed_branches(text)
 
     def test_single_trailing_newline_does_not_add_phantom_entry(self):
-        text = "refs/heads/main abc123 refs/heads/main def456\n"
+        text = "refs/heads/main aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa refs/heads/main dddddddddddddddddddddddddddddddddddddddd\n"
         self.assertEqual(read_pushed_branches(text), ["main"])
 
     def test_refs_heads_with_nothing_after_raises(self):
-        text = "refs/heads/ abc123 refs/heads/ def456\n"
+        text = "refs/heads/ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa refs/heads/ dddddddddddddddddddddddddddddddddddddddd\n"
         with self.assertRaises(BranchProtectionError):
             read_pushed_branches(text)
 
     def test_deletion_zero_local_sha_still_returns_branch_and_is_a_violation(self):
         zero = "0" * 40
-        text = f"(delete) {zero} refs/heads/main def456\n"
+        text = f"(delete) {zero} refs/heads/main dddddddddddddddddddddddddddddddddddddddd\n"
         branches = read_pushed_branches(text)
         self.assertEqual(branches, ["main"])
         violations = find_violations(branches, PROTECTED)

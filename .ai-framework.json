@@ -1,0 +1,4 @@
+{
+  "lint": "python tools/validate_framework.py",
+  "test": "python -m unittest"
+}

@@ -16,18 +16,18 @@ class ParsePushRecords(unittest.TestCase):
         self.assertEqual(parse_push_records("   \n  \n"), [])
 
     def test_single_branch_record(self):
-        text = "refs/heads/main abc123 refs/heads/main def456\n"
+        text = "refs/heads/main aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa refs/heads/main dddddddddddddddddddddddddddddddddddddddd\n"
         records = parse_push_records(text)
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0].local_ref, "refs/heads/main")
-        self.assertEqual(records[0].local_sha, "abc123")
+        self.assertEqual(records[0].local_sha, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
         self.assertEqual(records[0].remote_ref, "refs/heads/main")
-        self.assertEqual(records[0].remote_sha, "def456")
+        self.assertEqual(records[0].remote_sha, "dddddddddddddddddddddddddddddddddddddddd")
 
     def test_multiple_records_including_tags(self):
         text = (
-            "refs/heads/main abc123 refs/heads/main def456\n"
-            "refs/tags/v1.0 111 refs/tags/v1.0 222\n"
+            "refs/heads/main aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa refs/heads/main dddddddddddddddddddddddddddddddddddddddd\n"
+            "refs/tags/v1.0 1111111111111111111111111111111111111111 refs/tags/v1.0 2222222222222222222222222222222222222222\n"
         )
         records = parse_push_records(text)
         self.assertEqual(len(records), 2)
@@ -35,23 +35,23 @@ class ParsePushRecords(unittest.TestCase):
 
     def test_three_fields_raises(self):
         with self.assertRaises(PushInputError):
-            parse_push_records("refs/heads/main abc123 refs/heads/main\n")
+            parse_push_records("refs/heads/main aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa refs/heads/main\n")
 
     def test_five_fields_raises(self):
         with self.assertRaises(PushInputError):
-            parse_push_records("refs/heads/main abc123 refs/heads/main def456 extra\n")
+            parse_push_records("refs/heads/main aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa refs/heads/main dddddddddddddddddddddddddddddddddddddddd extra\n")
 
     def test_interior_blank_line_raises(self):
         text = (
-            "refs/heads/main abc123 refs/heads/main def456\n"
+            "refs/heads/main aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa refs/heads/main dddddddddddddddddddddddddddddddddddddddd\n"
             "\n"
-            "refs/heads/feature/x 111 refs/heads/feature/x 222\n"
+            "refs/heads/feature/x 1111111111111111111111111111111111111111 refs/heads/feature/x 2222222222222222222222222222222222222222\n"
         )
         with self.assertRaises(PushInputError):
             parse_push_records(text)
 
     def test_single_trailing_newline_does_not_add_phantom_entry(self):
-        text = "refs/heads/main abc123 refs/heads/main def456\n"
+        text = "refs/heads/main aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa refs/heads/main dddddddddddddddddddddddddddddddddddddddd\n"
         self.assertEqual(len(parse_push_records(text)), 1)
 
 

@@ -69,7 +69,7 @@ You switch tools; the framework follows.
 **OpenCode as primary — why:**
 
 OpenCode is the only tool that natively supports per-agent model overrides
-(so `architect` uses GPT-6 Astra while `gatekeeper` uses Haiku), global skill discovery,
+(so `architect` uses GPT-6 Astra while `backend` uses Sonnet), global skill discovery,
 slash commands (`/task`, `/review`), and lifecycle hooks. Claude Code supports
 most of these too. VS Code Copilot and IntelliJ support instructions only —
 no per-agent models, no slash commands, no hooks. For the full framework
@@ -280,26 +280,11 @@ Requires ChatGPT Plus/Pro or an OpenAI API key.
 
 ## Versioning and branches
 
-The framework uses two branches:
-
-- `main` — stable, tested across at least one real project
-- `develop` — active work, may be unstable
-
-Changes are documented in `CHANGELOG.md`.
-
-To follow stable releases only:
-
-```bash
-git checkout main
-git pull
-```
-
-To get the latest changes (may be unstable):
-
-```bash
-git checkout develop
-git pull
-```
+`main` is the only long-lived branch. Changes are made on short-lived branches
+(`feat/`, `fix/`, `chore/`, `refactor/`, `docs/`, `hotfix/`, `release/`) and merged to
+`main` through a pull request (merge commit). `CHANGELOG.md` lists what changed; the
+version is `FRAMEWORK_VERSION` in `setup.py`. To update an install, see
+[Keep up to date](#keep-up-to-date).
 
 ## Keep up to date
 
@@ -378,7 +363,7 @@ cat .ai-framework.json    # should exist after first-run analysis, with real lin
 Then try pushing a commit that deliberately fails lint (or temporarily set `"test": "exit 1"` in `.ai-framework.json`) and run `git push`.
 
 ✅ Pass: the push is blocked with `❌ build-verify failed — push blocked.`, independent of whether any agent is even running.
-❌ Fail: the push succeeds — `.git/hooks/pre-push` is stale. Run `git init` in the project (safe, just refreshes hooks) or re-run `python setup.py` from the ai-framework folder first.
+❌ Fail: the push succeeds — `.git/hooks/pre-push` is stale. Delete `.git/hooks/pre-push` in the project, then run `git init` there (it adds missing hooks but never overwrites an existing one).
 
 ---
 
@@ -459,9 +444,9 @@ Make sure your own working tree is clean first so nothing of yours leaks into th
 AGENTS.md                   ← behavior rules (14 rules, XML-tagged) — every tool reads this
 opencode.json               ← OpenCode global config (model: sonnet-5, permissions)
 
-agents/                     ← 15 agent definitions (each has model: field for cost tiering)
-skills/                     ← 42 skill folders (most have a ## Quick reference section)
-commands/                   ← slash commands (/task, /review, /first-run, /handoff)
+agents/                     ← 15 agent definitions (models are set in `execution/profiles/default.json`)
+skills/                     ← 45 skill folders (most have a ## Quick reference section)
+commands/                   ← slash commands (/task, /quick, /review, /first-run, /handoff)
 hooks/                      ← git hooks (pre-commit, commit-msg, pre-push, build-verify.sh, install-hooks.sh — wired via git init.templateDir, fire on git events)
 scripts/                    ← graphify-smart-viz.sh (node-count-aware graph visualization)
 
@@ -484,14 +469,9 @@ workflow-guide.md           ← day-to-day developer guide
 
 **Agent model assignments:**
 
-| Tier | Model | Agents |
-|---|---|---|
-| FRONTIER / AGENTIC | `github-copilot/gpt-6-astra` | architect, refactor-planner |
-| FRONTIER / VALIDATION | `github-copilot/claude-opus-5.5` | plan-reviewer |
-| STRONG | `github-copilot/claude-sonnet-5` | orchestrator, product-manager, backend, frontend, ui, db, api, frontend-error-fixer |
-| FRONTIER / VALIDATION | `github-copilot/gpt-6-sol` | code-reviewer |
-| STRONG / VALIDATION | `github-copilot/gpt-5.6-sol` | qa |
-| EFFICIENT | `github-copilot/claude-haiku-4.5` | gatekeeper, web-research-specialist |
+Models are set per agent in `execution/profiles/default.json`, the only routing source.
+To change one, edit the profile, run `python tools/generate_routing.py`, then
+`python setup.py --verify`.
 
 > **Validation rule:** model family is used for independence checks. The
 > implementation agents use Claude, while `code-reviewer` and `qa` use GPT;
@@ -610,4 +590,4 @@ or by telling the orchestrator directly:
 | Token Optimizer not installing                                   | See "Token usage reduction" section above                                                                                                                                                                                                                                                                    |
 | Graphify not installing                                          | Install manually: `uv tool install graphifyy` (or `pipx install graphifyy`), then re-run `python setup.py`                                                                                                                                                                                                   |
 | `graph.html` too large / slow to open                            | Use `scripts/graphify-smart-viz.sh` instead of raw `graphify` — it skips HTML generation past ~5000 nodes automatically                                                                                                                                                                                      |
-| Git hooks not firing                                             | Run `git init` in your existing repo to apply the template                                                                                                                                                                                                                                                   |
+| Git hooks not firing                                             | Delete the old hook (`.git/hooks/pre-push`), then run `git init` in the repo: it adds missing hooks but never overwrites an existing one                                                                                                                                                                                                                                                   |

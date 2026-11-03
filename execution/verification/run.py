@@ -46,7 +46,7 @@ def _read_config(repo):
         return {}, None
     try:
         data = json.loads(config_path.read_text(encoding="utf-8-sig"))
-    except ValueError as error:
+    except (OSError, ValueError) as error:
         return {}, {
             "check": "config",
             "reason": f"{CONFIG_NAME} cannot be read: {error}",
@@ -73,6 +73,11 @@ def _records_by_branch(stdin_text, push_input):
     return records_by_branch
 
 
+def _first_concrete(branches):
+    """The first protected branch that is a plain name, not a pattern: the base a new branch is compared with."""
+    return next((name for name in branches if not any(char in name for char in "*?[")), None)
+
+
 def _read_per_ref_checks(ctx):
     """Read dependency_change and quick_lane data for every pushed branch.
 
@@ -83,7 +88,7 @@ def _read_per_ref_checks(ctx):
     """
     per_ref_changed_paths, per_ref_commit_messages, per_ref_measurements = {}, {}, {}
     violations = []
-    protected_branch_for_new = ctx.protected_branches[0] if ctx.protected_branches else None
+    protected_branch_for_new = _first_concrete(ctx.protected_branches)
 
     for branch in ctx.pushed_branches:
         record = ctx.records_by_branch[branch]
@@ -204,6 +209,16 @@ def main(argv, stdin_text, env, run_git):
     return _report(violations)
 
 
+def main_or_block(argv, stdin_text, env, run_git):
+    """main(), but an unexpected error is a readable block and never a bare traceback (fail closed, DEC-015)."""
+    try:
+        return main(argv, stdin_text, env, run_git)
+    except Exception as error:
+        print(f"BLOCKED gate: internal error: {type(error).__name__}: {error}")
+        print("  Fix the cause above, or bypass the gate once with: git push --no-verify")
+        return 1
+
+
 def _read_quick_lane_measurements(
     quick_lane, dependency_change, old_sha, new_sha, protected_branch, dc_run_git, ql_run_git
 ):
@@ -260,4 +275,6 @@ if __name__ == "__main__":
 
     from execution.verification.git_runner import run_git as _real_run_git
 
-    sys.exit(main(sys.argv, sys.stdin.read(), os.environ, _real_run_git))
+    sys.stdin.reconfigure(encoding="utf-8", errors="replace")
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.exit(main_or_block(sys.argv, sys.stdin.read(), os.environ, _real_run_git))
