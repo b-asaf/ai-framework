@@ -9,7 +9,7 @@ description: Test writing conventions, what to test, and coverage expectations. 
 - **Never test:** framework internals, trivial getters/setters, auto-generated code
 - **FE:** Testing Library (query by role/label/text), `userEvent` not `fireEvent`, mock API calls
 - **BE:** one test class per class, mirror package under `src/test/java/`, given/when/then, mock all dependencies
-- **Coverage:** no regression, target 80%+ on service/utility classes, report delta before→after
+- **Coverage:** the changed-line minimum from `static-code-analysis` (set per repository in `.ai-framework.json`), target 80%+ on service/utility classes, report delta before→after
 # Testing Strategy
 
 ## What to test — always
@@ -87,7 +87,7 @@ void shouldReturnUserWhenFound() {
 ---
 
 ## Coverage expectations
-- **Minimum:** no coverage regression — new code must not lower overall coverage.
+- **Minimum:** the changed-line minimum in `static-code-analysis` (default 90%; `coverage.minChangedLines` in `.ai-framework.json` sets it per repository, `0` means no minimum).
 - **Target:** 80%+ line coverage on service and utility classes.
 - **Not required:** 100% coverage on DTOs, config classes, or generated code.
 

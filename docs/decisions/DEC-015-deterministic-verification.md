@@ -73,7 +73,7 @@ Every checklist item of `agents/gatekeeper.md`, labeled. "Decided by" names what
 | 18 | Xray warnings are present in the report | deterministic, informational (never blocks) | no code | candidate to drop |
 | 19 | `code-reviewer` last verdict was APPROVE | deterministic once the report is a stored artifact | no code: the verdict exists only in the session | keep until the runner stores it |
 | 20 | `qa` last run reported zero failures | deterministic | `build-verify` test at push, only where configured | trim with row 15 |
-| 21 | Coverage did not decrease | deterministic | no code (needs a coverage command and a stored baseline) | keep, open |
+| 21 | Coverage minimum met (was: did not decrease from a baseline; changed 2026-11-04 to a per-repository minimum, `coverage.minChangedLines`) | deterministic | `code-reviewer` Stage 2 reads the setting and the gate validates it at push; no code computes the coverage yet | keep, open |
 | 22 | No dependency change without documented approval | deterministic (approval is made visible, not proven: point 7) | `dependency_change` at push | trim |
 | 23 | `docs/` updated when a flow, the architecture, an API or an integration changed | judgment (whether the trigger applies) | gatekeeper | keep |
 | 24 | Memory: check for new patterns, conventions or facts | judgment | gatekeeper | keep |

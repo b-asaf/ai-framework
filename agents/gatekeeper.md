@@ -86,7 +86,7 @@ If the summary has no lane line, or says `Lane: regular`, apply every item as wr
 ### Tests
 
 - [ ] `@qa` last run reported zero failures
-- [ ] Coverage did not decrease from the baseline
+- [ ] `@code-reviewer`'s Stage 2 coverage precheck passed, or reported UNAVAILABLE (no coverage setup, or `coverage.minChangedLines` is 0)
 
 ### 3rd party
 
