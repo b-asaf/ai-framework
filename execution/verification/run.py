@@ -36,6 +36,7 @@ _HINTS = {
         "split the change or use the regular lane instead."
     ),
     "config": f"Fix {CONFIG_NAME} so it parses as a JSON object, or remove it.",
+    "coverage": "Set coverage.minChangedLines in .ai-framework.json to a whole number from 0 to 100, or remove it.",
 }
 
 
@@ -61,6 +62,15 @@ def _read_config(repo):
 
 def _fail_closed(check, reason):
     return {"check": check, "reason": reason}
+
+
+def _coverage_violation(config, coverage_config):
+    """A coverage minimum that is present but invalid is a violation, never a silent default (DEC-015 point 3)."""
+    try:
+        coverage_config.read_minimum(config)
+    except coverage_config.CoverageConfigError as error:
+        return [_fail_closed("coverage", str(error))]
+    return []
 
 
 def _records_by_branch(stdin_text, push_input):
@@ -136,7 +146,7 @@ class _Context:
 
 def main(argv, stdin_text, env, run_git):
     from execution.verification import push_input
-    from execution.verification.checks import branch_protection, dependency_change, quick_lane
+    from execution.verification.checks import branch_protection, coverage_config, dependency_change, quick_lane
     from execution.verification.gates import pre_push
 
     repo = argv[1] if len(argv) > 1 else "."
@@ -149,6 +159,7 @@ def main(argv, stdin_text, env, run_git):
 
     config, config_violation = _read_config(repo)
     violations = [config_violation] if config_violation else []
+    violations.extend(_coverage_violation(config, coverage_config))
 
     def bp_run_git(args):
         return run_git(args, cwd=repo, error=branch_protection.BranchProtectionError)

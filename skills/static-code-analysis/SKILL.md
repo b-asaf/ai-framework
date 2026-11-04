@@ -7,7 +7,7 @@ description: Run a static code analysis gate using lizard (cyclomatic complexity
 
 - **Run:** `python "$HOME/.config/opencode/scripts/static-analysis.py" <changed paths>` (lizard + jscpd, nothing written into the repo)
 - **PARTIAL** means duplication was not analyzed (inputs below the minimum block size): report it as not analyzed, never as a pass
-- **Thresholds:** CCN ≤ 10 per function, duplication ≤ 10%, changed-line coverage ≥ 90%
+- **Thresholds:** CCN ≤ 10 per function, duplication ≤ 10%, changed-line coverage ≥ 90% by default (`coverage.minChangedLines` in `.ai-framework.json` sets it per repository; `0` means no minimum)
 - **Scope:** enforce only on changed lines — legacy violations are context, not blockers
 - **Missing tool:** stop and report install command (`pip install lizard` / `npm install -g jscpd`)
 - **For code-reviewer:** run as precheck before reading any code — reject immediately if fails
@@ -25,7 +25,7 @@ Run a lightweight, objective quality gate on changed files before human review b
 |---|---|
 | Cyclomatic complexity per function | max `10` |
 | Duplication in changed lines | max `10%` |
-| Changed-line test coverage | min `90%` |
+| Changed-line test coverage | min `90%` by default; the repository's `.ai-framework.json` may set `coverage.minChangedLines` (a whole number from 0 to 100, where `0` means no minimum) |
 
 ---
 
@@ -79,7 +79,7 @@ Run whole-file tools, but enforce thresholds only for findings that intersect th
 
 - **Complexity fails** only when an over-threshold function was introduced or modified by the current diff.
 - **Duplication fails** only when duplicated blocks intersect changed lines and the duplication was introduced by the current change.
-- **Coverage fails** only when changed-line coverage is at or below the configured minimum.
+- **Coverage fails** only when changed-line coverage is below the configured minimum (see the table above; equal to the minimum passes).
 - Existing legacy violations outside changed lines → **record as context**, not blockers. Do not expand task scope.
 
 ---
@@ -109,9 +109,9 @@ REVIEW — REJECTED
 [STATIC ANALYSIS] Static analysis failed or could not run — review stopped before reading code
 ```
 
-**Coverage precheck:** After static analysis passes, check changed-line coverage if the repo has coverage infrastructure wired. If coverage is below the threshold defined in this skill, reject immediately.
+**Coverage precheck:** After static analysis passes, check changed-line coverage if the repo has coverage infrastructure wired. If coverage is below the minimum from this skill's threshold table, reject immediately. A minimum of `0` turns the precheck off: skip it and report coverage as UNAVAILABLE (no minimum configured).
 
 ```
 REVIEW — REJECTED
-[COVERAGE] Changed-line coverage below 90% — review stopped before reading code
+[COVERAGE] Changed-line coverage below the minimum (<N>%) — review stopped before reading code
 ```

@@ -101,10 +101,10 @@ A Xray blocker (CVSS ≥ 8) halts the pipeline — do not proceed to Stage 2 unt
 
 ### Stage 2 — Coverage precheck
 
-Check changed-line coverage if coverage infrastructure exists in the project. If below 90%:
+Check changed-line coverage if coverage infrastructure exists in the project. The minimum is in the `static-code-analysis` thresholds table (default 90%; `coverage.minChangedLines` in the project's `.ai-framework.json` overrides it, and `0` means no minimum: skip this stage and report coverage as UNAVAILABLE). If below the minimum:
 ```
 REVIEW — REJECTED
-[COVERAGE] Changed-line coverage below 90% — review stopped before reading code
+[COVERAGE] Changed-line coverage below the minimum (<N>%) — review stopped before reading code
 ```
 
 ### Stage 3 — CRAP score gate
