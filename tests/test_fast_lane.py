@@ -34,7 +34,7 @@ class FastLane(unittest.TestCase):
     def test_the_gatekeeper_knows_the_lane(self):
         text = self.read("agents/gatekeeper.md")
         self.assertIn("Lane: quick", text)
-        self.assertIn("quick-lane-check", text)
+        self.assertNotIn("quick-lane-check", text)
 
     def test_agents_md_names_the_lane(self):
         self.assertIn("/quick", self.read("AGENTS.md"))

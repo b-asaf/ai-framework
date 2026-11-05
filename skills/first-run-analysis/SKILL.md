@@ -83,7 +83,7 @@ Review before starting feature work. No changes made automatically.
 - **`_opencode.json`** — replace `[XXX]`, apply topology changes (confirm with developer first)
 - **`workflow-guide.md`** — append `## Project-specific notes` only if genuinely needed
 - **`Manual.md`** — replace `[XXX]`, update workspace layout if microservices detected
-- **`.ai-framework.json`** — write to the root of **each individual repo** (not the shared framework install): `{"lint": "<cmd>", "format": "<cmd or empty string>", "test": "<cmd>"}`, mirroring the Lint/Format/Test command fields you just wrote into that repo's `stack.md`. This is what the `pre-push` git hook reads to run `build-verify` structurally — it must live inside the project's own repo, not the shared skills location, since the hook has no other way to find it. Commit it.
+- **`.ai-framework.json`** — write to the root of **each individual repo** (not the shared framework install): `{"lint": "<cmd>", "format": "<cmd or empty string>", "test": "<cmd>"}` (optional: `coverage.minChangedLines`, a whole number from 0 to 100, default 90, 0 means no minimum, is the changed-line coverage minimum; write it only if the developer names a number), mirroring the Lint/Format/Test command fields you just wrote into that repo's `stack.md`. This is what the `pre-push` git hook reads to run `build-verify` structurally — it must live inside the project's own repo, not the shared skills location, since the hook has no other way to find it. Commit it.
 - **`graphify-out/`** — if the `graphify` skill is available and hasn't been run in this
   repo yet:
   1. Build the initial graph: run `graphify_smart_viz.py .` from the ai-framework repo
