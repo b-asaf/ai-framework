@@ -79,6 +79,7 @@ open the PR/MR automatically. Do not stop for approval first.
    host), the push has still happened — relay its `REASON:` and `URL:` to the
    developer (see `pr-provider`'s "Interpreting the result"). Never ask the
    developer to paste a token into chat.
+   If `REASON:` starts with `Blocked by the pre-push hook`, a code check blocked the push: treat it as a failed gate, fix the cause it names and run the script again. Never bypass the hook (see `pr-provider`).
 5. Once the PR/MR exists (or once you've reported why it doesn't), notify
    the developer — this is a notification, not a question, and does not
    wait for a reply:
