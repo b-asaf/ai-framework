@@ -90,6 +90,16 @@ _NOT_FOR_THE_AGENT = ("--no-verify", "SKIP_", "reviewed exception", "see the lin
 _MAX_HOOK_LINES = 60
 
 
+def _is_hook_block(lines):
+    return any(marker in line for line in lines for marker in _HOOK_BLOCK_MARKERS)
+
+
+def _for_the_agent(line):
+    if line.startswith(("error: failed to push", "hint:")):
+        return False
+    return not any(skip in line for skip in _NOT_FOR_THE_AGENT)
+
+
 def hook_block_reason(text):
     """Return the pre-push hook's own message when the hook blocked the push, else "".
 
@@ -98,13 +108,9 @@ def hook_block_reason(text):
     a bypass, so those lines are dropped and the rest is kept (capped) as one line.
     """
     lines = [line.strip() for line in text.splitlines() if line.strip()]
-    if not any(marker in line for line in lines for marker in _HOOK_BLOCK_MARKERS):
+    if not _is_hook_block(lines):
         return ""
-    kept = [
-        line for line in lines
-        if not line.startswith(("error: failed to push", "hint:"))
-        and not any(skip in line for skip in _NOT_FOR_THE_AGENT)
-    ]
+    kept = [line for line in lines if _for_the_agent(line)]
     hidden = max(0, len(kept) - _MAX_HOOK_LINES)
     detail = " | ".join(kept[:_MAX_HOOK_LINES]) or "the hook printed no details"
     more = f" | (+{hidden} more lines)" if hidden else ""
