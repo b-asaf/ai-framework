@@ -12,6 +12,7 @@ description: Pushes the current branch and opens a draft PR/MR on GitHub, GitLab
   (macOS/Linux: `python3 ~/.config/opencode/scripts/open-draft-pr.py ...`)
 - `--branch`, `--base`, `--title`, `--body` are all optional; when omitted the script derives them from git (current branch, `origin/HEAD`, last commit subject/body). Use `--body-file <path>` for multi-line bodies.
 - The script does the push itself. Do **not** run `git push` separately.
+- The push runs the repository's pre-push hook, including its tests. The script waits 900 s by default (`--push-timeout <seconds>` or `git config ai-framework.pushTimeout <seconds>` change it); on a timeout, stop and give the developer the `REASON:` text.
 - Read the script's output, not your own assumptions: the result is the `STATUS:` line and the exit code.
 
 ## What the script does (so you can explain it, not redo it)
