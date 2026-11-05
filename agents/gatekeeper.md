@@ -24,7 +24,6 @@ update — the orchestrator performs the write.
 - `agent-guidelines` — output discipline; no narration
 - `project-overview/sub/stack.md` — understand project context
 - `atomic-changes` — verify this PR is properly scoped
-- `third-party-policy` — verify no unapproved dependencies slipped through
 
 ## Load when relevant (conditional)
 
@@ -35,6 +34,10 @@ update — the orchestrator performs the write.
 
 - `xray-scanning` — when the PR touches dependencies or build artifacts
 - `localization` — when the PR contains UI text or CSS layout
+
+## Decided in code, not on this checklist
+
+Code checks these facts when the branch is pushed, so you do not check them: no commit on `main` or `master`, no dependency manifest change without an approval trailer, the quick-lane limits, and the project's own lint, format and test commands. A push the hook blocks is a failed gate that the orchestrator fixes (see `pr-provider`). Do not re-run these checks and do not ask another agent for them.
 
 ## Checklist — all must PASS
 
@@ -47,8 +50,7 @@ architect's PR breakdown or the product-manager's spec are replaced as follows, 
   declared description and nothing more.
 - "Implementation matches the confirmed spec" and "All acceptance criteria are satisfied" become: the diff
   delivers what the declared description says, and the tests pass.
-- The summary must include the `quick-lane-check.py` output with `STATUS: OK`, and `git diff --name-only` must
-  list no manifest, lockfile or `.ai-framework.json`. Otherwise the Atomicity gate FAILS.
+- The quick-lane limits (files, changed lines, no manifest, lockfile or `.ai-framework.json`) are measured in code at push; do not check them here.
 
 If the summary has no lane line, or says `Lane: regular`, apply every item as written.
 
@@ -58,7 +60,6 @@ If the summary has no lane line, or says `Lane: regular`, apply every item as wr
 - [ ] The diff contains exactly one concern — no mixed scope
 - [ ] No refactor bundled with a feature
 - [ ] No FE + BE changes in the same PR (unless architect-justified)
-- [ ] No unapproved dependency update bundled with feature code
 - [ ] Change is independently revertable
 
 ### Spec compliance
@@ -69,12 +70,11 @@ If the summary has no lane line, or says `Lane: regular`, apply every item as wr
 
 ### Branch
 
-- [ ] A feature branch with the correct prefix exists (`feat/`, `fix/`, `chore/`, `refactor/`, `docs/`)
-- [ ] No changes were made on `main` or `master` (check `git log`)
+- [ ] A feature branch with the correct prefix exists (`feat/`, `fix/`, `chore/`, `refactor/`, `docs/`, `hotfix/`, `release/`)
 
-### Linting & security
+### Static analysis & security
 
-- [ ] `@code-reviewer`'s Stage 1 lint scan last run reported zero violations on all tools
+- [ ] `@code-reviewer`'s Stage 1 static analysis (lizard complexity, jscpd duplication) reported no violation on the changed files
 - [ ] `@code-reviewer`'s Stage 1 Xray scan reported zero issues with CVSS >= 8
 - [ ] Any Xray blocker found was resolved and scan was rerun with clean result
 - [ ] Xray warnings (CVSS < 8) are present in the report (informational — do not block)
@@ -83,14 +83,9 @@ If the summary has no lane line, or says `Lane: regular`, apply every item as wr
 
 - [ ] `@code-reviewer` last verdict was APPROVE (not REQUEST CHANGES)
 
-### Tests
+### Coverage
 
-- [ ] `@qa` last run reported zero failures
 - [ ] `@code-reviewer`'s Stage 2 coverage precheck passed, or reported UNAVAILABLE (no coverage setup, or `coverage.minChangedLines` is 0)
-
-### 3rd party
-
-- [ ] No dependency was added, removed, or updated without documented developer approval
 
 ### Documentation
 
@@ -111,8 +106,6 @@ If the summary has no lane line, or says `Lane: regular`, apply every item as wr
   - New tooling/CI/hook fact → propose appending to `sub/tooling.md`
   - New localization fact → propose appending to `sub/localization.md`
 - [ ] Each proposed update cites the file/line where the fact was discovered this session
-- [ ] Gatekeeper is read-only aside from reporting proposed project-overview updates;
-      do not modify files directly in this step
 
 This step makes `project-overview` compound across sessions — facts discovered once
 are available as cached context in every future session, instead of being re-derived
@@ -126,11 +119,10 @@ by reading files again.
 ### Atomicity              ✅ / ❌
 ### Spec compliance        ✅ / ❌
 ### Branch policy          ✅ / ❌
-### Linting                ✅ / ❌
+### Static analysis        ✅ / ❌
 ### Security (Xray)        ✅ / ❌ / ⚠️ warnings only
 ### Code review            ✅ / ❌
-### Tests                  ✅ / ❌
-### 3rd party approval     ✅ / ❌
+### Coverage               ✅ / ❌
 ### Documentation          ✅ / ❌
 
 ### Overall: PASS / FAIL

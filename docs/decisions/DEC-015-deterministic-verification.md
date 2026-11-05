@@ -65,9 +65,9 @@ Every checklist item of `agents/gatekeeper.md`, labeled. "Decided by" names what
 | 10 | Spec: implementation matches the confirmed spec | judgment | gatekeeper | keep |
 | 11 | Spec: all acceptance criteria satisfied | judgment | gatekeeper | keep |
 | 12 | Spec: nothing out of scope implemented | judgment | gatekeeper | keep |
-| 13 | Branch: a feature branch with the correct prefix | deterministic | `pre-commit` hook (it allows 7 prefixes; the gatekeeper lists 5, without `hotfix/` and `release/`) | trim |
+| 13 | Branch: a feature branch with the correct prefix | deterministic | no code: `pre-commit` blocks commits on `main`, `master` and `develop` only and checks no prefix | keep, with all 7 prefixes (`feat/ fix/ chore/ refactor/ docs/ hotfix/ release/`); open: a prefix check in `pre-commit` |
 | 14 | Branch: no changes on `main` or `master` | deterministic | `pre-commit` (no direct commits) and `branch_protection` at push | trim |
-| 15 | Lint scan reported zero violations | deterministic | `build-verify` lint at push, only where `.ai-framework.json` has the command | trim once `build-verify` blocks without config |
+| 15 | Lint scan reported zero violations | deterministic | `build-verify` lint and format at push, in every repository since #86; nothing runs lizard or jscpd at push | trim the lint and format part (done 2026-11-05); keep the lizard and jscpd part |
 | 16 | Xray scan: zero issues with CVSS 8 or higher | deterministic | no code (the scan is run by `code-reviewer`) | keep, no code yet |
 | 17 | Xray blocker resolved and the scan rerun clean | deterministic | no code | keep, no code yet |
 | 18 | Xray warnings are present in the report | deterministic, informational (never blocks) | no code | candidate to drop |
@@ -81,13 +81,15 @@ Every checklist item of `agents/gatekeeper.md`, labeled. "Decided by" names what
 | 26 | Memory: each proposal cites the file and line | judgment (format only) | gatekeeper | keep |
 | 27 | Memory: the gatekeeper does not modify files | deterministic | the agent's `edit: deny` and `write: deny` | drop from the checklist |
 
-Totals: 14 judgment, 13 deterministic. Of the 13, rows 3, 8, 13, 14, 22 and 27 are decided by code unconditionally, rows 15 and 20 only where `.ai-framework.json` configures the commands, and rows 16 to 19 and 21 by no code yet.
+Totals: 14 judgment, 13 deterministic. Of the 13, rows 3, 8, 14, 22 and 27 are decided by code unconditionally, rows 15 (its lint and format part) and 20 by `build-verify` at push (every repository, since #86 blocks a push without the configuration), and rows 13, 16 to 19 and 21 by no code yet.
+
+The 3A.4 trim was done on 2026-11-05: rows 3, 8, 14, 20, 22, 27 and the lint and format part of row 15 left the checklist. Row 13 stays, because no code checks the prefix. The replay of the baseline tasks is open.
 
 Notes for 3A.4:
 
 - The gatekeeper's bash is limited to `git status`, `git log` and `git diff`, so rows 15 to 21 only read what other agents reported. Point 4 (inspect the tree, not the report) is not met for them.
-- `build-verify` skips with a warning when `.ai-framework.json` is missing (F14), which point 3 forbids. Rows 15 and 20 can be trimmed only after that is changed.
-- Trimmed checks now fail at push, after the gatekeeper has reported. The orchestrator has to treat a blocked push as a failed gate.
+- `build-verify` used to skip with a warning when `.ai-framework.json` was missing (F14); PR #86 made it block, so rows 15 and 20 are trimmed in 3A.4.
+- Trimmed checks fail at push, after the gatekeeper has reported. A push the hook blocks is a failed gate: PR #88 passes the hook's own message to the orchestrator, which fixes the cause and pushes again (F71).
 - Rows 16 to 19 and 21 stay in the gatekeeper until code decides them.
 
 ## Reasoning
