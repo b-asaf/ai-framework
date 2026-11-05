@@ -25,7 +25,7 @@ def setting(value):
 
 class ReadMinimum(unittest.TestCase):
     def test_absent_setting_gives_the_default(self):
-        for config in (None, {}, {"coverage": {}}, setting(None)):
+        for config in (None, {}, {"coverage": {}}):
             with self.subTest(config=config):
                 self.assertEqual(coverage_config.read_minimum(config), 90)
 
@@ -35,10 +35,14 @@ class ReadMinimum(unittest.TestCase):
                 self.assertEqual(coverage_config.read_minimum(setting(value)), value)
 
     def test_invalid_values_raise(self):
-        for value in (-1, 101, "90", 90.5, True, False, [], {}):
+        for value in (None, -1, 101, "90", 90.5, True, False, [], {}):
             with self.subTest(value=value):
                 with self.assertRaises(coverage_config.CoverageConfigError):
                     coverage_config.read_minimum(setting(value))
+
+    def test_null_is_not_the_same_as_absent(self):
+        with self.assertRaisesRegex(coverage_config.CoverageConfigError, "remove the key"):
+            coverage_config.read_minimum(setting(None))
 
     def test_wrong_shapes_raise(self):
         for config in ({"coverage": 5}, {"coverage": []}, [], "text"):

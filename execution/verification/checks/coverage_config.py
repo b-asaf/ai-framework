@@ -23,11 +23,12 @@ def read_minimum(config=None):
     coverage = config.get("coverage", {})
     if not isinstance(coverage, dict):
         raise CoverageConfigError("coverage in .ai-framework.json must be an object")
-    value = coverage.get("minChangedLines")
-    if value is None:
+    if "minChangedLines" not in coverage:
         return DEFAULT_MIN_CHANGED_LINES
+    value = coverage["minChangedLines"]
     if not isinstance(value, int) or isinstance(value, bool) or not 0 <= value <= 100:
         raise CoverageConfigError(
-            "coverage.minChangedLines in .ai-framework.json must be a whole number from 0 to 100"
+            "coverage.minChangedLines in .ai-framework.json must be a whole number from 0 to 100 "
+            "(remove the key to use the default)"
         )
     return value
