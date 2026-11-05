@@ -47,7 +47,7 @@ Output contract (stdout, one KEY: value per line; token is never printed):
 
 Exit codes:
   0  draft PR/MR opened (or one already exists)
-  1  push failed
+  1  push failed (when the pre-push hook blocked it, REASON carries the hook's message)
   2  usage error / refused (e.g. on the base branch)
   4  pushed, but the provider API call failed
   5  a PR was opened but the server did NOT make it a draft (convert or
@@ -83,6 +83,39 @@ def git(*args, timeout=None):
         return 124, "", (f"git {args[0]} timed out after {timeout}s — it was probably "
                          "waiting for credentials or an SSH prompt")
     return r.returncode, r.stdout.strip(), r.stderr.strip()
+
+
+_HOOK_BLOCK_MARKERS = ("BLOCKED ", "push blocked", "atomic-changes limit")
+_NOT_FOR_THE_AGENT = ("--no-verify", "SKIP_", "reviewed exception", "see the lines above")
+_MAX_HOOK_LINES = 60
+
+
+def _is_hook_block(lines):
+    return any(marker in line for line in lines for marker in _HOOK_BLOCK_MARKERS)
+
+
+def _for_the_agent(line):
+    if line.startswith(("error: failed to push", "hint:")):
+        return False
+    return not any(skip in line for skip in _NOT_FOR_THE_AGENT)
+
+
+def hook_block_reason(text):
+    """Return the pre-push hook's own message when the hook blocked the push, else "".
+
+    Git prints the hook's lines first and then its own "error: failed to push" and "hint:" lines.
+    The hook also prints bypass hints. The agent must read the cause and must never be offered
+    a bypass, so those lines are dropped and the rest is kept (capped) as one line.
+    """
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    if not _is_hook_block(lines):
+        return ""
+    kept = [line for line in lines if _for_the_agent(line)]
+    hidden = max(0, len(kept) - _MAX_HOOK_LINES)
+    detail = " | ".join(kept[:_MAX_HOOK_LINES]) or "the hook printed no details"
+    more = f" | (+{hidden} more lines)" if hidden else ""
+    return (f"Blocked by the pre-push hook: {detail}{more} | "
+            "Fix the cause and run this script again. Do not bypass the hook.")
 
 
 def redact(text, secrets):
@@ -303,6 +336,10 @@ def main(argv=None):
             push_cmd += ["-o", f"merge_request.description={body}"]
     rc, out, err = git(*push_cmd, timeout=180)
     if rc != 0:
+        blocked = hook_block_reason("\n".join(part for part in (out, err) if part))
+        if blocked:
+            emit("PUSH_FAILED", provider, reason=blocked)
+            return EXIT_PUSH_FAILED
         lines = [l.strip() for l in (err or out).splitlines() if l.strip()]
         reason = " ".join(lines[-3:]) if lines else "git push failed"
         emit("PUSH_FAILED", provider, reason=f"{reason} (run `git push -u {args.remote} {branch}` "

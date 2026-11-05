@@ -268,6 +268,7 @@ Once gatekeeper reports all PASS:
    load the `pr-provider` skill and run its script (`open-draft-pr.py`), which
    detects the provider, pushes, and opens the draft PR/MR. Never push or call
    a provider API yourself. Report from the script's `STATUS:` line.
+   If `STATUS: PUSH_FAILED` and `REASON:` starts with `Blocked by the pre-push hook`, the hook rejected the push: treat it as a failed gate. Read the `BLOCKED` or `ERROR` lines in `REASON:`, route the fix to the relevant agent (a manifest change needs the developer's approval and the `Dependency-Approved:` trailer; a failing test goes back to the implementation agent), recommit, and run the script again. Never bypass the hook (`--no-verify`, `SKIP_*`), never edit hooks or `.ai-framework.json` to get past it, never push by hand. If the cause is not yours to fix, stop and tell the developer with the `REASON:` text.
 3. Notify the developer — this does not wait for a reply:
    > "All checks passed. Pushed and opened a draft PR/MR: <URL>"
    > "Commit: `<prefix>: <concise description of what changed>`"

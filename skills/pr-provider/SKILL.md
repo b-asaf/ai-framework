@@ -30,7 +30,7 @@ description: Pushes the current branch and opens a draft PR/MR on GitHub, GitLab
 | 10 | `PUSHED_MANUAL_PR_NEEDED` | Branch is pushed but no PR/MR was opened. Relay `REASON:` verbatim and give the `URL:` (a ready-made "create PR" link). Typical cause: token/PAT env var not set, or an unrecognized host. |
 | 5 | `PR_OPENED_NOT_DRAFT` | A PR was created but the server did **not** make it a draft (some servers ignore the flag). Tell the developer plainly, give the `URL:`, and ask them to convert it to a draft or abandon it. Do not open another one. |
 | 4 | `API_FAILED` | Branch is pushed; the provider rejected the request. Relay `REASON:` and give the manual `URL:`. Do not retry blindly. |
-| 1 | `PUSH_FAILED` | Nothing was pushed. Relay `REASON:` (e.g. no `origin` remote). |
+| 1 | `PUSH_FAILED` | Nothing was pushed. Relay `REASON:` (e.g. no `origin` remote). When `REASON:` starts with `Blocked by the pre-push hook`, a code check rejected the push: see the rule below. |
 | 2 | `USAGE_ERROR` | The script refused to run (e.g. on `main`). Fix the cause; do not work around it. |
 
 ## Rules
@@ -39,4 +39,5 @@ description: Pushes the current branch and opens a draft PR/MR on GitHub, GitLab
 - Never echo, log, or include a token/PAT value in any message. The script never prints one.
 - Never mark the PR/MR ready-for-review or merge it — the script only ever opens drafts.
 - Never bypass the script with a hand-written `git push` / `curl` / provider CLI call to "get around" a non-zero exit. If the script cannot do it, report why and stop.
+- A push the pre-push hook blocked (`REASON:` starts with `Blocked by the pre-push hook`) is a failed gate, not a script problem. Read the `BLOCKED` or `ERROR` lines in `REASON:` and fix the cause they name: a manifest change needs the developer's `Dependency-Approved:` trailer, a failing test goes back to the implementation agent. Commit, then run the script again. Never bypass the hook with `--no-verify` or a `SKIP_*` variable, and never edit the hooks or `.ai-framework.json` to get past it. If the cause is not yours to fix, stop and give the developer the `REASON:` text.
 - If the script itself is missing or crashes (not a `STATUS:` result), stop and tell the developer — `python setup.py --verify` re-links the framework's `scripts/` directory.
