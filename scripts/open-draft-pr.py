@@ -23,6 +23,7 @@ What it does, in order:
 Usage:
   python open-draft-pr.py [--branch B] [--base BASE] [--title T]
                           [--body B | --body-file F] [--remote origin]
+                          [--push-timeout SECONDS]
 
   Omitted values are derived deterministically:
     --branch  current branch
@@ -37,6 +38,10 @@ a host name that doesn't say so, set the provider once per repo:
 (GitHub Enterprise Server uses https://<host>/api/v3 automatically.)
 Azure DevOps Server REST API version: tried newest-first (7.1, 7.0, 6.0, 5.1);
 pin one with  git config ai-framework.adoApiVersion 6.0
+
+Push timeout: the pre-push hook runs the project's tests inside the push, so the script waits 900 seconds
+by default. Change it with --push-timeout <seconds> or, per repository:
+  git config ai-framework.pushTimeout 1800
 
 Output contract (stdout, one KEY: value per line; token is never printed):
   STATUS:   DRAFT_PR_OPENED | PR_ALREADY_EXISTS | PUSHED_MANUAL_PR_NEEDED |
@@ -116,6 +121,37 @@ def hook_block_reason(text):
     more = f" | (+{hidden} more lines)" if hidden else ""
     return (f"Blocked by the pre-push hook: {detail}{more} | "
             "Fix the cause and run this script again. Do not bypass the hook.")
+
+
+DEFAULT_PUSH_TIMEOUT = 900
+
+
+def resolve_push_timeout(cli_value, git_value):
+    """Seconds to wait for the push: --push-timeout, else git config ai-framework.pushTimeout, else the default.
+
+    The pre-push hook runs the project's tests inside the push, so the wait must cover a slow suite (F72).
+    """
+    raw = cli_value if cli_value is not None else git_value
+    if raw is None or raw == "":
+        return DEFAULT_PUSH_TIMEOUT
+    try:
+        seconds = int(raw)
+    except (TypeError, ValueError):
+        seconds = 0
+    if seconds < 1:
+        raise ValueError(f"the push timeout must be a whole number of seconds, 1 or more; got {raw!r} "
+                         "(--push-timeout or git config ai-framework.pushTimeout)")
+    return seconds
+
+
+def push_failure_reason(rc, out, err, timeout):
+    """The reason for a push failure that needs its own message, else "": a timeout or a pre-push hook block."""
+    if rc == 124:
+        return (f"git push timed out after {timeout}s. The pre-push hook runs the project's tests inside the push, "
+                "so a slow test suite needs a longer wait. Tell the developer to raise it once with "
+                "--push-timeout <seconds>, or for this repository with: git config ai-framework.pushTimeout <seconds>. "
+                "Git may also have been waiting for credentials or an SSH prompt.")
+    return hook_block_reason("\n".join(part for part in (out, err) if part))
 
 
 def redact(text, secrets):
@@ -290,7 +326,14 @@ def main(argv=None):
     ap.add_argument("--body")
     ap.add_argument("--body-file")
     ap.add_argument("--remote", default="origin")
+    ap.add_argument("--push-timeout", type=int, help="seconds to wait for git push (default 900)")
     args = ap.parse_args(argv)
+    try:
+        push_timeout = resolve_push_timeout(
+            args.push_timeout, git("config", "--get", "ai-framework.pushTimeout")[1])
+    except ValueError as error:
+        emit("USAGE_ERROR", reason=str(error))
+        return EXIT_USAGE
 
     # -- derive defaults deterministically
     branch = args.branch or git("branch", "--show-current")[1]
@@ -334,9 +377,9 @@ def main(argv=None):
                      "-o", f"merge_request.title={mr_title}", "-o", "merge_request.draft"]
         if body and "\n" not in body and "\r" not in body:
             push_cmd += ["-o", f"merge_request.description={body}"]
-    rc, out, err = git(*push_cmd, timeout=180)
+    rc, out, err = git(*push_cmd, timeout=push_timeout)
     if rc != 0:
-        blocked = hook_block_reason("\n".join(part for part in (out, err) if part))
+        blocked = push_failure_reason(rc, out, err, push_timeout)
         if blocked:
             emit("PUSH_FAILED", provider, reason=blocked)
             return EXIT_PUSH_FAILED

@@ -83,6 +83,36 @@ class HookBlockReason(unittest.TestCase):
         self.assertIn("(+41 more lines)", reason)
 
 
+class PushTimeout(unittest.TestCase):
+    def test_the_default_applies_when_nothing_is_set(self):
+        for git_value in ("", None):
+            with self.subTest(git_value=git_value):
+                self.assertEqual(open_draft_pr.resolve_push_timeout(None, git_value),
+                                 open_draft_pr.DEFAULT_PUSH_TIMEOUT)
+
+    def test_the_default_covers_a_slow_suite(self):
+        self.assertGreaterEqual(open_draft_pr.DEFAULT_PUSH_TIMEOUT, 900)
+
+    def test_the_command_line_beats_git_config(self):
+        self.assertEqual(open_draft_pr.resolve_push_timeout(30, "600"), 30)
+        self.assertEqual(open_draft_pr.resolve_push_timeout(None, "600"), 600)
+
+    def test_a_bad_value_is_refused(self):
+        for cli, git_value in ((0, ""), (-5, ""), (None, "abc"), (None, "1.5"), (None, "0")):
+            with self.subTest(cli=cli, git_value=git_value):
+                with self.assertRaises(ValueError):
+                    open_draft_pr.resolve_push_timeout(cli, git_value)
+
+    def test_a_timeout_says_what_to_change(self):
+        reason = open_draft_pr.push_failure_reason(124, "", "git push timed out after 5s", 5)
+        for part in ("timed out after 5s", "--push-timeout", "pushTimeout", "tests"):
+            with self.subTest(part=part):
+                self.assertIn(part, reason)
+
+    def test_an_ordinary_failure_is_not_a_timeout(self):
+        self.assertEqual(open_draft_pr.push_failure_reason(1, "", "fatal: no remote", 5), "")
+
+
 def _env():
     env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
     env["GIT_TERMINAL_PROMPT"] = "0"
@@ -127,9 +157,9 @@ class PushThroughTheScript(unittest.TestCase):
         hook.write_text("#!/bin/sh\n" + body, encoding="utf-8", newline="\n")
         hook.chmod(0o755)
 
-    def run_script(self):
+    def run_script(self, *extra):
         result = subprocess.run(
-            [sys.executable, "-B", str(SCRIPT)], cwd=self.work, env=_env(),
+            [sys.executable, "-B", str(SCRIPT), *extra], cwd=self.work, env=_env(),
             capture_output=True, text=True, encoding="utf-8", timeout=120,
         )
         fields = dict(line.split(": ", 1) for line in result.stdout.splitlines() if ": " in line)
@@ -163,6 +193,14 @@ class PushThroughTheScript(unittest.TestCase):
         self.assertEqual(fields.get("STATUS"), "PUSH_FAILED")
         self.assertIn("BLOCKED dependency_change", fields["REASON"])
         self.assertIn("Dependency-Approved trailer", fields["REASON"])
+
+    def test_a_slow_hook_ends_in_a_timeout_message(self):
+        self.install_hook("cat > /dev/null\nsleep 8\nexit 0\n")
+        result, fields = self.run_script("--push-timeout", "2")
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertEqual(fields.get("STATUS"), "PUSH_FAILED")
+        self.assertIn("timed out after 2s", fields["REASON"])
+        self.assertIn("pushTimeout", fields["REASON"])
 
     def test_another_push_failure_keeps_the_old_reason(self):
         git(self.work, "remote", "set-url", "origin", str(self.root / "does-not-exist.git"))
