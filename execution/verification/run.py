@@ -37,6 +37,7 @@ _HINTS = {
     ),
     "config": f"Fix {CONFIG_NAME} so it parses as a JSON object, or remove it.",
     "coverage": "Set coverage.minChangedLines in .ai-framework.json to a whole number from 0 to 100, or remove it.",
+    "diff_size": "Split the branch into smaller PRs. If the reason names diffBaseBranch or maxDiffLines, fix it in .ai-framework.json.",
 }
 
 
@@ -216,8 +217,46 @@ def main(argv, stdin_text, env, run_git):
             skip_verification=skip_verification,
         )
     )
+    violations.extend(_diff_size_violations(repo, config, stdin_text, env, run_git))
 
     return _report(violations)
+
+
+def _measure_branches(records, base, run_git, diff_size):
+    """(branch, lines, base) for every pushed branch, and a violation for each branch that cannot be measured."""
+    measurements, violations = [], []
+    for branch, record in records.items():
+        try:
+            lines = diff_size.measure(record.local_sha, base, run_git=run_git)
+        except diff_size.DiffSizeError as error:
+            violations.append(_fail_closed("diff_size", f"{branch}: {error}"))
+        else:
+            measurements.append((branch, lines, base))
+    return measurements, violations
+
+
+def _diff_size_violations(repo, config, stdin_text, env, run_git):
+    """The diff-size check (F68, DEC-020). A base or a branch that cannot be measured is a violation, not a skip."""
+    from execution.verification import push_input
+    from execution.verification.checks import diff_size
+
+    if str(env.get("SKIP_DIFF_SIZE_CHECK", "")) == "1":
+        print("SKIP_DIFF_SIZE_CHECK=1: skipping the diff-size check.")
+        return []
+
+    def ds_run_git(args):
+        return run_git(args, cwd=repo, error=diff_size.DiffSizeError)
+
+    try:
+        max_lines = diff_size.read_max_lines(config)
+        records = _records_by_branch(stdin_text, push_input)
+        if not records:
+            return []
+        base = diff_size.read_base(config, run_git=ds_run_git)
+    except (diff_size.DiffSizeError, push_input.PushInputError) as error:
+        return [_fail_closed("diff_size", str(error))]
+    measurements, violations = _measure_branches(records, base, ds_run_git, diff_size)
+    return violations + diff_size.find_violations(measurements, max_lines)
 
 
 def main_or_block(argv, stdin_text, env, run_git):

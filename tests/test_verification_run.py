@@ -65,6 +65,8 @@ class FakeRunGitUnit(unittest.TestCase):
         def fake_run_git(argv, cwd=None, *, error):
             if argv[:2] == ["symbolic-ref", "--short"]:
                 return "origin/main\n"
+            if argv[0] == "merge-base":
+                return "b" * 40 + "\n"
             if argv[0] == "diff":
                 return ""
             if argv[0] == "log":
@@ -80,6 +82,30 @@ class FakeRunGitUnit(unittest.TestCase):
             )
         self.assertEqual(code, 0)
         self.assertEqual(out.getvalue(), "")
+
+    def test_a_big_branch_is_blocked_with_a_fake_git(self):
+        stdin_text = "refs/heads/feature/x " + "a" * 40 + " refs/heads/feature/x " + "d" * 40 + "\n"
+        big = "diff --git a/x.js b/x.js\n--- a/x.js\n+++ b/x.js\n@@ -1,0 +1,2 @@\n+one\n+two\n"
+
+        def fake_run_git(argv, cwd=None, *, error):
+            if argv[0] == "symbolic-ref":
+                return "origin/main\n"
+            if argv[0] == "merge-base":
+                return "b" * 40 + "\n"
+            if argv[0] == "diff":
+                return big if "-U0" in argv else ""
+            if argv[0] == "log":
+                return ""
+            raise AssertionError(f"unexpected git call: {argv}")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / ".ai-framework.json").write_text('{"maxDiffLines": 1}', encoding="utf-8")
+            out = StringIO()
+            with mock.patch("sys.stdout", out):
+                code = run.main(["run.py", tmp], stdin_text, {}, fake_run_git)
+        self.assertEqual(code, 1)
+        self.assertIn("BLOCKED diff_size", out.getvalue())
+        self.assertIn("2 meaningful lines against origin/main", out.getvalue())
 
     def test_push_input_parse_failure_blocks_every_relevant_check(self):
         out = StringIO()
