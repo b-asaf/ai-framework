@@ -163,6 +163,7 @@ class PrePushHookTest(unittest.TestCase):
         self.commit("big.txt", "".join(f"line {i}\n" for i in range(10)))
         code, out = self.push("-u", "origin", "feature/x")
         self.assertNotEqual(code, 0, out)
+        self.assertIn("BLOCKED diff_size", out)
         self.assertIn("atomic-changes limit", out)
         self.assertNotIn("refs/heads/feature/x", self.remote_heads())
 
@@ -241,6 +242,15 @@ class PrePushHookTest(unittest.TestCase):
         self.assertNotEqual(code, 0, out)
         self.assertIn("build-verify.sh is missing", out)
         self.assertNotIn("refs/heads/feature/x", self.remote_heads())
+
+
+class HookText(unittest.TestCase):
+    def test_the_shell_hook_no_longer_measures_the_diff(self):
+        text = (ROOT / "hooks" / "pre-push").read_text(encoding="utf-8")
+        for gone in ("diffBaseBranch", "maxDiffLines", "MERGE_BASE", "diff-size check skipped"):
+            with self.subTest(gone=gone):
+                self.assertNotIn(gone, text)
+        self.assertIn("SKIP_DIFF_SIZE_CHECK", text)
 
 
 if __name__ == "__main__":

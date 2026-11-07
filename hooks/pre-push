@@ -3,9 +3,9 @@
 #
 #   1. Reads the push lines from stdin once.
 #   2. Runs the Python gate ($aiFramework.root/execution/verification/run.py):
-#      branch protection, dependency approval, quick-lane checks.
-#   3. Runs the shell diff-size check (atomic changes, DEC-007 / DEC-009).
-#   4. Runs the project's own build-verify (lint/format/test) from
+#      branch protection, dependency approval, quick-lane checks and the
+#      diff-size check (atomic changes, DEC-020).
+#   3. Runs the project's own build-verify (lint/format/test) from
 #      .ai-framework.json.
 #
 # "aiFramework.root" is a global git setting written by `python setup.py`. If it,
@@ -19,7 +19,7 @@
 #   git push --no-verify             (skips this whole hook)
 #   SKIP_VERIFICATION=1 git push     (Python gate: dependency and quick-lane
 #                                     checks only; branch protection stays on)
-#   SKIP_DIFF_SIZE_CHECK=1 git push  (diff-size check only)
+#   SKIP_DIFF_SIZE_CHECK=1 git push  (diff-size check only, in the Python gate)
 #   SKIP_BUILD_VERIFY=1 git push     (build-verify only)
 #   AI_FRAMEWORK_PYTHON=<path>       (use this interpreter for the gate)
 
@@ -118,112 +118,6 @@ if [ "$GATE_EXIT" -ne 0 ]; then
   echo "  Bypass once (reviewed exception only): git push --no-verify"
   echo ""
   exit 1
-fi
-
-# --- Diff-size backstop (atomic-changes) — DEC-007 / DEC-009 ---------------
-
-if [ "${SKIP_DIFF_SIZE_CHECK:-}" = "1" ]; then
-  echo "diff-size check skipped (SKIP_DIFF_SIZE_CHECK=1)"
-else
-  BASE_BRANCH=""
-  BASE_SOURCE=""
-
-  # 1. explicit config
-  if [ -f "$COMMANDS_FILE" ]; then
-    CONFIGURED_BASE=$(json_get diffBaseBranch "$COMMANDS_FILE")
-    if [ -n "$CONFIGURED_BASE" ]; then
-      if git rev-parse --verify --quiet "$CONFIGURED_BASE" >/dev/null 2>&1; then
-        BASE_BRANCH="$CONFIGURED_BASE"
-        BASE_SOURCE="config (diffBaseBranch)"
-      else
-        echo ""
-        echo "WARNING: diffBaseBranch \"$CONFIGURED_BASE\" in .ai-framework.json"
-        echo "  does not resolve to a real ref. Falling back to reflog evidence."
-        echo ""
-      fi
-    fi
-  fi
-
-  # 2. unambiguous reflog evidence (only if step 1 found nothing)
-  #
-  # NOTE: the branch's OWN reflog ("git reflog show <branch>") is not
-  # reliable here. Its "branch: Created from X" entry only names a real
-  # ref if `git checkout -b <name> <start-point>` was given an explicit
-  # start-point. Plain `git checkout -b <name>` (the common case) records
-  # the literal string "Created from HEAD" -- and by the time this hook
-  # runs, HEAD resolves to the new branch's own tip, so it "verifies"
-  # successfully and silently diffs the branch against itself (always 0
-  # changed lines). Found via smoke test on a plain `checkout -b`.
-  #
-  # HEAD's OWN reflog doesn't have this problem: every checkout, with or
-  # without an explicit start-point, records
-  #   "checkout: moving from <actual-source> to <new-branch>"
-  # with the real source ref. We take the OLDEST such entry for the
-  # current branch (git reflog show lists newest-first, so `tail -1` on
-  # the filtered set) as the creation point.
-  if [ -z "$BASE_BRANCH" ]; then
-    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
-    if [ -n "$CURRENT_BRANCH" ] && [ "$CURRENT_BRANCH" != "HEAD" ]; then
-      CREATION_LINE=$(git reflog show HEAD 2>/dev/null \
-        | grep -E "checkout: moving from .* to ${CURRENT_BRANCH}\$" \
-        | tail -1)
-      if [ -n "$CREATION_LINE" ]; then
-        # '#' as delimiter, not '/' -- branch names routinely contain '/'
-        # (e.g. "test/reflog-base2"), which broke a '/'-delimited sed
-        # substitution outright (found via smoke test).
-        CANDIDATE=$(echo "$CREATION_LINE" \
-          | sed -E "s#.*moving from (.*) to ${CURRENT_BRANCH}\$#\1#")
-        if [ -n "$CANDIDATE" ] && [ "$CANDIDATE" != "$CURRENT_BRANCH" ] \
-           && [ "$CANDIDATE" != "HEAD" ] \
-           && git rev-parse --verify --quiet "$CANDIDATE" >/dev/null 2>&1; then
-          BASE_BRANCH="$CANDIDATE"
-          BASE_SOURCE="reflog (HEAD 'moving from' entry)"
-        fi
-      fi
-    fi
-  fi
-
-  # 3. neither -> skip honestly, never guess
-  if [ -z "$BASE_BRANCH" ]; then
-    echo ""
-    echo "diff-size check skipped: no diffBaseBranch configured and no"
-    echo "  unambiguous reflog evidence of this branch's origin."
-    echo "  Set \"diffBaseBranch\" in .ai-framework.json to enable this check."
-    echo ""
-  else
-    MERGE_BASE=$(git merge-base "$BASE_BRANCH" HEAD 2>/dev/null)
-    if [ -z "$MERGE_BASE" ]; then
-      echo "could not compute merge-base with $BASE_BRANCH ($BASE_SOURCE) - skipping diff-size check"
-    else
-      MAX_LINES=400
-      if [ -f "$COMMANDS_FILE" ]; then
-        CONFIGURED_MAX=$(grep -o '"maxDiffLines"[[:space:]]*:[[:space:]]*[0-9]*' "$COMMANDS_FILE" 2>/dev/null \
-          | sed -E 's/.*:[[:space:]]*([0-9]+)/\1/')
-        [ -n "$CONFIGURED_MAX" ] && MAX_LINES="$CONFIGURED_MAX"
-      fi
-
-      # Meaningful-line filtering (DEC-009): ignore whitespace-only and
-      # blank-line-only changes, then drop import/require-only lines. Pure
-      # renames with no content change produce no +/- body lines and are
-      # excluded automatically by git diff itself.
-      TOTAL=$(git diff -w --ignore-blank-lines "$MERGE_BASE" HEAD -- . 2>/dev/null \
-        | grep -E '^[+-][^+-]' \
-        | grep -vE '^[+-][[:space:]]*(import[[:space:]]|export[[:space:]]+.*[[:space:]]from[[:space:]]|const[[:space:]]+.*=[[:space:]]*require\()' \
-        | wc -l | tr -d ' ')
-      TOTAL=${TOTAL:-0}
-
-      if [ "$TOTAL" -gt "$MAX_LINES" ]; then
-        echo ""
-        echo "ERROR: This branch changes $TOTAL meaningful lines (vs $BASE_BRANCH,"
-        echo "  base via $BASE_SOURCE) - exceeds the atomic-changes limit of"
-        echo "  $MAX_LINES lines (skills/atomic-changes/SKILL.md)."
-        echo "  Split this into smaller PRs, or SKIP_DIFF_SIZE_CHECK=1 git push to"
-        echo "  override (only if this size is a deliberate, reviewed exception)."
-        echo ""
-        exit 1
-      fi
-    fi
-  fi
 fi
 
 # --- build-verify ------------------------------------------------------------
