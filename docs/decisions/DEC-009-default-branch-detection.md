@@ -3,7 +3,7 @@
 # for the diff base; filter non-meaningful diff noise
 
 **Date:** 2026-08-20 (finalized; supersedes an earlier same-numbered draft)
-**Status:** accepted; implementation still being smoke-tested against real repos
+**Status:** accepted; implementation still being smoke-tested against real repos. The skip rule and the reflog strategy for the diff base are superseded by DEC-020 (2026-11-06)
 
 ## Context
 Testing `DEC-007`'s diff-size backstop on a real repo

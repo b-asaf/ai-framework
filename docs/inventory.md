@@ -10,7 +10,7 @@ Labels: **KEEP** (unchanged), **MOVE** (logic goes elsewhere), **SPLIT** (become
 
 | File | Lines | Label | Phase | Notes |
 |---|---|---|---|---|
-| `hooks/pre-push` | 230 | SPLIT | 3A | Branch protection, diff-size and the verify gate move to `verification/checks/`; the hook becomes a thin entrypoint. All three skip silently when `origin/HEAD`, `protectedBranches`, `diffBaseBranch` or `.ai-framework.json` is missing (F14), so the new checks must fail closed. Observed: it blocks `HEAD:main` only when `origin/HEAD` is set |
+| `hooks/pre-push` | 230 | SPLIT | 3A | Branch protection, diff-size and the verify gate move to `verification/checks/`; the hook becomes a thin entrypoint. All three skip silently when `origin/HEAD`, `protectedBranches`, `diffBaseBranch` or `.ai-framework.json` is missing (F14), so the new checks must fail closed (done: branch protection and diff size in the Python gate, build-verify in the shell hook, all blocking). Observed: it blocks `HEAD:main` only when `origin/HEAD` is set |
 | `hooks/build-verify.sh` | 98 | MOVE | 3A | Build and test facts go to `verification/checks/`. Stays shell or becomes Python per decision #2 |
 | `hooks/pre-commit` | 15 | KEEP | revisit with decision #2 | Commit-time rules (no direct commits to `main`, branch prefixes) were observed at the first plan commit. Confirm whether the rule lives here or in `commit-msg` |
 | `hooks/commit-msg` | 15 | KEEP | Phase 1 | Confirm which message format it enforces before the first Phase 1 commit |

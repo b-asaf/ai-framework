@@ -129,11 +129,11 @@ The diff base answers a different question:
 
 > **"What branch is this feature being compared against?"**
 
-The preferred authoritative source when a PR/MR exists is its target branch. However, a plain local `pre-push` hook cannot know an external PR/MR target unless a provider integration supplies it. Therefore the hook itself uses only deterministic local evidence:
+The preferred authoritative source when a PR/MR exists is its target branch. However, a plain local `pre-push` hook cannot know an external PR/MR target unless a provider integration supplies it. Therefore the push gate uses only deterministic local evidence:
 
-1. `.ai-framework.json` → `diffBaseBranch`, if configured
-2. Git reflog evidence identifying an unambiguous protected branch as the feature branch's creation/checkout source
-3. Otherwise **skip the diff-size check rather than guess**
+1. `.ai-framework.json` → `diffBaseBranch`, if configured (it must resolve to a commit, otherwise the push is blocked)
+2. Origin's default branch (`origin/HEAD`)
+3. Otherwise the push is **blocked** with a message that names the fix (DEC-020); the check never skips
 
 A provider/CI integration may populate `diffBaseBranch` from the PR/MR target before running the gate.
 
@@ -171,7 +171,7 @@ This is intentionally conservative. The hook does **not** attempt to determine w
 
 If `maxDiffLines` is absent, the default is `400`.
 
-If no deterministic diff base can be identified, the hook skips the diff-size backstop with an explicit message; it does not silently compare against an arbitrary branch.
+If no diff base can be identified, the push is blocked with a message that names the fix (DEC-020); the check never skips and never compares against an arbitrary branch. It runs in the Python push gate (`execution/verification/checks/diff_size.py`).
 
 ### Override
 
