@@ -45,7 +45,7 @@ Comparison is per task, not by averages. A task with an "unknown" baseline value
 
 - **Gatekeeper classification (step 3A.1):** done 2026-11-03, see the table below.
 - **Pipeline experiment outcome (after Phase 3C):** keep, replace with a declarative definition, or remove, with the evidence.
-- **Soak verdict (step 4.5):** keep, extend or revert, based on 5 real PRs compared with the baseline.
+- **Soak verdict (step 4.5):** keep, extend or revert, based on 5 real PRs compared with the baseline. It includes the gatekeeper comparison that replaces the separate replay of 3A.4 (decided 2026-11-06): the judgment items let no more defects escape than the baseline did; then decide whether the tier can drop.
 
 ### Gatekeeper classification (step 3A.1, 2026-11-03)
 
@@ -83,7 +83,7 @@ Every checklist item of `agents/gatekeeper.md`, labeled. "Decided by" names what
 
 Totals: 14 judgment, 13 deterministic. Of the 13, rows 3, 8, 14, 22 and 27 are decided by code unconditionally, rows 15 (its lint and format part) and 20 by `build-verify` at push (every repository, since #86 blocks a push without the configuration), and rows 13, 16 to 19 and 21 by no code yet.
 
-The 3A.4 trim was done on 2026-11-05: rows 3, 8, 14, 20, 22, 27 and the lint and format part of row 15 left the checklist. Row 13 stays, because no code checks the prefix. The replay of the baseline tasks is open.
+The 3A.4 trim was done on 2026-11-05: rows 3, 8, 14, 20, 22, 27 and the lint and format part of row 15 left the checklist. Row 13 stays, because no code checks the prefix. The replay of the baseline tasks is part of the soak (step 4.5), decided 2026-11-06.
 
 Notes for 3A.4:
 
