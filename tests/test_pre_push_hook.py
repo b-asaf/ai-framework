@@ -166,6 +166,44 @@ class PrePushHookTest(unittest.TestCase):
         self.assertIn("atomic-changes limit", out)
         self.assertNotIn("refs/heads/feature/x", self.remote_heads())
 
+    def big_branch(self):
+        self.git("checkout", "-q", "-b", "feature/x", cwd=self.clone)
+        self.commit("big.txt", "".join(f"line {i}\n" for i in range(10)))
+
+    def test_diff_size_blocks_when_there_is_no_reflog_evidence(self):
+        self.write_config('{"maxDiffLines": 3}\n')
+        self.big_branch()
+        (self.clone / ".git" / "logs" / "HEAD").unlink(missing_ok=True)
+        code, out = self.push("-u", "origin", "feature/x")
+        self.assertNotEqual(code, 0, out)
+        self.assertIn("BLOCKED diff_size", out)
+        self.assertNotIn("refs/heads/feature/x", self.remote_heads())
+
+    def test_diff_size_without_a_base_blocks_instead_of_skipping(self):
+        self.write_config('{"test": "true", "protectedBranches": ["main"]}\n')
+        self.start_feature()
+        self.git("remote", "set-head", "origin", "-d", cwd=self.clone)
+        code, out = self.push("-u", "origin", "feature/x")
+        self.assertNotEqual(code, 0, out)
+        self.assertIn("BLOCKED diff_size", out)
+        self.assertIn("origin/HEAD is not set", out)
+        self.assertNotIn("refs/heads/feature/x", self.remote_heads())
+
+    def test_a_diff_base_that_does_not_resolve_blocks(self):
+        self.write_config('{"test": "true", "diffBaseBranch": "no-such-branch"}\n')
+        self.start_feature()
+        code, out = self.push("-u", "origin", "feature/x")
+        self.assertNotEqual(code, 0, out)
+        self.assertIn("does not resolve", out)
+        self.assertNotIn("refs/heads/feature/x", self.remote_heads())
+
+    def test_skip_diff_size_check_lets_a_big_branch_through(self):
+        self.write_config('{"test": "true", "maxDiffLines": 3}\n')
+        self.big_branch()
+        code, out = self.push("-u", "origin", "feature/x", SKIP_DIFF_SIZE_CHECK="1")
+        self.assertEqual(code, 0, out)
+        self.assertIn("refs/heads/feature/x", self.remote_heads())
+
     def test_build_verify_failure_still_blocks(self):
         self.write_config('{"test": "exit 1"}\n')
         self.start_feature()
