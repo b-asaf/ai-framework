@@ -1,0 +1,47 @@
+{
+  "title": "QAReport",
+  "description": "The report the qa role hands to the next stage. Pass and fail counts and coverage are not in it: the runner measures them. The rules on outcome, tests_written and gaps are checked in code, not here.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["outcome", "summary", "frameworks", "tests_written", "gaps", "production_issues"],
+  "properties": {
+    "outcome": {"type": "string", "enum": ["TESTS_WRITTEN", "NO_TESTS_NEEDED", "NEEDS_DEVELOPER"]},
+    "summary": {"type": "string", "minLength": 1, "description": "Two or three sentences: what was tested and what was left out."},
+    "frameworks": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "description": "Test frameworks detected, for example node:test."
+    },
+    "tests_written": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["file", "count", "covers"],
+        "properties": {
+          "file": {"type": "string", "minLength": 1, "description": "Path relative to the project root."},
+          "count": {"type": "integer", "minimum": 1, "description": "Number of tests in the file."},
+          "covers": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "gaps": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "description": "Behavior that is not tested, or what the developer must decide."
+    },
+    "production_issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["message"],
+        "properties": {
+          "file": {"type": "string", "minLength": 1},
+          "message": {"type": "string", "minLength": 1}
+        }
+      },
+      "description": "Defects in production code that the tests exposed. The qa role reports them and never fixes them."
+    }
+  }
+}
