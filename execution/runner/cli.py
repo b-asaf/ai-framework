@@ -38,6 +38,31 @@ def _finding(finding):
     return f"  {finding['severity']} [{finding['category']}] {where}: {finding['message'][:160]}"
 
 
+def _review_lines(data):
+    header = f"verdict: {data['verdict']} ({len(data['findings'])} findings)"
+    return [header] + [_finding(finding) for finding in data["findings"]]
+
+
+def _qa_lines(data):
+    lines = [f"outcome: {data['outcome']} ({len(data['tests_written'])} test files)"]
+    lines += [f"  {item['file']}: {item['count']} tests, {item['covers'][:120]}" for item in data["tests_written"]]
+    lines += [f"  gap: {gap[:160]}" for gap in data["gaps"]]
+    lines += [f"  production issue in {issue.get('file', 'unknown')}: {issue['message'][:160]}" for issue in data["production_issues"]]
+    return lines
+
+
+def _report_lines(data):
+    return _review_lines(data) if "verdict" in data else _qa_lines(data)
+
+
+def _verification_lines(data):
+    tests = data["tests"]
+    state = "timed out" if tests["timed_out"] else f"exit {tests['exit_code']}"
+    lines = [f"tests: {tests['command']} -> {state}"]
+    lines += [f"  problem: {problem}" for problem in data["problems"]]
+    return lines
+
+
 def _describe(outcome, path):
     built = outcome.record
     lines = [
@@ -48,8 +73,9 @@ def _describe(outcome, path):
     if built["error"]:
         lines.append("error: " + built["error"]["message"])
     if outcome.report:
-        lines.append(f"verdict: {outcome.report['verdict']} ({len(outcome.report['findings'])} findings)")
-        lines += [_finding(finding) for finding in outcome.report["findings"]]
+        lines += _report_lines(outcome.report)
+    if built.get("verification"):
+        lines += _verification_lines(built["verification"])
     return "\n".join(lines)
 
 
@@ -63,7 +89,8 @@ def main(argv=None, review=run.run_review, runs_dir=None):
     path = record.append_record(outcome.record, runs_dir)
     print(_describe(outcome, path))
     status = outcome.record["status"]
-    return 0 if status["execution"] == "success" and status["artifact"] == "success" else 1
+    ok = status["execution"] == "success" and status["artifact"] == "success"
+    return 0 if ok and status.get("workflow") != "failure" else 1
 
 
 if __name__ == "__main__":

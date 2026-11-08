@@ -5,10 +5,13 @@ checked), writes a per-run config folder with a primary copy of the agent,
 starts OpenCode in the target repo, and reads the events. The session is
 exported only when the events look clean (about 5 s, F44), because the export
 says which agent and model really ran (F34, F43). Then the report is checked
-(artifact level) and the RunRecord is built. The workflow level stays not_run
-until the gates exist (Phase 3A).
+(artifact level) and the RunRecord is built. For a reviewer the workflow level stays
+not_run until the gates exist (Phase 3A). A write role (WRITING_ROLES) gets a facts
+stage: the tests are run by code and the report is checked against the files that
+changed (facts_stage.py, plan step 3B.1).
 
-Nothing is written into the target repo, and the per-run folder is deleted
+A read-only role writes nothing into the target repo. A write role runs in a copy of
+it, so the real target is never touched. The per-run folder is deleted
 afterwards. Appending the record is a separate call (record.append_record), so
 a test or a dry run writes nothing. The subprocess runner is injectable, so the
 tests replay recorded OpenCode output. A policy rejection, a failed preflight, a
@@ -18,20 +21,23 @@ failure is a record.
 
 import os
 import shutil
+import stat
 import subprocess
 import tempfile
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from . import opencode_adapter as adapter
-from . import preflight, record, report, resolve
+from . import facts, facts_stage, preflight, record, report, resolve, tree
 from lib.opencode_resolved import find_opencode  # noqa: E402
 
 RUNTIME = "opencode"
 RUN_TIMEOUT = 600
 EXPORT_TIMEOUT = 120
 SLEEP_MARGIN = 60
+# Roles that write files: they run in a copy of the target and get a facts stage (plan step 3B.1).
+WRITING_ROLES = frozenset({"qa"})
 # One plain line (F10). It states the branch decision and the approval, which the
 # global AGENTS.md gates would otherwise ask for in a headless run (F8).
 TASK_MESSAGE = (
@@ -40,6 +46,15 @@ TASK_MESSAGE = (
     "The attached files are already included in this message, so do not open them again. "
     "Do not create a branch and do not ask to confirm a plan: the plan is approved."
 )
+
+QA_TASK_MESSAGE = (
+    "Write the missing tests for the attached diff. This run is made by an automated tool that parses "
+    "your whole reply as JSON, so reply with only the JSON object that the attached task file describes, "
+    "with no text before or after it. "
+    "The attached files are already included in this message, so do not open them again. "
+    "Do not create a branch and do not ask to confirm a plan: the plan is approved."
+)
+TASK_MESSAGES = {"code-reviewer": TASK_MESSAGE, "qa": QA_TASK_MESSAGE}
 
 
 @dataclass(frozen=True)
@@ -113,11 +128,16 @@ def _events_look_clean(events, launched, resolved):
     return not result.problems
 
 
-def _artifact_level(assessment):
+def _report_role(role):
+    """The role whose report contract applies: its own when it has one, else the reviewer's."""
+    return role if role in report.ROLE_REPORTS else report.DEFAULT_ROLE
+
+
+def _artifact_level(assessment, role=report.DEFAULT_ROLE):
     """(status, report, problems) of the artifact level; not_run when the run itself failed."""
     if assessment.status != "success":
         return "not_run", None, ()
-    check = report.parse_report(assessment.reply)
+    check = report.parse_report(assessment.reply, _report_role(role))
     return check.status, check.report, check.problems
 
 
@@ -153,8 +173,8 @@ def _run(work, resolved, executable, agent_text, diff, target, runner, timeout, 
     role, model = resolved.role, resolved.model
     setup = adapter.prepare_run_dir(work, role, agent_text, model, resolved.effort)
     task_file = work / "task.md"
-    task_file.write_text(report.task_message(), encoding="utf-8", newline="\n")
-    command = adapter.build_command(executable, role, TASK_MESSAGE, [task_file, diff])
+    task_file.write_text(report.task_message(_report_role(role)), encoding="utf-8", newline="\n")
+    command = adapter.build_command(executable, role, TASK_MESSAGES.get(role, TASK_MESSAGE), [task_file, diff])
     environment = adapter.build_environment(base, setup.config_file, setup.config_dir)
     started = _now()
     launched = _launch(runner, command, target, environment, timeout)
@@ -165,7 +185,7 @@ def _run(work, resolved, executable, agent_text, diff, target, runner, timeout, 
         ran, export_note = _export(runner, executable, events.session_id, target, base)
         notes += [export_note] if export_note else []
     assessment = adapter.assess(events, launched.stderr, ran, role, model, launched.returncode, effort=resolved.effort)
-    artifact, checked, problems = _artifact_level(assessment)
+    artifact, checked, problems = _artifact_level(assessment, role)
     elapsed = _now() - started
     slept = elapsed > timeout + EXPORT_TIMEOUT + SLEEP_MARGIN
     if slept:
@@ -179,6 +199,47 @@ def _run(work, resolved, executable, agent_text, diff, target, runner, timeout, 
     return Outcome(record=built, report=checked, slept=slept)
 
 
+def _make_writable(function, path, error):
+    """rmtree handler: Windows keeps git objects read-only, so make the entry writable and retry once."""
+    try:
+        os.chmod(path, stat.S_IWRITE)
+        function(path)
+    except OSError:
+        pass
+
+
+def _remove(directory):
+    shutil.rmtree(directory, onexc=_make_writable)
+
+
+def _test_command(target):
+    """(command, argv) of a write role's tests, read from the real target before anything runs."""
+    try:
+        return facts_stage.prepare(target)
+    except facts.FactsError as error:
+        raise preflight.PreflightError(f"the target project is not ready for a run:\n  - {error}") from error
+
+
+def _run_writing(work, resolved, executable, agent_text, diff, target, runner, timeout, base, prepared, which):
+    """Run a write role in a copy of the target, so the real target is never touched, then the facts stage.
+
+    The tests have their own timeout. On a timeout only the direct child process is killed (Windows).
+    """
+    copy = work / "target"
+    shutil.copytree(target, copy)
+    before = tree.snapshot(copy)
+    outcome = _run(work, resolved, executable, agent_text, diff, copy, runner, timeout, base)
+    status = outcome.record["status"]
+    if status["execution"] != "success" or status["artifact"] != "success":
+        return outcome
+    command, argv = prepared
+    level, verification, error = facts_stage.run_facts(
+        command, argv, copy, before, outcome.report["tests_written"], runner=runner, which=which
+    )
+    built = dict(outcome.record, status=dict(status, workflow=level), verification=verification, error=error)
+    return replace(outcome, record=record.build_record(**built))
+
+
 def run_review(
     repo_root,
     target,
@@ -190,7 +251,10 @@ def run_review(
     environ=None,
     which=shutil.which,
 ):
-    """Run the role's agent on the diff in the target repo and return the Outcome."""
+    """Run the role's agent on the diff in the target repo and return the Outcome.
+
+    A write role (WRITING_ROLES) runs in a copy of the target; every other role runs in the target itself.
+    """
     resolved = resolve.resolve(role, repo_root, profile_name)
     executable = find_opencode(which)
     agent_text = adapter.load_agent_text(repo_root, role)
@@ -199,8 +263,13 @@ def run_review(
         raise adapter.AdapterError(f"{diff.as_posix()} not found, so there is nothing to review")
     base = dict(os.environ if environ is None else environ)
     preflight.require(target, role, base)
+    prepared = _test_command(target) if role in WRITING_ROLES else None
     work = Path(tempfile.mkdtemp(prefix="review-run-"))
     try:
-        return _run(work, resolved, executable, agent_text, diff, Path(target), runner, timeout, base)
+        if prepared is None:
+            return _run(work, resolved, executable, agent_text, diff, Path(target), runner, timeout, base)
+        return _run_writing(
+            work, resolved, executable, agent_text, diff, Path(target), runner, timeout, base, prepared, which
+        )
     finally:
-        shutil.rmtree(work, ignore_errors=True)
+        _remove(work)
