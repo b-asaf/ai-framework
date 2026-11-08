@@ -20,12 +20,12 @@ def prepare(target):
     return command, facts.command_argv(command)
 
 
-def _tests(argv, copy, timeout, runner, which):
+def _tests(argv, copy, timeout, runner, which, environ):
     try:
         resolved = facts.resolve_argv(argv, copy, which)
     except facts.FactsError as error:
         return facts.TestOutcome(-1, False, (), 0, str(error))
-    return facts.run_tests(resolved, copy, timeout=timeout, runner=runner)
+    return facts.run_tests(resolved, copy, timeout=timeout, runner=runner, environ=environ)
 
 
 def _message(tests, problems):
@@ -38,7 +38,8 @@ def _message(tests, problems):
 
 
 def run_facts(
-    command, argv, copy, before, written, timeout=facts.TEST_TIMEOUT, runner=subprocess.run, which=shutil.which
+    command, argv, copy, before, written, timeout=facts.TEST_TIMEOUT, runner=subprocess.run, which=shutil.which,
+    environ=None,
 ):
     """(workflow level, verification object, error object or None) for a run that reached a valid report.
 
@@ -46,7 +47,7 @@ def run_facts(
     """
     changes = tree.changed_files(before, tree.snapshot(copy))
     problems = facts_check.cross_check(written, changes)
-    tests = _tests(argv, copy, timeout, runner, which)
+    tests = _tests(argv, copy, timeout, runner, which, environ)
     level = facts_check.workflow_level(tests, problems)
     verification = facts_check.build_verification(command, tests, changes, problems)
     error = None if level == "success" else record.error_info(_message(tests, problems))

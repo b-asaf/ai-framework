@@ -187,6 +187,19 @@ class WritingRun(unittest.TestCase):
         self.assertEqual(adapter.check_message(run.QA_TASK_MESSAGE), run.QA_TASK_MESSAGE)
         self.assertIs(run.TASK_MESSAGES["code-reviewer"], run.TASK_MESSAGE)
 
+    def test_opencode_its_export_and_the_tests_start_without_the_shell_pwd(self):
+        shell = {"PATH": "p", "PWD": "/d/ai-framework", "Pwd": "x"}
+        fake = QaFake(qa_report(TEST_FILE), {TEST_FILE: "t"})
+        run.run_review(self.repo, self.target, ROLE, self.diff, runner=fake, environ=shell, which=lambda name: "oc")
+        self.assertEqual([call[0][1] for call in fake.calls], ["run", "export", "--all"])
+        for _, kwargs in fake.calls:
+            self.assertEqual([key for key in kwargs["env"] if key.upper() == "PWD"], [])
+            self.assertEqual(kwargs["env"]["PATH"], "p")
+        self.assertEqual(shell["PWD"], "/d/ai-framework")
+
+    def test_the_clean_environment_drops_pwd_in_any_case_and_keeps_the_rest(self):
+        self.assertEqual(run._clean_environment({"PWD": "a", "pwd": "b", "PATH": "p"}), {"PATH": "p"})
+
 
 class FactsStage(unittest.TestCase):
     def test_prepare_returns_the_command_and_its_argv(self):

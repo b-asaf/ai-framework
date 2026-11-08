@@ -199,6 +199,16 @@ def _run(work, resolved, executable, agent_text, diff, target, runner, timeout, 
     return Outcome(record=built, report=checked, slept=slept)
 
 
+def _clean_environment(environ):
+    """The environment OpenCode, its export and the tests start with: a copy without PWD.
+
+    OpenCode takes its working directory from PWD when it is set. Git Bash sets PWD to the folder the
+    runner was started in, and that beat the directory the process was started in, so an agent worked in
+    the framework repository instead of its target (F74). Windows variable names ignore case.
+    """
+    return {key: value for key, value in environ.items() if key.upper() != "PWD"}
+
+
 def _make_writable(function, path, error):
     """rmtree handler: Windows keeps git objects read-only, so make the entry writable and retry once."""
     try:
@@ -234,7 +244,7 @@ def _run_writing(work, resolved, executable, agent_text, diff, target, runner, t
         return outcome
     command, argv = prepared
     level, verification, error = facts_stage.run_facts(
-        command, argv, copy, before, outcome.report["tests_written"], runner=runner, which=which
+        command, argv, copy, before, outcome.report["tests_written"], runner=runner, which=which, environ=base
     )
     built = dict(outcome.record, status=dict(status, workflow=level), verification=verification, error=error)
     return replace(outcome, record=record.build_record(**built))
@@ -261,7 +271,7 @@ def run_review(
     diff = Path(diff_file).resolve()
     if not diff.is_file():
         raise adapter.AdapterError(f"{diff.as_posix()} not found, so there is nothing to review")
-    base = dict(os.environ if environ is None else environ)
+    base = _clean_environment(os.environ if environ is None else environ)
     preflight.require(target, role, base)
     prepared = _test_command(target) if role in WRITING_ROLES else None
     work = Path(tempfile.mkdtemp(prefix="review-run-"))
