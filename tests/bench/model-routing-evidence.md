@@ -1,4 +1,4 @@
-# Model routing evidence (E1 to E13)
+# Model routing evidence (E1 to E14)
 
 Date: 2026-10-18. OpenCode 1.19.3, Windows, Git Bash. Findings F32 to F36 in `docs/transition-plan.md` rest on this file.
 
@@ -227,3 +227,17 @@ Test suite (F60): 82 s for 501 tests; seconds per module from the 600 slowest te
 Retest failures of 2026-10-25 (F58, F59): sonnet-5 `off-by-one-loop` #2 ended after an auto-rejected `echo done`; haiku-4.5 `clean-guard-with-test` #3 wrote prose before a fenced JSON block.
 
 Caveats: one task, one repository, two pilots; the `ask` counts are approximate; waiting time cannot be split into prompts, thinking and sleep.
+
+## E14: the working directory of a headless run (2026-11-08)
+
+Setup: the first real `qa` run through `python -m execution.runner.cli --role qa` (a throwaway TypeScript fixture outside both repositories, `gpt-5.6-sol`), started from Git Bash in `/d/ai-framework`; then three probe runs of `claude-haiku-5.5` in a probe folder with the first-run files. OpenCode 1.19.3.
+
+| Step | Result |
+|---|---|
+| The `qa` run | execution, artifact and workflow success, but `NEEDS_DEVELOPER` with no tests written. Its 16 tool calls read `D:\ai-framework\docs\project-overview\stack.md` (the framework's own, Python `unittest`), failed on `D:\ai-framework\src\slug.ts`, and ran five globs and four git commands against `D:\ai-framework`; no `write` call; the live repository stayed clean |
+| `opencode export` of that session | `info.directory`, `cwd` and `root` all `D:\ai-framework`, not the temporary copy the runner started it in |
+| Probe A, `PWD` inherited (`D:/ai-framework`) | session directory `D:\ai-framework` |
+| Probe B, `PWD` removed | session directory `D:\qa-pwd-probe` |
+| Probe C, `PWD` set to the probe folder | session directory `D:\qa-pwd-probe` |
+
+Caveats: one model, one session each, Git Bash on Windows only. That the earlier reviewer runs (E9 to E13) worked in the framework repository is inferred, not checked. The export of a session started in a temporary folder is read by the runner before the folder is removed; whether `opencode export` finds such a session from another folder was not tested. The `qa` benchmark evidence will be E15.
