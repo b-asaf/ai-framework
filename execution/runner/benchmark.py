@@ -19,7 +19,6 @@ keeps its results and --summarize can read them.
 """
 
 import argparse
-import hashlib
 import json
 import re
 import shutil
@@ -31,21 +30,11 @@ from pathlib import Path
 
 from . import bench_cases, record, resolve, run
 from .cli import NOT_RUN, REPO_ROOT
+from .tree import snapshot
 
 ROLE = bench_cases.ROLE
 DEFAULT_REPEATS = 3
 EARLY_STOP_RUNS = 5
-
-
-def snapshot(directory):
-    """Map of relative path to content hash for every file under directory except .git."""
-    root = Path(directory)
-    result = {}
-    for path in sorted(root.rglob("*")):
-        relative = path.relative_to(root).as_posix()
-        if path.is_file() and not relative.startswith(".git/"):
-            result[relative] = hashlib.sha256(path.read_bytes()).hexdigest()
-    return result
 
 
 def _write_policy(source, target, trial_model):
