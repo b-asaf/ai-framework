@@ -1,4 +1,4 @@
-# Model routing evidence (E1 to E14)
+# Model routing evidence (E1 to E15)
 
 Date: 2026-10-18. OpenCode 1.19.3, Windows, Git Bash. Findings F32 to F36 in `docs/transition-plan.md` rest on this file.
 
@@ -241,3 +241,18 @@ Setup: the first real `qa` run through `python -m execution.runner.cli --role qa
 | Probe C, `PWD` set to the probe folder | session directory `D:\qa-pwd-probe` |
 
 Caveats: one model, one session each, Git Bash on Windows only. That the earlier reviewer runs (E9 to E13) worked in the framework repository is inferred, not checked. The export of a session started in a temporary folder is read by the runner before the folder is removed; whether `opencode export` finds such a session from another folder was not tested. The `qa` benchmark evidence will be E15.
+
+## E15: qa write permission and out-of-folder reads (2026-11-09 and 2026-11-10)
+
+Setup: `opencode debug agent qa` with a per-run `OPENCODE_CONFIG_DIR` (no model call) for four versions of `agents/qa.md`; four real `qa` runs through `python -m execution.runner.cli --role qa` on a throwaway TypeScript fixture (`gpt-5.6-sol`, `node --test`); two probe runs of `claude-haiku-5.5` with `external_directory` set to `ask` and to `deny`. OpenCode 1.19.3, `PWD` removed (F74).
+
+| Step | Result |
+|---|---|
+| `debug agent`: `edit: deny` with `write: allow`, and `edit: deny` alone | the same rules; `apply_patch: false` in both |
+| `edit` as a map with test paths, and `edit: allow` | `apply_patch: true` in both |
+| Run 1 (after the PWD fix) | stop reason tool-calls; the last call was `apply_patch` through bash, auto-rejected |
+| Run 2 (edit map) | stop reason tool-calls with no write; two reads of the skills folder (`external_directory`, `ask`) were auto-rejected |
+| Probe `ask` against `deny` | `ask`: stop reason tool-calls, no reply; `deny`: the read failed, the model answered, stop reason stop |
+| Run 3 (edit map and the project docs named in the task message) | `apply_patch` completed on `src/slug.test.ts`; execution, artifact and workflow success; 6 tests passed; the fixture stayed unchanged |
+
+Caveats: one run per step; the probe used another model than `qa`; no production path was tempted; the Windows path match was seen for `src/slug.test.ts` only.

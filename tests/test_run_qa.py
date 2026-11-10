@@ -187,6 +187,10 @@ class WritingRun(unittest.TestCase):
         self.assertEqual(adapter.check_message(run.QA_TASK_MESSAGE), run.QA_TASK_MESSAGE)
         self.assertIs(run.TASK_MESSAGES["code-reviewer"], run.TASK_MESSAGE)
 
+    def test_the_qa_message_points_at_the_project_docs_and_not_outside_the_folder(self):
+        self.assertIn("docs/project-overview", run.QA_TASK_MESSAGE)
+        self.assertIn("do not read files outside the current directory", run.QA_TASK_MESSAGE)
+
     def test_opencode_its_export_and_the_tests_start_without_the_shell_pwd(self):
         shell = {"PATH": "p", "PWD": "/d/ai-framework", "Pwd": "x"}
         fake = QaFake(qa_report(TEST_FILE), {TEST_FILE: "t"})
