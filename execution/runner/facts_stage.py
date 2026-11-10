@@ -40,13 +40,14 @@ def _message(tests, problems):
 def run_facts(
     command, argv, copy, before, written, timeout=facts.TEST_TIMEOUT, runner=subprocess.run, which=shutil.which,
     environ=None,
+    report_problems=(),
 ):
     """(workflow level, verification object, error object or None) for a run that reached a valid report.
 
     The second snapshot is taken before the tests run, because a test run can write files of its own.
     """
     changes = tree.changed_files(before, tree.snapshot(copy))
-    problems = facts_check.cross_check(written, changes)
+    problems = facts_check.cross_check(written, changes) + list(report_problems)
     tests = _tests(argv, copy, timeout, runner, which, environ)
     level = facts_check.workflow_level(tests, problems)
     verification = facts_check.build_verification(command, tests, changes, problems)
