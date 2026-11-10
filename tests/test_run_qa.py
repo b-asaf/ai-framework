@@ -206,6 +206,20 @@ class WritingRun(unittest.TestCase):
         self.assertEqual(run._clean_environment({"PWD": "a", "pwd": "b", "PATH": "p"}), {"PATH": "p"})
 
 
+    def test_a_report_that_needs_the_developer_is_a_workflow_failure(self):
+        data = dict(qa_report(), outcome="NEEDS_DEVELOPER", gaps=["Which test pattern?"])
+        built = self.go(QaFake(data)).record
+        self.assertEqual(built["status"], {"execution": "success", "artifact": "success", "workflow": "failure"})
+        self.assertIn("Which test pattern?", built["error"]["message"])
+        self.assertEqual(
+            built["verification"]["problems"], ["qa needs a decision from the developer: Which test pattern?"]
+        )
+
+    def test_no_tests_needed_with_nothing_changed_is_a_workflow_success(self):
+        data = dict(qa_report(), outcome="NO_TESTS_NEEDED", summary="Nothing to test.")
+        self.assertEqual(self.go(QaFake(data)).record["status"]["workflow"], "success")
+
+
 class FactsStage(unittest.TestCase):
     def test_prepare_returns_the_command_and_its_argv(self):
         with tempfile.TemporaryDirectory() as tmp:

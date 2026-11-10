@@ -23,6 +23,13 @@ def cross_check(tests_written, changes):
     return problems
 
 
+def outcome_problems(report):
+    """A qa report that needs the developer wrote no tests because a decision is missing: not a success (F76)."""
+    if report.get("outcome") != "NEEDS_DEVELOPER":
+        return []
+    return ["qa needs a decision from the developer: " + "; ".join(report["gaps"])]
+
+
 def workflow_level(tests, problems):
     """success only when the tests passed and the report matches the tree."""
     return "success" if tests.passed and not problems else "failure"

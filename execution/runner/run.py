@@ -29,7 +29,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 from . import opencode_adapter as adapter
-from . import facts, facts_stage, preflight, record, report, resolve, tree
+from . import facts, facts_check, facts_stage, preflight, record, report, resolve, tree
 from lib.opencode_resolved import find_opencode  # noqa: E402
 
 RUNTIME = "opencode"
@@ -249,7 +249,8 @@ def _run_writing(work, resolved, executable, agent_text, diff, target, runner, t
         return outcome
     command, argv = prepared
     level, verification, error = facts_stage.run_facts(
-        command, argv, copy, before, outcome.report["tests_written"], runner=runner, which=which, environ=base
+        command, argv, copy, before, outcome.report["tests_written"],
+        runner=runner, which=which, environ=base, report_problems=facts_check.outcome_problems(outcome.report),
     )
     built = dict(outcome.record, status=dict(status, workflow=level), verification=verification, error=error)
     return replace(outcome, record=record.build_record(**built))

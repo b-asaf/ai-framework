@@ -55,5 +55,15 @@ class Workflow(unittest.TestCase):
         self.assertEqual(built["problems"], ["x"])
 
 
+class Outcome(unittest.TestCase):
+    def test_needs_developer_lists_the_gaps(self):
+        problems = facts_check.outcome_problems({"outcome": "NEEDS_DEVELOPER", "gaps": ["a", "b"]})
+        self.assertEqual(problems, ["qa needs a decision from the developer: a; b"])
+
+    def test_the_other_outcomes_have_no_problem(self):
+        for outcome in ("TESTS_WRITTEN", "NO_TESTS_NEEDED"):
+            self.assertEqual(facts_check.outcome_problems({"outcome": outcome, "gaps": []}), [])
+
+
 if __name__ == "__main__":
     unittest.main()
