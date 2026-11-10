@@ -48,6 +48,7 @@ class RanInfo:
     model: str | None
     finish: str | None
     variant: str | None = None
+    directory: str | None = None
 
 
 @dataclass(frozen=True)
@@ -183,14 +184,31 @@ def _model_id(info):
     return f"{provider}/{model}" if isinstance(provider, str) and isinstance(model, str) else None
 
 
+def _directory(data, info):
+    """The folder the session ran in: the assistant message's cwd, else the session's directory (F74)."""
+    path = info.get("path")
+    cwd = path.get("cwd") if isinstance(path, dict) else None
+    session = data.get("info")
+    fallback = session.get("directory") if isinstance(session, dict) else None
+    chosen = cwd or fallback
+    return chosen if isinstance(chosen, str) and chosen else None
+
+
 def parse_export(text):
     """Read the agent and the model that ran from the last assistant message of `opencode export`."""
-    infos = _assistant_infos(_load_export(text))
+    data = _load_export(text)
+    infos = _assistant_infos(data)
     if not infos:
         raise AdapterError("the session export has no assistant message, so the model that ran is unknown")
     info = infos[-1]
     variant = info.get("variant") if isinstance(info.get("variant"), str) else None
-    return RanInfo(agent=info.get("agent"), model=_model_id(info), finish=info.get("finish"), variant=variant)
+    return RanInfo(
+        agent=info.get("agent"),
+        model=_model_id(info),
+        finish=info.get("finish"),
+        variant=variant,
+        directory=_directory(data, info),
+    )
 
 
 def check_model_ran(ran, agent, model, effort=None):
@@ -206,6 +224,46 @@ def check_model_ran(ran, agent, model, effort=None):
             "OpenCode ignores an effort the model does not offer, without a warning (F52)"
         )
     return problems
+
+
+REJECTED = re.compile(r"permission requested: (\w+) \((.*?)\); auto-rejecting", re.S)
+SHOWN_CHARS = 100
+
+
+def check_directory(ran, directory):
+    """One message when the session did not run in the requested folder, or does not say where it ran (F74)."""
+    if directory is None:
+        return []
+    if not ran.directory:
+        return ["the session export names no directory, so where the agent worked is unknown (F74)"]
+    try:
+        same = Path(ran.directory).samefile(directory)
+    except (OSError, ValueError):
+        same = False
+    if same:
+        return []
+    return [f"the run worked in '{ran.directory}', not in the requested '{Path(directory).as_posix()}' (F74)"]
+
+
+def rejected_permissions(stderr):
+    """The permission requests a headless run auto-rejected, each once and in order, as 'name (argument)' (F13)."""
+    found = []
+    for name, argument in REJECTED.findall(str(stderr)):
+        shown = f"{name} ({' '.join(argument.split())[:SHOWN_CHARS]})"
+        if shown not in found:
+            found.append(shown)
+    return found
+
+
+def _rejection_problems(stderr):
+    rejected = rejected_permissions(stderr)
+    if not rejected:
+        return []
+    return [
+        "a permission request was auto-rejected, which ends a headless run without a reply: "
+        + "; ".join(rejected)
+        + " (F13, F75)"
+    ]
 
 
 def _event_problems(events):
@@ -224,13 +282,15 @@ def _fell_back(warnings, ran, agent):
     return bool(warnings) or (ran is not None and ran.agent != agent)
 
 
-def assess(events, stderr, ran, agent, model, exit_code=0, effort=None):
+def assess(events, stderr, ran, agent, model, exit_code=0, effort=None, directory=None):
     """The execution level of a run: success only when nothing above went wrong.
 
     A fallback, a model mismatch and a non-zero exit code count as failures. The
     result keeps the model that really ran, so the record shows why. ran is None
     when the session export was not read, as after a run that failed before any
     reply; a run that looks fine otherwise but has no export fails closed (F34).
+    When a directory is given, the export must say the run worked there (F74). A failed run
+    also names the permission requests that OpenCode auto-rejected (F13).
     """
     warnings = fallback_warnings(stderr)
     problems = _event_problems(events)
@@ -238,9 +298,10 @@ def assess(events, stderr, ran, agent, model, exit_code=0, effort=None):
         problems.append(f"OpenCode exited with code {exit_code}")
     problems += [f"stderr: {warning}" for warning in warnings]
     if ran is not None:
-        problems += check_model_ran(ran, agent, model, effort)
+        problems += check_model_ran(ran, agent, model, effort) + check_directory(ran, directory)
     elif not problems:
         problems.append("the session export was not read, so the model that ran is unknown (F34)")
+    problems += _rejection_problems(stderr) if problems else []
     return Assessment(
         status="failure" if problems else "success",
         problems=tuple(problems),

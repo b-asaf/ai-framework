@@ -4,7 +4,7 @@ run_review joins the pieces: it resolves the role to its model (the policy is
 checked), writes a per-run config folder with a primary copy of the agent,
 starts OpenCode in the target repo, and reads the events. The session is
 exported only when the events look clean (about 5 s, F44), because the export
-says which agent and model really ran (F34, F43). Then the report is checked
+says which agent and model really ran, and in which folder (F34, F43, F74). Then the report is checked
 (artifact level) and the RunRecord is built. For a reviewer the workflow level stays
 not_run until the gates exist (Phase 3A). A write role (WRITING_ROLES) gets a facts
 stage: the tests are run by code and the report is checked against the files that
@@ -187,7 +187,9 @@ def _run(work, resolved, executable, agent_text, diff, target, runner, timeout, 
     if not launched.note and _events_look_clean(events, launched, resolved):
         ran, export_note = _export(runner, executable, events.session_id, target, base)
         notes += [export_note] if export_note else []
-    assessment = adapter.assess(events, launched.stderr, ran, role, model, launched.returncode, effort=resolved.effort)
+    assessment = adapter.assess(
+        events, launched.stderr, ran, role, model, launched.returncode, effort=resolved.effort, directory=target
+    )
     artifact, checked, problems = _artifact_level(assessment, role)
     elapsed = _now() - started
     slept = elapsed > timeout + EXPORT_TIMEOUT + SLEEP_MARGIN
