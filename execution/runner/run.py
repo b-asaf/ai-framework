@@ -52,6 +52,9 @@ QA_TASK_MESSAGE = (
     "your whole reply as JSON, so reply with only the JSON object that the attached task file describes, "
     "with no text before or after it. "
     "The attached files are already included in this message, so do not open them again. "
+    "The files of the project are in the current directory: read its docs/project-overview folder "
+    "(stack.md and sub/patterns.md) for the stack and the test file pattern, "
+    "and do not read files outside the current directory. "
     "Do not create a branch and do not ask to confirm a plan: the plan is approved."
 )
 TASK_MESSAGES = {"code-reviewer": TASK_MESSAGE, "qa": QA_TASK_MESSAGE}

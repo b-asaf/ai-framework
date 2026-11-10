@@ -30,8 +30,13 @@ permission:
     "python -m unittest": allow
     "python -m unittest *": allow
     "python -m lizard *": allow
-  edit: deny
-  write: allow
+  edit:
+    "*": deny
+    "*.test.*": allow
+    "*.spec.*": allow
+    "*test_*.py": allow
+    "*__tests__/*": allow
+    "*src/test/*": allow
   task: deny
 ---
 
