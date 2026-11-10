@@ -12,6 +12,7 @@ sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "tools"))
 
 from execution.runner import benchmark, record, resolve, run  # noqa: E402
+from tests.test_run import with_directory  # noqa: E402
 from execution.runner import opencode_adapter as adapter  # noqa: E402
 from lib import routing  # noqa: E402
 
@@ -219,7 +220,7 @@ class FakeRunner:
 
     def __call__(self, command, **kwargs):
         if command[1] == "export":
-            return SimpleNamespace(returncode=0, stdout=self.export, stderr="")
+            return SimpleNamespace(returncode=0, stdout=with_directory(self.export, kwargs["cwd"]), stderr="")
         self.routing = json.loads(Path(kwargs["env"]["OPENCODE_CONFIG"]).read_text(encoding="utf-8"))
         return SimpleNamespace(returncode=0, stdout=read("review.jsonl"), stderr="")
 

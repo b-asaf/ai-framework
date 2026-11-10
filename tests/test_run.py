@@ -44,6 +44,18 @@ def write_json(path, data):
     path.write_text(json.dumps(data), encoding="utf-8")
 
 
+def with_directory(text, cwd):
+    """An export that also records the folder the session ran in, as a real one does (F74); other text stays as it is."""
+    try:
+        data = json.loads(text)
+    except (TypeError, ValueError):
+        return text
+    if not isinstance(data, dict) or not isinstance(data.get("info"), dict):
+        return text
+    data["info"].setdefault("directory", str(cwd))
+    return json.dumps(data)
+
+
 def make_repo(base):
     root = base / "repo"
     policy = {"version": 1, "models": {MODEL: APPROVED}, "constraints": {"independence": []}}
@@ -66,7 +78,8 @@ class Fake:
     def __call__(self, command, **kwargs):
         self.calls.append((command, kwargs))
         if command[1] != "run":
-            return self.export_result
+            export = self.export_result
+            return result(export.returncode, with_directory(export.stdout, kwargs["cwd"]), export.stderr)
         self.look_at_the_run_folder(command, kwargs["env"])
         if isinstance(self.run_result, Exception):
             raise self.run_result
@@ -140,6 +153,15 @@ class RunReview(unittest.TestCase):
         self.go()
         after = sorted(p.relative_to(self.target).as_posix() for p in self.target.rglob("*"))
         self.assertEqual(after, self.target_files)
+
+    def test_a_session_that_ran_in_another_directory_fails_the_run(self):
+        export = json.loads(read("review-session.json"))
+        export["info"]["directory"] = str(self.target.parent)
+        outcome, fake = self.go(Fake(export_result=result(0, json.dumps(export))))
+        built = outcome.record
+        self.assertEqual(len(fake.calls), 2)
+        self.assertEqual(built["status"]["execution"], "failure")
+        self.assertIn("F74", built["error"]["message"])
 
     def test_a_fallback_warning_fails_the_run_without_an_export(self):
         outcome, fake = self.go(Fake(run_result=result(0, read("review.jsonl"), read("fallback.stderr"))))

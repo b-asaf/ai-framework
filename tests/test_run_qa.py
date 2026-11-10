@@ -17,6 +17,7 @@ sys.path.insert(0, str(REPO / "tools"))
 
 from execution.runner import facts_stage, preflight, report, run, tree  # noqa: E402
 from execution.runner import opencode_adapter as adapter  # noqa: E402
+from tests.test_run import with_directory  # noqa: E402
 
 FIXTURES = REPO / "tests" / "fixtures" / "opencode-run"
 ROLE = "qa"
@@ -83,7 +84,7 @@ class QaFake:
     def __call__(self, command, **kwargs):
         self.calls.append((command, kwargs))
         if command[1] == "export":
-            return result(0, EXPORT)
+            return result(0, with_directory(EXPORT, kwargs["cwd"]))
         if command[1] == "run":
             return self.opencode(command, Path(kwargs["cwd"]))
         self.seen["tests_cwd"] = Path(kwargs["cwd"])
