@@ -114,5 +114,34 @@ class AssessWiring(unittest.TestCase):
         self.assertEqual(self.go(stderr=ASK.format("bash", "echo done")).status, "success")
 
 
+class RunConfigRule(unittest.TestCase):
+    def test_the_committed_form_has_no_permission_rule(self):
+        self.assertNotIn("permission", json.loads(adapter.render_run_config({"qa": "m/one"})))
+
+    def test_a_headless_run_config_denies_the_template_and_nothing_else_changes(self):
+        plain = json.loads(adapter.render_run_config({"qa": "m/one"}))
+        headless = json.loads(adapter.render_run_config({"qa": "m/one"}, headless=True))
+        self.assertEqual(headless.pop("permission"), {"external_directory": {adapter.TEMPLATE_READ: "deny"}})
+        self.assertEqual(headless, plain)
+
+    def test_the_pattern_names_the_template_and_no_other_skill_folder(self):
+        import fnmatch
+
+        template = "D:\\ai-framework\\skills\\project-overview\\sub\\stack.md"
+        alias = "C:\\Users\\a\\.claude\\skills\\project-overview\\sub\\patterns.md"
+        other = "D:\\ai-framework\\skills\\linting-tools\\references\\x.md"
+        self.assertTrue(fnmatch.fnmatchcase(template, adapter.TEMPLATE_READ))
+        self.assertTrue(fnmatch.fnmatchcase(alias, adapter.TEMPLATE_READ))
+        self.assertFalse(fnmatch.fnmatchcase(other, adapter.TEMPLATE_READ))
+
+    def test_prepare_run_dir_writes_the_rule(self):
+        agent = "---\ndescription: Fixture\nmode: subagent\npermission:\n  edit: deny\n---\nReview.\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            setup = adapter.prepare_run_dir(tmp, "qa", agent, "m/one")
+            written = json.loads(setup.config_file.read_text(encoding="utf-8"))
+        self.assertEqual(written["permission"], {"external_directory": {adapter.TEMPLATE_READ: "deny"}})
+        self.assertEqual(written["agent"], {"qa": {"model": "m/one"}})
+
+
 if __name__ == "__main__":
     unittest.main()
