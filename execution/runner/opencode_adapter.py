@@ -405,8 +405,16 @@ def _checked_efforts(efforts):
     return efforts
 
 
-def render_run_config(models, efforts=None):
-    """The OpenCode config for a run: the same format as the generated execution/routing.json."""
+TEMPLATE_READ = "*skills*project-overview*"
+
+
+def render_run_config(models, efforts=None, headless=False):
+    """The OpenCode config for a run: the same format as the generated execution/routing.json.
+
+    headless adds the rule that a run started by the runner may not read the generic project-overview
+    template (F77): the skill text points at it, a read outside the project asks, and an ask that nobody
+    can answer ends the run without a reply (F13). The committed routing file has no such rule.
+    """
     if not isinstance(models, dict) or not models:
         raise AdapterError("a run config needs at least one role and model")
     bad = [role for role, model in models.items() if not isinstance(model, str) or not model.strip()]
@@ -414,7 +422,10 @@ def render_run_config(models, efforts=None):
         raise AdapterError("no model given for: " + ", ".join(sorted(map(str, bad))))
     efforts = _checked_efforts(efforts)
     agents = {role: agent_entry(models[role], efforts.get(role)) for role in sorted(models)}
-    return routing_text({"$schema": SCHEMA_URL, "agent": agents})
+    config = {"$schema": SCHEMA_URL, "agent": agents}
+    if headless:
+        config["permission"] = {"external_directory": {TEMPLATE_READ: "deny"}}
+    return routing_text(config)
 
 
 def _write(path, text):
@@ -439,7 +450,7 @@ def prepare_run_dir(directory, role, agent_text, model, effort=None):
     """
     _check_role(role)
     derived = derive_agent(agent_text)
-    routing = render_run_config({role: model}, {role: effort} if effort else None)
+    routing = render_run_config({role: model}, {role: effort} if effort else None, headless=True)
     root = Path(directory)
     config_dir = root / "opencode-config"
     (config_dir / "agents").mkdir(parents=True, exist_ok=True)

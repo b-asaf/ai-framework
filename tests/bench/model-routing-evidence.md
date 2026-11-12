@@ -1,4 +1,4 @@
-# Model routing evidence (E1 to E15)
+# Model routing evidence (E1 to E16)
 
 Date: 2026-10-18. OpenCode 1.19.3, Windows, Git Bash. Findings F32 to F36 in `docs/transition-plan.md` rest on this file.
 
@@ -256,3 +256,18 @@ Setup: `opencode debug agent qa` with a per-run `OPENCODE_CONFIG_DIR` (no model 
 | Run 3 (edit map and the project docs named in the task message) | `apply_patch` completed on `src/slug.test.ts`; execution, artifact and workflow success; 6 tests passed; the fixture stayed unchanged |
 
 Caveats: one run per step; the probe used another model than `qa`; no production path was tempted; the Windows path match was seen for `src/slug.test.ts` only.
+
+## E16: reviewer retest after the PWD fix, and the template read (2026-11-10 and 2026-11-11)
+
+Setup: `python -m execution.runner.benchmark --trial --repeats 2 --models github-copilot/claude-haiku-5.5,github-copilot/gpt-6-luna`, started in the background on `main` (the baseline `gpt-5.6-terra` is added), 42 runs planned; then `opencode debug agent code-reviewer` with per-run config folders (no model call). OpenCode 1.19.3.
+
+| Step | Result |
+|---|---|
+| Retest rows | 5 rows were written, then nothing for about 11 hours and no python, opencode or node process was left (cause unknown: a machine sleep or a closed terminal is possible). Baseline off-by-one-loop #1 and leap-year-century #1 failed, gpt-6-luna off-by-one-loop #1 failed, claude-haiku-5.5 found the bug in both of its runs with a valid report |
+| The three failures | stop reason tool-calls, no reply, an auto-rejected `external_directory (D:\ai-framework\skills\project-overview\sub\*)`; the F74 guard rejected none |
+| Skill output | the `project-overview` skill ends with a base directory line for `C:\Users\...\.config\opencode\skills\project-overview` and lists the `sub` files there; that folder is a link to `D:\ai-framework\skills` |
+| Rule order, control | one `*` rule (`ask`) at position 0 and 92 allows after it |
+| Rule order, blanket `external_directory: {"*": deny}` in the run config (top level or in the agent entry) | `deny *` at position 91 with 2 allows after it, so it overrides about 90 specific allows |
+| Rule order, `*skills*project-overview*` deny | 94 rules, the first still `ask *`, one deny at position 91, then the reviewer's `linting-tools\references` allow and the `tool-output` allow |
+
+Caveats: five rows only; no run with the deny yet; whether the `skill` tool still loads the skill under the rule is untested; the E9 to E13 numbers were not rerun.
