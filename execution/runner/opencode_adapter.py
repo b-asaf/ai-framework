@@ -443,13 +443,57 @@ def load_agent_text(repo_root, role):
         raise AdapterError(f"{path.as_posix()} cannot be read: {error}") from error
 
 
+_EOLS = "\r\n"
+DENY_ALL = '    "*": deny'
+
+
+def _eol(line):
+    return line[len(line.rstrip(_EOLS)):]
+
+
+def _deny_bash_default(lines, end):
+    """The catch-all entry that opens the bash map becomes a deny, when there is exactly one."""
+    found = [
+        index
+        for index in range(2, end)
+        if lines[index].rstrip(_EOLS) == '    "*": ask' and lines[index - 1].rstrip(_EOLS) == "  bash:"
+    ]
+    if len(found) == 1:
+        lines[found[0]] = DENY_ALL + _eol(lines[found[0]])
+
+
+def _deny_external_directory(lines, end):
+    """A catch-all deny comes first in the external_directory map, or opens a new map under permission:."""
+    maps = [index for index in range(1, end) if lines[index].startswith("  external_directory:")]
+    permission = _top_level(lines, end, "permission")
+    if len(maps) == 1 and lines[maps[0]].rstrip(_EOLS) == "  external_directory:":
+        lines.insert(maps[0] + 1, DENY_ALL + _eol(lines[maps[0]]))
+    elif not maps and len(permission) == 1 and lines[permission[0]].rstrip(_EOLS) == "permission:":
+        eol = _eol(lines[permission[0]])
+        lines[permission[0] + 1:permission[0] + 1] = ["  external_directory:" + eol, DENY_ALL + eol]
+
+
+def deny_unanswerable_asks(text):
+    """The agent file for a headless run: an ask that nobody can answer ends the run without a reply (F13, F78).
+
+    In the per-run copy only, the bash catch-all ask becomes a deny and external_directory gets a catch-all
+    deny before its allows, so an unlisted command or path is an error the agent can work around. Every other
+    rule keeps its place and the line endings are kept. A file without the expected lines is returned unchanged.
+    """
+    lines = text.splitlines(keepends=True)
+    end = _frontmatter_end(lines)
+    _deny_bash_default(lines, end)
+    _deny_external_directory(lines, end)
+    return "".join(lines)
+
+
 def prepare_run_dir(directory, role, agent_text, model, effort=None):
     """Write the per-run files under directory and return where OpenCode finds them.
 
     Nothing is written unless the role, the agent text and the model are valid.
     """
     _check_role(role)
-    derived = derive_agent(agent_text)
+    derived = deny_unanswerable_asks(derive_agent(agent_text))
     routing = render_run_config({role: model}, {role: effort} if effort else None, headless=True)
     root = Path(directory)
     config_dir = root / "opencode-config"
