@@ -271,3 +271,23 @@ Setup: `python -m execution.runner.benchmark --trial --repeats 2 --models github
 | Rule order, `*skills*project-overview*` deny | 94 rules, the first still `ask *`, one deny at position 91, then the reviewer's `linting-tools\references` allow and the `tool-output` allow |
 
 Caveats: five rows only; no run with the deny yet; whether the `skill` tool still loads the skill under the rule is untested; the E9 to E13 numbers were not rerun.
+
+## E17: reviewer retest after the headless deny (2026-11-13)
+
+Setup: `python -m execution.runner.benchmark --models github-copilot/claude-haiku-5.5,github-copilot/gpt-6-luna --trial --repeats 2 --out /d/bench-retest-3`, run from the worktree of branch `fix/headless-ask-deny` (F78 applied), 42 runs; one baseline row that hit the timeout or a sleep was repeated with `--resume`. Then a manual `qa` run on the fixture `/d/qa-manual-fixture`. OpenCode 1.19.3, Windows, Git Bash. The result files are in `/d/bench-retest-3`, which is not versioned, so the numbers are copied here.
+
+| Run | Valid | Bugs found | False positives | Auto-rejected | Cost | Mean time |
+|---|---|---|---|---|---|---|
+| bench-retest-2, `gpt-5.6-terra` (baseline) | 12 of 14 | 8 of 10 | 1 of 4 | 2 | not recorded here | not recorded here |
+| bench-retest-2, `claude-haiku-5.5` | 13 of 14 | 9 of 10 | 0 of 4 | 0 | not recorded here | not recorded here |
+| bench-retest-2, `gpt-6-luna` | 6 of 14 | 6 of 10 | 0 of 4 | 8 | not recorded here | not recorded here |
+| bench-retest-3, `gpt-5.6-terra` (baseline) | 14 of 14 | 10 of 10 | 0 of 4 | 0 | $1.599 | 75 s |
+| bench-retest-3, `claude-haiku-5.5` | 14 of 14 | 10 of 10 | 0 of 4 | 0 | $0.040 | 36 s |
+| bench-retest-3, `gpt-6-luna` | 14 of 14 | 10 of 10 | 0 of 4 | 0 | $0.112 | 107 s |
+
+| Step | Result |
+|---|---|
+| Terra on `clean-rename-helper`, 4 runs on `main` before F78 | 2 REQUEST CHANGES with one BLOCKING `API COMPATIBILITY` finding on `src/format.ts:1` (the exported `fmt` is renamed and no alias is kept), 2 APPROVED; static analysis found the changed files in all 4 |
+| `qa` on `/d/qa-manual-fixture` with the changed agent copy | `TESTS_WRITTEN`, 1 test file, 6 tests; execution, artifact and workflow success; `node --test` exit 0 |
+
+Caveats: two repeats per case, so the cases screen out a bad model and do not rank the good ones. The F78 effect rests on the auto-rejected count (10 of 42 before, 0 of 42 after). The terra rename result is ambiguous: the diff does not show whether `fmt` has outside callers, and the same case gave 2 of 4 flags in one batch and 0 of 4 in the other. Luna's E12 result did not reproduce, but F74, F77 and F78 changed in between, so the cause is unknown. The reviewer cannot run `jf` or other unlisted commands any more, so Xray is not part of this benchmark; whether it reports Xray as skipped was not checked in the retest-3 reports. `qa` was checked in one run, and the second step above ran before F78 for terra only. E9 to E13 were not rerun and predate F74, so their rankings are history.

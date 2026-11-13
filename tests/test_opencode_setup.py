@@ -131,7 +131,7 @@ class PrepareRunDir(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             setup = adapter.prepare_run_dir(tmp, "qa", AGENT, "m/one")
             agent_file = setup.config_dir / "agents" / "qa.md"
-            self.assertEqual(agent_file.read_bytes().decode("utf-8"), adapter.derive_agent(AGENT))
+            self.assertEqual(agent_file.read_bytes().decode("utf-8"), adapter.deny_unanswerable_asks(adapter.derive_agent(AGENT)))
             routing = json.loads(setup.config_file.read_text(encoding="utf-8"))
             self.assertEqual(routing["agent"], {"qa": {"model": "m/one"}})
             self.assertEqual(setup.config_file.parent, Path(tmp))
