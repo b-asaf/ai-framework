@@ -44,12 +44,15 @@ def run_facts(
 ):
     """(workflow level, verification object, error object or None) for a run that reached a valid report.
 
-    The second snapshot is taken before the tests run, because a test run can write files of its own.
+    The second snapshot is taken before the tests run, because a test run can write files of its own. The text of
+    the added and modified files is read at the same moment and returned as the fourth value (tree.read_files),
+    because the copy of the target is deleted when the run ends.
     """
     changes = tree.changed_files(before, tree.snapshot(copy))
+    files = tree.read_files(copy, changes.added + changes.modified)
     problems = facts_check.cross_check(written, changes) + list(report_problems)
     tests = _tests(argv, copy, timeout, runner, which, environ)
     level = facts_check.workflow_level(tests, problems)
     verification = facts_check.build_verification(command, tests, changes, problems)
     error = None if level == "success" else record.error_info(_message(tests, problems))
-    return level, verification, error
+    return level, verification, error, files

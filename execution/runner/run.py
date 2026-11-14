@@ -65,6 +65,7 @@ class Outcome:
     record: dict
     report: dict | None
     slept: bool = False
+    files: dict | None = None
 
 
 @dataclass(frozen=True)
@@ -248,12 +249,12 @@ def _run_writing(work, resolved, executable, agent_text, diff, target, runner, t
     if status["execution"] != "success" or status["artifact"] != "success":
         return outcome
     command, argv = prepared
-    level, verification, error = facts_stage.run_facts(
+    level, verification, error, files = facts_stage.run_facts(
         command, argv, copy, before, outcome.report["tests_written"],
         runner=runner, which=which, environ=base, report_problems=facts_check.outcome_problems(outcome.report),
     )
     built = dict(outcome.record, status=dict(status, workflow=level), verification=verification, error=error)
-    return replace(outcome, record=record.build_record(**built))
+    return replace(outcome, record=record.build_record(**built), files=files)
 
 
 def run_review(
