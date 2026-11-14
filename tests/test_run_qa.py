@@ -103,6 +103,15 @@ class QaFake:
         return result(0, "\n".join(lines))
 
 
+class TestsRewrite(QaFake):
+    """The test run itself rewrites the test file, as a real test run can."""
+
+    def __call__(self, command, **kwargs):
+        if command[1] not in ("run", "export"):
+            put(kwargs["cwd"], TEST_FILE, "rewritten by the tests")
+        return super().__call__(command, **kwargs)
+
+
 class WritingRun(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -219,6 +228,26 @@ class WritingRun(unittest.TestCase):
         data = dict(qa_report(), outcome="NO_TESTS_NEEDED", summary="Nothing to test.")
         self.assertEqual(self.go(QaFake(data)).record["status"]["workflow"], "success")
 
+    def test_a_good_run_returns_the_text_of_the_files_it_wrote(self):
+        outcome = self.go(QaFake(qa_report(TEST_FILE), {TEST_FILE: "t"}))
+        self.assertEqual(outcome.files, {TEST_FILE: "t"})
+
+    def test_a_changed_production_file_is_returned_too(self):
+        writes = {TEST_FILE: "t", "src/clamp.ts": "changed"}
+        outcome = self.go(QaFake(qa_report(TEST_FILE), writes))
+        self.assertEqual(outcome.files, writes)
+
+    def test_nothing_changed_gives_no_files_and_not_none(self):
+        data = dict(qa_report(), outcome="NO_TESTS_NEEDED", summary="Nothing to test.")
+        self.assertEqual(self.go(QaFake(data)).files, {})
+
+    def test_an_invalid_report_leaves_the_files_unset(self):
+        self.assertIsNone(self.go(QaFake("not json")).files)
+
+    def test_the_text_is_read_before_the_tests_can_rewrite_it(self):
+        outcome = self.go(TestsRewrite(qa_report(TEST_FILE), {TEST_FILE: "t"}))
+        self.assertEqual(outcome.files, {TEST_FILE: "t"})
+
 
 class FactsStage(unittest.TestCase):
     def test_prepare_returns_the_command_and_its_argv(self):
@@ -228,12 +257,13 @@ class FactsStage(unittest.TestCase):
 
     def test_a_test_command_that_is_not_found_is_a_failed_workflow(self):
         with tempfile.TemporaryDirectory() as tmp:
-            level, verification, error = facts_stage.run_facts(
+            level, verification, error, files = facts_stage.run_facts(
                 "nope x", ["nope", "x"], tmp, tree.snapshot(tmp), [], which=lambda name: None
             )
         self.assertEqual(level, "failure")
         self.assertIn("not found", verification["tests"]["note"])
         self.assertIn("not found", error["message"])
+        self.assertEqual(files, {})
 
 
 if __name__ == "__main__":

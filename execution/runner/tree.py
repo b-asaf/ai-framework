@@ -10,6 +10,9 @@ import hashlib
 from dataclasses import dataclass
 from pathlib import Path
 
+MAX_FILE_BYTES = 64 * 1024
+MAX_TOTAL_BYTES = 256 * 1024
+
 
 def snapshot(directory):
     """Map of relative path to content hash for every file under directory except .git."""
@@ -40,3 +43,28 @@ def changed_files(before, after):
         modified=tuple(sorted(name for name in set(before) & set(after) if before[name] != after[name])),
         deleted=tuple(sorted(set(before) - set(after))),
     )
+
+
+def _text(path, limit):
+    """The UTF-8 text of a file, or None when it is missing, larger than limit bytes or not UTF-8."""
+    try:
+        if path.stat().st_size > limit:
+            return None
+        return path.read_bytes().decode("utf-8")
+    except (OSError, ValueError):
+        return None
+
+
+def read_files(directory, names, max_file=MAX_FILE_BYTES, max_total=MAX_TOTAL_BYTES):
+    """Name -> text of each named file under directory, so the content outlives the copy of the target.
+
+    A file that is missing, larger than max_file bytes, not UTF-8 or past the max_total budget maps to None:
+    None means not captured, never empty.
+    """
+    root = Path(directory)
+    result, used = {}, 0
+    for name in names:
+        text = _text(root / name, min(max_file, max_total - used))
+        result[name] = text
+        used += len(text.encode("utf-8")) if text is not None else 0
+    return result
