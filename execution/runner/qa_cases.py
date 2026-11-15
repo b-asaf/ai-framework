@@ -45,7 +45,8 @@ PERCENT = """export function percent(part: number, total: number): number {
   return Math.round((part / total) * 100);
 }
 """
-TITLE = """const SMALL_WORDS = new Set(["a", "an", "and", "of", "the"]);
+TITLE = """// Small words stay lower case, except the first word.
+const SMALL_WORDS = new Set(["a", "an", "and", "of", "the"]);
 
 function capitalize(word: string): string {
   return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
