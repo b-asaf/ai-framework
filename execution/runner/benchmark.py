@@ -49,15 +49,15 @@ def _write_policy(source, target, trial_model):
     target.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
-def make_bench_root(repo_root, directory, model, effort=None, trial=False):
+def make_bench_root(repo_root, directory, model, effort=None, trial=False, role=ROLE):
     """A framework folder that differs from repo_root only in the profile: the role runs on model."""
     source, root = Path(repo_root), Path(directory)
     (root / "execution" / "profiles").mkdir(parents=True)
     (root / "agents").mkdir()
     _write_policy(source / "execution" / "policy.json", root / "execution" / "policy.json", model if trial else None)
-    shutil.copyfile(source / "agents" / f"{ROLE}.md", root / "agents" / f"{ROLE}.md")
+    shutil.copyfile(source / "agents" / f"{role}.md", root / "agents" / f"{role}.md")
     entry = {"model": model, "effort": effort} if effort else {"model": model}
-    profile = {"version": 1, "agents": {ROLE: entry}}
+    profile = {"version": 1, "agents": {role: entry}}
     text = json.dumps(profile, indent=2) + "\n"
     (root / "execution" / "profiles" / "default.json").write_text(text, encoding="utf-8", newline="\n")
     return root
