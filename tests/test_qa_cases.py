@@ -58,6 +58,12 @@ class Cases(unittest.TestCase):
                 self.assertNotEqual(case.mutant, case.source)
                 self.assertFalse(qa_cases.is_test_file(case.path))
 
+    def test_the_title_source_states_the_rule_and_the_mutant_breaks_it(self):
+        case = qa_cases.get_case("title-case-private-helper")
+        self.assertIn("// Small words stay lower case, except the first word.", case.source)
+        self.assertIn("index > 0 &&", case.source)
+        self.assertNotIn("index > 0 &&", case.mutant)
+
     def test_an_unknown_case_names_the_known_ones(self):
         with self.assertRaisesRegex(ValueError, "percent-zero-total"):
             qa_cases.get_case("nope")
