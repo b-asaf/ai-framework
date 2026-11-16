@@ -55,6 +55,9 @@ QA_TASK_MESSAGE = (
     "The files of the project are in the current directory: read its docs/project-overview folder "
     "(stack.md and sub/patterns.md) for the stack and the test file pattern, "
     "and do not read files outside the current directory. "
+    "Look at files with the read, glob and grep tools, not with bash. "
+    "Use bash only to run the test command of the project, as one plain command "
+    "with no cd, no pipes, no chaining and no redirects. "
     "Do not create a branch and do not ask to confirm a plan: the plan is approved."
 )
 TASK_MESSAGES = {"code-reviewer": TASK_MESSAGE, "qa": QA_TASK_MESSAGE}
