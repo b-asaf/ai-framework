@@ -628,122 +628,6 @@ def audit_token_optimizer(det):
     info("Token Optimizer installed. Run the one-time audit yourself:")
     info("  In Claude Code: /token-optimizer")
 
-# ── Graphify ───────────────────────────────────────────────────────────────────
-# Code knowledge graph (tree-sitter AST, zero LLM cost for code) — agents query
-# it instead of Read/Glob/grep-ing files to figure out structure. See
-# skills/graphify/SKILL.md for the query commands and how it composes with
-# zoom-out / first-run-analysis / pattern-enforcement.
-
-def install_graphify():
-    bold("Setting up Graphify...")
-    if shutil.which("graphify"):
-        try:
-            r = subprocess.run(["graphify", "--version"], capture_output=True, text=True)
-            if r.returncode == 0:
-                ok(f"Graphify already installed: {r.stdout.strip()}")
-                return True
-        except Exception:
-            pass
-    installer = shutil.which("uv") or shutil.which("pipx")
-    if not installer:
-        warn("Neither uv nor pipx found — cannot install Graphify")
-        _need_action(
-            "Graphify not installed",
-            "Graphify needs uv or pipx. Install one, then run:",
-            "  uv tool install graphifyy   (recommended)",
-            "  pipx install graphifyy",
-        )
-        return False
-    try:
-        installer_name = Path(installer).name.lower()
-        if installer_name in ("uv", "uv.exe"):
-            install_result = subprocess.run([installer, "tool", "install", "graphifyy"],
-                                             check=True, capture_output=True, text=True)
-        else:
-            install_result = subprocess.run([installer, "install", "graphifyy"],
-                                             check=True, capture_output=True, text=True)
-
-        if shutil.which("graphify"):
-            r = subprocess.run(["graphify", "--version"],
-                               check=False, capture_output=True, text=True)
-            if r.returncode == 0:
-                ok("Graphify installed")
-                return True
-
-        warn("Graphify installed but could not run after installation")
-        # uv installs to a per-user tool dir that isn't always on PATH yet —
-        # uv itself usually says so directly. Show it instead of guessing.
-        uv_output = (install_result.stdout + install_result.stderr).strip()
-        if uv_output:
-            info("uv said:")
-            for line in uv_output.splitlines():
-                info(f"  {line}")
-        _need_action(
-            "Graphify installed but not runnable",
-            "uv installed it, but 'graphify --version' still fails — almost",
-            "always a PATH issue (see \"uv said:\" output above, if any).",
-            "1. Run 'uv tool update-shell' to register uv's tool bin dir on PATH.",
-            "2. A NEW cmd/PowerShell window is often not enough on Windows —",
-            "   setx/uv update the registry but an already-running Explorer/shell",
-            "   session keeps its old PATH. Log off and back on (or reboot), or",
-            "   open System Properties -> Environment Variables -> OK to force a refresh.",
-            "3. Confirm the binary directly: run 'uv tool dir --bin' to find it,",
-            "   then '<that dir>\\graphify.exe --version' (Windows) to test it in isolation.",
-            "4. Once 'graphify --version' works in a fresh shell: re-run 'python setup.py'",
-            "   (not just --verify) — this both marks it installed AND registers the",
-            "   /graphify skill with each of your assistants (OpenCode, Claude Code, etc).",
-        )
-        return False
-    except subprocess.CalledProcessError as exc:
-        warn(f"Graphify install failed: {exc}")
-        if exc.stderr:
-            info("uv said:")
-            for line in exc.stderr.strip().splitlines():
-                info(f"  {line}")
-        _need_action(
-            "Graphify not installed",
-            "Install manually: uv tool install graphifyy",
-        )
-        return False
-
-def wire_graphify(det):
-    """Registers Graphify assistants globally. Hook installation is per-project,
-    not wired here, so each opened project receives its own rebuild hook."""
-    if not shutil.which("graphify"):
-        return
-    bold("Wiring Graphify...")
-    platform_flag = {
-        "opencode": "opencode",
-        "claude":   None,   # bare `graphify install` targets Claude Code by default
-        "codex":    "codex",
-        "gemini":   "gemini",
-    }
-    installed_any = False
-    for tool, flag in platform_flag.items():
-        if not det.get(tool):
-            continue
-        try:
-            cmd = ["graphify", "install"]
-            if flag:
-                cmd += ["--platform", flag]
-            subprocess.run(cmd, check=True, capture_output=True, cwd=str(REPO))
-            ok(f"graphify/{tool}")
-            installed_any = True
-        except (subprocess.CalledProcessError, FileNotFoundError) as exc:
-            warn(f"graphify/{tool} failed: {exc}")
-            _need_action(
-                f"Graphify not wired for {tool}",
-                f"Install manually: graphify install" + (f" --platform {flag}" if flag else ""),
-            )
-    if not installed_any:
-        return
-    info("Graphify CLI registration complete (skill available globally).")
-    info("Two more steps, run once inside each opened project:")
-    info("  cd <project> && graphify <platform> install   # always-on nudge, e.g. opencode/claude/codex/gemini")
-    info("  cd <project> && graphify hook install          # keeps graph.json current on commit")
-    info("Large repos: use scripts/graphify-smart-viz.sh instead of raw")
-    info("`graphify` when HTML output matters — auto-skips viz past ~5000 nodes.")
-
 # ── PR/MR provider tooling ───────────────────────────────────────────────────
 
 def check_pr_provider():
@@ -846,25 +730,6 @@ def verify_only():
     check_hooks()
     print()
 
-    bold("Graphify status:")
-    if shutil.which("graphify"):
-        r = subprocess.run(["graphify", "--version"], capture_output=True, text=True)
-        if r.returncode == 0:
-            ok(f"graphify runnable: {r.stdout.strip()}")
-        else:
-            warn("graphify found on PATH but 'graphify --version' fails")
-            _need_action(
-                "Graphify installed but not runnable",
-                "Re-run: python setup.py",
-            )
-    else:
-        warn("graphify not found — run 'python setup.py' to install")
-        _need_action(
-            "Graphify not installed",
-            "Run: python setup.py",
-        )
-    print()
-
     template_dir = REPO / "git-template"
     current = subprocess.run(
         ["git", "config", "--global", "--get", "init.templateDir"],
@@ -943,12 +808,7 @@ def main():
     audit_token_optimizer(det)
     print()
 
-    # 5. Graphify — code knowledge graph (see skills/graphify/SKILL.md)
-    if install_graphify():
-        wire_graphify(det)
-    print()
-
-    # 6. PR/MR provider tooling (detect only — see check_pr_provider docstring)
+    # 5. PR/MR provider tooling (detect only — see check_pr_provider docstring)
     check_pr_provider()
     print()
 

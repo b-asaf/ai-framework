@@ -38,8 +38,6 @@ Run `zoom-out` on each repo. Output feeds into Step 4 (knowing where to look) an
 
 ## Step 4 — Convention detection
 
-If the `graphify` skill is available and `graphify-out/graph.json` exists (or can be built), verify that the graph is fresh before using it. When `graphify-out/graph.json` is missing or stale, run `graphify update .` first, then use `graphify query`/`graphify explain` against the real `calls`/`imports`/`inherits` edges to identify where patterns repeat across the whole repo, not just a sample — then confirm against the specific files found. If Graphify is unavailable or cannot refresh the artifact, scan 10-20 representative files per repo.
-
 Detect:
 
 - Test file placement (co-located / `__tests__/` / mirror package / mixed)
@@ -84,23 +82,6 @@ Review before starting feature work. No changes made automatically.
 - **`workflow-guide.md`** — append `## Project-specific notes` only if genuinely needed
 - **`Manual.md`** — replace `[XXX]`, update workspace layout if microservices detected
 - **`.ai-framework.json`** — write to the root of **each individual repo** (not the shared framework install): `{"lint": "<cmd>", "format": "<cmd or empty string>", "test": "<cmd>"}` (optional: `coverage.minChangedLines`, a whole number from 0 to 100, default 90, 0 means no minimum, is the changed-line coverage minimum; write it only if the developer names a number), mirroring the Lint/Format/Test command fields you just wrote into that repo's `stack.md`. This is what the `pre-push` git hook reads to run `build-verify` structurally — it must live inside the project's own repo, not the shared skills location, since the hook has no other way to find it. Commit it.
-- **`graphify-out/`** — if the `graphify` skill is available and hasn't been run in this
-  repo yet:
-  1. Build the initial graph: run `graphify_smart_viz.py .` from the ai-framework repo
-     (auto-detects LLM key availability, defaults to `--code-only` if none is set —
-     see `skills/graphify/SKILL.md`).
-  2. Wire the always-on nudge for the current platform: `graphify opencode install`
-     (or `graphify claude install` / `graphify codex install` / `graphify gemini
-     install` — match whichever tool this session is running in).
-  3. Wire the rebuild hooks: `graphify hook install`.
-  4. **Commit** `graphify-out/` (except `graphify-out/cost.json`, which stays local),
-     plus whatever platform instruction file step 2 modified (e.g. the graphify
-     section added to this project's own `AGENTS.md`).
-
-  Without step 4, teammates pulling never get a current graph. Without steps 2–3, the
-  graph gets built once but is never consulted automatically and never kept fresh —
-  see `decisions/DEC-005` for why this was previously a separate manual step and isn't
-  anymore.
 
 ## Completion message
 
@@ -110,7 +91,7 @@ Review before starting feature work. No changes made automatically.
 Project: [name]  |  Architecture: [type]  |  Repos: [list with state]
 Stack: BE [lang/framework]  |  FE [framework]
 
-Files updated: project-overview ✅  _opencode.json ✅  CONTEXT.md ✅  .ai-framework.json ✅  graphify-out ✅  graphify wiring ✅
+Files updated: project-overview ✅  _opencode.json ✅  CONTEXT.md ✅  .ai-framework.json ✅
 [📋 refactoring-plan.md generated] ← only if applicable
 
 Ready. What would you like to do first?
