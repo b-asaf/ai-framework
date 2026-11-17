@@ -144,7 +144,6 @@ git commands) is stale relative to the current `AGENTS.md` and predates the
 | Tool | Layer | Status |
 |---|---|---|
 | Token Optimizer | Structural audit + compaction survival | Auto-installed by setup.py (git clone) |
-| ccusage | Cross-tool token/cost monitoring | Auto-installed by setup.py (npm, or zero-install via npx) |
 
 Plus framework-level optimisations already built in:
 - All skills have `## Quick reference` sections (load summary, not full content)

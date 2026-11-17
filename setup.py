@@ -628,31 +628,6 @@ def audit_token_optimizer(det):
     info("Token Optimizer installed. Run the one-time audit yourself:")
     info("  In Claude Code: /token-optimizer")
 
-# ── Token monitoring ─────────────────────────────────────────────────────────
-# See monitoring/README.md — ccusage covers cross-tool token/cost dashboards.
-
-def install_ccusage(det):
-    """Cross-tool token/cost dashboard — Claude Code, Codex, OpenCode, Gemini CLI,
-    Copilot CLI, all in one command. See monitoring/README.md."""
-    bold("Checking token/cost dashboard (ccusage)...")
-    if shutil.which("ccusage"):
-        ok("ccusage already installed")
-        return True
-    npm = shutil.which("npm")
-    if npm:
-        try:
-            subprocess.run([npm, "install", "-g", "ccusage"],
-                           check=True, capture_output=True, timeout=60)
-            ok("ccusage installed globally")
-            info("  Try: ccusage daily   /   ccusage session   /   ccusage weekly")
-            return True
-        except Exception as exc:
-            warn(f"Global install failed ({exc}) — falls back to npx, no action needed")
-    else:
-        info("npm not found — that's fine, ccusage runs zero-install via npx")
-    info("  Try: npx ccusage@latest daily   (works without any install)")
-    return True
-
 # ── Graphify ───────────────────────────────────────────────────────────────────
 # Code knowledge graph (tree-sitter AST, zero LLM cost for code) — agents query
 # it instead of Read/Glob/grep-ing files to figure out structure. See
@@ -973,11 +948,7 @@ def main():
         wire_graphify(det)
     print()
 
-    # 6. Token monitoring
-    install_ccusage(det)
-    print()
-
-    # 7. PR/MR provider tooling (detect only — see check_pr_provider docstring)
+    # 6. PR/MR provider tooling (detect only — see check_pr_provider docstring)
     check_pr_provider()
     print()
 
