@@ -201,9 +201,8 @@ intended setup, not redundant.
 | Tool                | Layer                         | What it does                                                                                                                                                                                                                         |
 | ------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Token Optimizer** | Structural + behavioral audit | Finds bloated configs, unused skills, stale memory, model misrouting; checkpoints session state so compression survives auto-compaction                                                                                              |
-| **Graphify**        | Codebase exploration          | Pre-builds a local, deterministic call/import graph (tree-sitter, zero LLM cost). Agents query it (`graphify explain`, `graphify path`) instead of reading files one by one to figure out structure — see `skills/graphify/SKILL.md` |
 
-All three install automatically during `python setup.py` if their prerequisites
+Token Optimizer installs automatically during `python setup.py` if its prerequisites
 (git, uv/pipx) are available. If a tool fails to install, setup continues —
 none is required for the framework to work.
 
@@ -212,15 +211,6 @@ for personal, research, and educational use. Commercial use requires a
 separate license from the author. After install, run the one-time audit
 yourself inside Claude Code with `/token-optimizer` — it presents diffs for
 approval before changing anything, it does not run automatically.
-
-**Graphify note:** the graph is meant to be committed (`graphify-out/`) so
-the whole team starts oriented and every session skips re-deriving structure
-from scratch. `python setup.py` registers Graphify assistants globally, but the
-repo-specific rebuild hook should be installed inside each opened project with
-`cd <project> && graphify hook install`. For repos large enough that `graph.html`
-becomes unwieldy (~5000+ nodes), use `scripts/graphify-smart-viz.sh`
-instead of calling `graphify` directly — it extracts with `--no-viz` first,
-checks the node count, and only generates HTML under the threshold.
 
 ---
 
@@ -424,16 +414,13 @@ Make sure your own working tree is clean first so nothing of yours leaks into th
 | `refactor-planner`        | "Plan a refactor of X" | Safe incremental refactor plan before any code changes                                      |
 | `web-research-specialist` | "Search the web for X" | External research — Rule 12 means it never fires on its own, always needs your confirmation |
 
-**Skills you trigger:** see the [human-invoked skills table](#skills--you-trigger-human-invoked) — `excalidraw-sequence-diagram`, `improve-codebase-architecture`, `caveman`, `handoff`, `zoom-out`, `first-run-analysis`, `repo-topology`, `graphify`.
+**Skills you trigger:** see the [human-invoked skills table](#skills--you-trigger-human-invoked) — `excalidraw-sequence-diagram`, `improve-codebase-architecture`, `caveman`, `handoff`, `zoom-out`, `first-run-analysis`, `repo-topology`.
 
 **Standalone CLI tools** (run from your terminal, not through the agent):
 
 | Tool                       | Run                                                                                | What it does                                                                                              |
 | -------------------------- | ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | Token Optimizer audit      | `/token-optimizer` inside Claude Code                                              | One-time audit for bloated configs/unused skills — presents diffs for approval, doesn't run automatically |
-| Graphify always-on install | `graphify <platform> install` (e.g. `graphify opencode install`), once per project | Makes the agent auto-prefer the graph over Read/Glob — not wired by `setup.py` since it's per-project     |
-| Graphify rebuild hook      | `graphify hook install`, once per project                                          | Keeps `graphify-out/graph.json` current on every commit                                                   |
-| Graphify large-repo viz    | `scripts/graphify-smart-viz.sh <path>`                                             | Safe graph visualization — auto-skips HTML past ~5000 nodes                                               |
 | Setup health check         | `python setup.py --verify`                                                         | Read-only — prints what still needs attention without changing anything                                   |
 
 ---
@@ -448,7 +435,7 @@ agents/                     ← 15 agent definitions (models are set in `executi
 skills/                     ← 45 skill folders (most have a ## Quick reference section)
 commands/                   ← slash commands (/task, /quick, /review, /first-run, /handoff)
 hooks/                      ← git hooks (pre-commit, commit-msg, pre-push, build-verify.sh — copied into new repos via git init.templateDir; `python setup.py --install-hooks <repo>` installs them in an existing repo)
-scripts/                    ← graphify-smart-viz.sh (node-count-aware graph visualization)
+scripts/                    ← helper scripts the agents call (git-context.py, static-analysis.py, quick-lane-check.py, open-draft-pr.py)
 
 instructions/
   AGENTS-reference.md       ← agent roles, task flow, skill routing — loaded on-demand
@@ -522,7 +509,6 @@ action from you — just open a project and start a task.
 | `first-run-analysis`         | `project-overview` is empty or contains `[XXX]`                                                                                                                                          |
 | `zoom-out`                   | First session on a project (after first-run) or long gap between sessions                                                                                                                |
 | `repo-topology`              | During first-run analysis or any cross-service task                                                                                                                                      |
-| `graphify`                   | Loaded by `zoom-out`, `first-run-analysis`, `pattern-enforcement` whenever `graphify-out/graph.json` exists; also fires directly on "what calls X" / "what depends on X" style questions |
 | `build-verify`               | Loaded by `backend`, `frontend`, `frontend-error-fixer`, `api`, `db`, `ui` — always runs before any of them declares work done, not conditional                                          |
 | `diagnose`                   | Task type is a bug fix                                                                                                                                                                   |
 | `tdd`                        | Writing code for a feature or fix                                                                                                                                                        |
@@ -573,7 +559,6 @@ or by telling the orchestrator directly:
 | `zoom-out`                        | "Zoom out" / "orient me"                     | Orientation map — also fires automatically on first session                           |
 | `first-run-analysis`              | "Re-scan the project"                        | Manual refresh of project-overview (auto-fires on `[XXX]`)                            |
 | `repo-topology`                   | "Detect the topology"                        | Manual topology re-detection (auto-fires during first-run)                            |
-| `graphify`                        | "What calls X?" / "How does A connect to B?" | Queries the code knowledge graph instead of grepping — see `skills/graphify/SKILL.md` |
 
 ---
 
@@ -588,6 +573,4 @@ or by telling the orchestrator directly:
 | VS Code Copilot has no instructions                              | Re-run `python setup.py` — it updates `settings.json` automatically                                                                                                                                                                                                                                          |
 | Skills not loading                                               | Verify `~/.config/opencode/skills` or `~/.claude/skills` exists                                                                                                                                                                                                                                              |
 | Token Optimizer not installing                                   | See "Token usage reduction" section above                                                                                                                                                                                                                                                                    |
-| Graphify not installing                                          | Install manually: `uv tool install graphifyy` (or `pipx install graphifyy`), then re-run `python setup.py`                                                                                                                                                                                                   |
-| `graph.html` too large / slow to open                            | Use `scripts/graphify-smart-viz.sh` instead of raw `graphify` — it skips HTML generation past ~5000 nodes automatically                                                                                                                                                                                      |
 | Git hooks not firing                                             | Run `python <ai-framework>/setup.py --install-hooks <repo>` (git init never overwrites an existing hook)                                                                                                                                                                                                                                                   |

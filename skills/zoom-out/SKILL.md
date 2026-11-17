@@ -36,8 +36,6 @@ Do **not** run this if you've already orientated in this session. One zoom-out p
 
 Work through these in order. Stop when you have enough orientation — don't read everything.
 
-If the `graphify` skill is available and both `graphify-out/graph.json` and `graphify-out/GRAPH_REPORT.md` exist, answer Steps 1–3 from `graphify-out/GRAPH_REPORT.md` (God nodes, communities) and `graphify explain "<entry point>"` first — it's a scoped answer instead of a multi-file read. Otherwise, fall back to the manual sequence below for anything the graph doesn't cover, and always still do Step 5 (reading the actual task files) manually.
-
 ### 1. Start at the root
 
 ```
