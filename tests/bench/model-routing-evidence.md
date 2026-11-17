@@ -291,3 +291,24 @@ Setup: `python -m execution.runner.benchmark --models github-copilot/claude-haik
 | `qa` on `/d/qa-manual-fixture` with the changed agent copy | `TESTS_WRITTEN`, 1 test file, 6 tests; execution, artifact and workflow success; `node --test` exit 0 |
 
 Caveats: two repeats per case, so the cases screen out a bad model and do not rank the good ones. The F78 effect rests on the auto-rejected count (10 of 42 before, 0 of 42 after). The terra rename result is ambiguous: the diff does not show whether `fmt` has outside callers, and the same case gave 2 of 4 flags in one batch and 0 of 4 in the other. Luna's E12 result did not reproduce, but F74, F77 and F78 changed in between, so the cause is unknown. The reviewer cannot run `jf` or other unlisted commands any more, so Xray is not part of this benchmark; whether it reports Xray as skipped was not checked in the retest-3 reports. `qa` was checked in one run, and the second step above ran before F78 for terra only. E9 to E13 were not rerun and predate F74, so their rankings are history.
+
+## E18: qa benchmark, two runs on two TypeScript cases (2026-11)
+
+Setup: `python -m execution.runner.qa_benchmark --models github-copilot/claude-haiku-5.5,github-copilot/gpt-6-luna --trial --repeats 2`, started from a worktree, through a small wrapper outside the repository that saved each run's report, files and verification. The baseline is the production model of `qa` (`gpt-5.6-sol`); `gpt-6-luna` is experimental and counts as approved inside the benchmark only. 2 cases x 3 models x 2 repeats = 12 runs per run. The cases are in `execution/runner/qa_cases.py`: `percent-zero-total` (a helper with a zero guard) and `title-case-private-helper` (a helper whose parts are not exported, which tempts an edit of the production file). A run passes when a test file was added, the tests pass on the correct code (measured by the runner), the same tests fail on the copy with the planted defect, and no production file changed. A single smoke run before run 1 (`gpt-5.6-sol`, `percent-zero-total`) passed at $0.13. OpenCode 1.19.3, Windows, Git Bash. The result files are in `/d/qabench-1` and `/d/qabench-2`, which are not versioned, so the numbers are copied here.
+
+| Model | Run 1 | Run 2 | Cost, run 1 | Cost, run 2 | Mean time, run 1 | Mean time, run 2 |
+|---|---|---|---|---|---|---|
+| gpt-5.6-sol (baseline) | 3 of 4 | 4 of 4 | $0.497 | $0.470 | 66 s | 45 s |
+| claude-haiku-5.5 | 2 of 4 | 4 of 4 | $0.017 | $0.015 | 50 s | 31 s |
+| gpt-6-luna | 4 of 4 | 4 of 4 | $0.018 | $0.016 | 86 s | 54 s |
+
+Per case in run 1: sol 2 of 2 on `percent-zero-total` and 1 of 2 on `title-case-private-helper`; haiku 0 of 2 and 2 of 2; luna 2 of 2 and 2 of 2. In run 2 every cell was 2 of 2. No run changed a production file, none ended in `NEEDS_DEVELOPER`, every report was valid.
+
+| Step | Result |
+|---|---|
+| Run 1, sol `title-case-private-helper` #1 | The test expected "What Dreams Are Made Of"; the code gives "What Dreams Are Made of". The test failed on the correct code and the model reported it as a production defect. The source stated no rule for the last word, so the fixture was at fault. PR #108 added one comment line with the rule; the mutant is unchanged |
+| Run 1, haiku `percent-zero-total` #1 and #2 | The first bash call (a chained `cat` and `ls` command) was denied; the model wrote the tests with the write tool and never ran them; the report says shell access was denied; the test file imports `./percent` and Node fails with ERR_MODULE_NOT_FOUND (F79) |
+| Change between the runs | The title case rule in the fixture (PR #108) and one sentence in `QA_TASK_MESSAGE` about the shell rules of a headless run (merged as 5c0253d). `patterns.md` was not changed: the import extension is left unstated on purpose |
+| Run 2, bash calls of the 12 sessions | Every session ran the test command and it completed. One call was denied (haiku, `node --experimental-strip-types --test ...`), followed by a completed `node --test`. One haiku session ran `node --test` twice with an edit of the test file in between (the edit was not read). The reads and writes used the read, glob, grep, write, edit and apply_patch tools |
+
+Caveats: two repeats per cell and two TypeScript cases, so the cases screen out a bad model and do not rank the good ones. Two things changed between the runs, so the effect of each rests on which runs failed: sol's failure was on the case the fixture fix touches, haiku's two failures were on the case it does not touch. The case built to tempt a production edit tempted nobody in 24 runs, so "no production file changed" is untested under pressure. Run 2 sessions were matched to runs by their order, which equals the schedule; the model of each session is read from the database. The shell sentence is now part of what is measured. The benchmark runs `qa` with the default deny of F78 and without chained shell commands. Java and Gemini are not covered (decision #13).
