@@ -201,6 +201,13 @@ class WritingRun(unittest.TestCase):
         self.assertIn("docs/project-overview", run.QA_TASK_MESSAGE)
         self.assertIn("do not read files outside the current directory", run.QA_TASK_MESSAGE)
 
+    def test_the_qa_message_describes_the_headless_shell_and_the_reviewer_message_is_unchanged(self):
+        message = run.QA_TASK_MESSAGE
+        self.assertIn("not with bash", message)
+        self.assertIn("no cd, no pipes, no chaining and no redirects", message)
+        self.assertFalse(set("&|<>;`$") & set(message))
+        self.assertNotIn("bash", run.TASK_MESSAGE)
+
     def test_opencode_its_export_and_the_tests_start_without_the_shell_pwd(self):
         shell = {"PATH": "p", "PWD": "/d/ai-framework", "Pwd": "x"}
         fake = QaFake(qa_report(TEST_FILE), {TEST_FILE: "t"})
