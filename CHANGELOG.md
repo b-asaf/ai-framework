@@ -9,6 +9,7 @@ Changes are made on short-lived branches and merged to `main` through a pull req
 
 ## Unreleased
 
+- **A framework audit report is added (plan step S.2).** `docs/framework-audit-2026-11.md` lists, by reference counts and the files read, what each folder, agent and skill is used by, the duplicated or stale text, and the lizard debt; it feeds S.3 to S.5. No framework behavior changes.
 - **Token Optimizer is removed from the framework (DEC-023, S.8f).** `python setup.py` no longer clones or mentions it, and the README and `docs/session-summary.md` no longer describe it. A clone in `~/.claude/token-optimizer/` stays until you delete it.
 - **The graphify skill folder is removed (DEC-022, S.8e).** The rest of `skills/graphify/SKILL.md` is deleted with its folder, the two `.gitignore` lines for it are gone, and the README counts 44 skills. The clean slate is done; the new graphify integration is step S.13. The graphify CLI stays installed on the machine.
 - **More of the graphify skill is removed (DEC-022, S.8d).** The next section of `skills/graphify/SKILL.md` is deleted, cut at a heading. The rest, the folder and two `.gitignore` lines follow in S.8e; the new integration is step S.13.
