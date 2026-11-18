@@ -9,6 +9,7 @@ Changes are made on short-lived branches and merged to `main` through a pull req
 
 ## Unreleased
 
+- **Token Optimizer is removed from the framework (DEC-023, S.8f).** `python setup.py` no longer clones or mentions it, and the README and `docs/session-summary.md` no longer describe it. A clone in `~/.claude/token-optimizer/` stays until you delete it.
 - **The graphify skill folder is removed (DEC-022, S.8e).** The rest of `skills/graphify/SKILL.md` is deleted with its folder, the two `.gitignore` lines for it are gone, and the README counts 44 skills. The clean slate is done; the new graphify integration is step S.13. The graphify CLI stays installed on the machine.
 - **More of the graphify skill is removed (DEC-022, S.8d).** The next section of `skills/graphify/SKILL.md` is deleted, cut at a heading. The rest, the folder and two `.gitignore` lines follow in S.8e; the new integration is step S.13.
 - **The graphify script and the end of its skill are removed (DEC-022, S.8c).** `scripts/graphify-smart-viz.sh` is deleted and `skills/graphify/SKILL.md` is cut after a heading; its description now says it is removed, so it is not offered during the transition. The rest of the skill, the folder and two `.gitignore` lines follow in S.8d and S.8e; the new integration is step S.13.

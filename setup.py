@@ -584,50 +584,6 @@ def uninstall_git_template():
     info("every push until you run 'python setup.py' again or delete .git/hooks/pre-push there.")
     print()
 
-# ── Token Optimizer ────────────────────────────────────────────────────────────
-
-TOKEN_OPTIMIZER_REPO = "https://github.com/alexgreensh/token-optimizer.git"
-
-def install_token_optimizer(det):
-    bold("Setting up Token Optimizer...")
-    git_bin = shutil.which("git")
-    if not git_bin:
-        warn("git not found — cannot install Token Optimizer")
-        return
-    if det.get("claude"):
-        install_dir = CLAUDE_DIR / "token-optimizer"
-        if install_dir.exists():
-            ok("token-optimizer/claude already installed")
-        else:
-            try:
-                subprocess.run([git_bin, "clone", "--depth", "1", TOKEN_OPTIMIZER_REPO,
-                                str(install_dir)], check=True, capture_output=True)
-                install_script = install_dir / "install.sh"
-                if install_script.exists() and not IS_WIN:
-                    subprocess.run(["bash", str(install_script)], check=True,
-                                   cwd=str(install_dir))
-                    ok("token-optimizer/claude installed")
-                elif IS_WIN:
-                    info("token-optimizer: Windows — use Claude Code plugin marketplace")
-            except (subprocess.CalledProcessError, FileNotFoundError) as exc:
-                warn(f"token-optimizer/claude install failed: {exc}")
-                _need_action(
-                    "token-optimizer/claude not installed",
-                    f"Install manually: git clone {TOKEN_OPTIMIZER_REPO} <path> && bash <path>/install.sh",
-                )
-    if det.get("opencode"):
-        info("token-optimizer/opencode: add 'token-optimizer-opencode' to opencode.json plugins")
-
-def audit_token_optimizer(det):
-    if not det.get("claude"):
-        return
-    install_dir = CLAUDE_DIR / "token-optimizer"
-    if not install_dir.exists():
-        return
-    print()
-    info("Token Optimizer installed. Run the one-time audit yourself:")
-    info("  In Claude Code: /token-optimizer")
-
 # ── PR/MR provider tooling ───────────────────────────────────────────────────
 
 def check_pr_provider():
@@ -803,12 +759,7 @@ def main():
     set_framework_root()
     print()
 
-    # 4. Token Optimizer
-    install_token_optimizer(det)
-    audit_token_optimizer(det)
-    print()
-
-    # 5. PR/MR provider tooling (detect only — see check_pr_provider docstring)
+    # 4. PR/MR provider tooling (detect only — see check_pr_provider docstring)
     check_pr_provider()
     print()
 
