@@ -139,13 +139,9 @@ git commands) is stale relative to the current `AGENTS.md` and predates the
 
 ---
 
-## Token reduction stack
+## Token reduction
 
-| Tool | Layer | Status |
-|---|---|---|
-| Token Optimizer | Structural audit + compaction survival | Auto-installed by setup.py (git clone) |
-
-Plus framework-level optimisations already built in:
+Framework-level optimisations built in:
 - All skills have `## Quick reference` sections (load summary, not full content)
 - All agents load `project-overview/sub/[specific-file]` not the full entrypoint
 - AGENTS.md is rules-only (~130 lines); agent roles in AGENTS-reference.md (on-demand)

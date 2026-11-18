@@ -362,6 +362,7 @@ Added after the reviewer benchmark work (E17). The developer asked for eight cha
 | S.8c | Delete `scripts/graphify-smart-viz.sh` (136 lines) and the last ~150 lines of `skills/graphify/SKILL.md`, cut at a heading | the file still starts with its frontmatter; the staged diff is at most 400 lines; the green checks above |
 | S.8d | Delete the middle ~300 lines of `skills/graphify/SKILL.md`, cut at headings | same |
 | S.8e | Delete the rest of `skills/graphify/SKILL.md` and the folder, the two graphify lines of `.gitignore`, and change the README skill count from 45 to 44. Before it, the developer deletes the ignored `skills/graphify/references/` folder | `skills/` has 44 folders; `git grep -i graphify` finds nothing outside `docs/decisions/`, `CHANGELOG.md` and this plan |
+| S.8f | Item 3, DEC-023. Token Optimizer is removed: `TOKEN_OPTIMIZER_REPO`, `install_token_optimizer`, `audit_token_optimizer` and their calls in `setup.py` (renumber the step comment), the README section "Token usage reduction", the line in the setup description, the sample output block and two table rows, and the table in `docs/session-summary.md`. The clone in `~/.claude/token-optimizer/` is deleted by the developer | `python setup.py --verify` unchanged except for any Token Optimizer lines; `git grep -i "token.optimizer"` finds nothing outside `docs/decisions/`, `CHANGELOG.md` and this plan; validator and `python -m unittest` green |
 | S.9 | Item 7, standing. A repeatable review of the framework itself (a command or a checklist), shaped by the S.2 audit | DEC committed |
 | S.10 | Apply S.3 to S.5, one PR per move, merge or removal. First check that `checks/diff_size.py` counts deleted lines the way the manual check does | the green checks above after each PR |
 | S.11 | Folder map in the README: one purpose line for every top-level folder, and a unit test in `tests/` that fails when a top-level folder is missing from the "Repo structure" section | the test passes on the final layout and fails on a folder added without a line |
@@ -507,6 +508,10 @@ Checked at the Phase 2 gate and again at 4.5. A phase that breaks one is a reaso
 13. **Gemini family for the Phase 2 gate.** Open (2026-11-14), left open on purpose. No Gemini model was available in E9 or E12, so the model swap is shown for Claude and GPT only.
 
 14. **One folder for generated files (S.12).** Decided 2026-11-14: everything the framework generates in a project lives in one folder, and the developer can change where it is. The location is a key in `.ai-framework.json`, which stays at the repository root (decided 2026-11-14): the setting cannot live inside the folder it points to, the file is committed so teammates share it, and no new file is added. Open for the DEC: the default folder name and the key name (proposed `.ai-framework/` and `generatedDir`), the files a tool reads only at a fixed path and so cannot move (proposed: `.ai-framework.json`, `opencode.json`, `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`), and the one-off migration of existing projects.
+
+15. **Token Optimizer (S.8f).** Decided 2026-11-18: removed completely (DEC-023); nothing in the framework called it, the README states a noncommercial license, and on Windows it was never fully installed.
+
+16. **Agent descriptions stay on one line.** Decided 2026-11-18: the strict frontmatter parser is kept (a web edit that wrapped a description broke the validator on `main`). For the S.2 audit: the parser should report the file and the line instead of a raw traceback.
 
 ## 10. What is not changing
 

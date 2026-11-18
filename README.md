@@ -125,8 +125,7 @@ python setup.py
 
 That's it. No admin rights required. The script detects which tools are
 installed and wires everything automatically — symlinks (or file copies,
-if your machine can't symlink — see below), VS Code settings, git hooks,
-and token-reduction tools (Token Optimizer). Anything it can't do
+if your machine can't symlink — see below), VS Code settings, and git hooks. Anything it can't do
 itself (like setting `GITHUB_TOKEN`/`ADO_PAT`) is
 listed clearly at the end under "Action required," with exact steps to fix it.
 
@@ -155,9 +154,6 @@ Wiring VS Code Copilot...
 
 Configuring git hooks...
   OK   git init.templateDir -> /home/you/ai-framework/hooks
-
-Setting up Token Optimizer...
-  OK   token-optimizer/claude installed
 
 Checking PR/MR provider setup...
   OK   scripts/open-draft-pr.py found — draft PR/MR opener is available
@@ -189,28 +185,6 @@ opencode          # or open VS Code in this folder
 ```
 
 The framework activates automatically. No project-level setup needed.
-
----
-
-## Token usage reduction
-
-`setup.py` auto-installs three complementary tools that each cut waste at a
-different layer. They don't overlap — running all three together is the
-intended setup, not redundant.
-
-| Tool                | Layer                         | What it does                                                                                                                                                                                                                         |
-| ------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Token Optimizer** | Structural + behavioral audit | Finds bloated configs, unused skills, stale memory, model misrouting; checkpoints session state so compression survives auto-compaction                                                                                              |
-
-Token Optimizer installs automatically during `python setup.py` if its prerequisites
-(git, uv/pipx) are available. If a tool fails to install, setup continues —
-none is required for the framework to work.
-
-**Token Optimizer note:** licensed under PolyForm Noncommercial 1.0.0 — free
-for personal, research, and educational use. Commercial use requires a
-separate license from the author. After install, run the one-time audit
-yourself inside Claude Code with `/token-optimizer` — it presents diffs for
-approval before changing anything, it does not run automatically.
 
 ---
 
@@ -420,7 +394,6 @@ Make sure your own working tree is clean first so nothing of yours leaks into th
 
 | Tool                       | Run                                                                                | What it does                                                                                              |
 | -------------------------- | ---------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Token Optimizer audit      | `/token-optimizer` inside Claude Code                                              | One-time audit for bloated configs/unused skills — presents diffs for approval, doesn't run automatically |
 | Setup health check         | `python setup.py --verify`                                                         | Read-only — prints what still needs attention without changing anything                                   |
 
 ---
@@ -572,5 +545,4 @@ or by telling the orchestrator directly:
 | Tool shows "not found" but is installed                          | Restart your terminal (PATH needs to refresh), then re-run setup                                                                                                                                                                                                                                             |
 | VS Code Copilot has no instructions                              | Re-run `python setup.py` — it updates `settings.json` automatically                                                                                                                                                                                                                                          |
 | Skills not loading                                               | Verify `~/.config/opencode/skills` or `~/.claude/skills` exists                                                                                                                                                                                                                                              |
-| Token Optimizer not installing                                   | See "Token usage reduction" section above                                                                                                                                                                                                                                                                    |
 | Git hooks not firing                                             | Run `python <ai-framework>/setup.py --install-hooks <repo>` (git init never overwrites an existing hook)                                                                                                                                                                                                                                                   |
