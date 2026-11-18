@@ -1,10 +1,5 @@
 ---
-description: >-
-  Human-triggered. Searches the internet for documentation, known bugs, and
-  community solutions. Invoke explicitly when the codebase cannot answer the
-  question — unknown errors, third-party behaviour, compatibility issues.
-  Not invoked automatically: Rule 12 (isolated environment) means any external
-  lookup requires developer awareness.
+description: Human-triggered. Searches the internet for documentation, known bugs, and community solutions. Invoke explicitly when the codebase cannot answer the question — unknown errors, third-party behaviour, compatibility issues. Not invoked automatically: Rule 12 (isolated environment) means any external lookup requires developer awareness.
 mode: subagent
 permission:
   bash:
