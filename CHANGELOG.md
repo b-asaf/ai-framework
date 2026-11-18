@@ -9,6 +9,7 @@ Changes are made on short-lived branches and merged to `main` through a pull req
 
 ## Unreleased
 
+- **More of the graphify skill is removed (DEC-022, S.8d).** The next section of `skills/graphify/SKILL.md` is deleted, cut at a heading. The rest, the folder and two `.gitignore` lines follow in S.8e; the new integration is step S.13.
 - **The graphify script and the end of its skill are removed (DEC-022, S.8c).** `scripts/graphify-smart-viz.sh` is deleted and `skills/graphify/SKILL.md` is cut after a heading; its description now says it is removed, so it is not offered during the transition. The rest of the skill, the folder and two `.gitignore` lines follow in S.8d and S.8e; the new integration is step S.13.
 - **The web-research-specialist description is back on one line.** A web edit had turned it into a folded YAML block, which the strict frontmatter parser does not read, so the validator crashed on `main`. The text is unchanged.
 - **The graphify references are removed (DEC-022, S.8b).** `python setup.py` no longer installs or wires graphify and `--verify` no longer reports it; `first-run-analysis` no longer builds, wires or commits a graph; `zoom-out`, `instructions/CLAUDE.md`, the `skill-routing` rules and the README no longer mention it. `skills/graphify/`, `scripts/graphify-smart-viz.sh` and two `.gitignore` lines stay until S.8c to S.8e, and the new integration is step S.13. The graphify CLI stays installed on the machine.
