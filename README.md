@@ -432,7 +432,7 @@ AGENTS.md                   ← behavior rules (14 rules, XML-tagged) — every 
 opencode.json               ← OpenCode global config (model: sonnet-5, permissions)
 
 agents/                     ← 15 agent definitions (models are set in `execution/profiles/default.json`)
-skills/                     ← 45 skill folders (most have a ## Quick reference section)
+skills/                     ← 44 skill folders (most have a ## Quick reference section)
 commands/                   ← slash commands (/task, /quick, /review, /first-run, /handoff)
 hooks/                      ← git hooks (pre-commit, commit-msg, pre-push, build-verify.sh — copied into new repos via git init.templateDir; `python setup.py --install-hooks <repo>` installs them in an existing repo)
 scripts/                    ← helper scripts the agents call (git-context.py, static-analysis.py, quick-lane-check.py, open-draft-pr.py)
