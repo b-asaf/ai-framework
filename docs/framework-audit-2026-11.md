@@ -86,3 +86,20 @@ Plan row 5.3b names only `setup.py` and `validate_framework.py`. A PR that touch
 3. Does the `hooks/build-verify.sh *` allow resolve from a project, and through which link?
 4. Is `tools/lib/frontmatter.py` used by anything other than a re-export?
 5. Which rules of `AGENTS.md` are repeated in agent files and skills?
+
+## Answers to the open questions (2026-11-18)
+
+1. **Who reads `skills/skill-routing/skill-rules.json`?** Agents, as an instruction, not code: AGENTS.md rule 8 (outside the task flow), `skills/agent-guidelines/SKILL.md`, `instructions/GEMINI.md`, `instructions/codex-AGENTS.md`, `instructions/AGENTS-reference.md`. Keep `skill-routing` (verified).
+2. **Which agents load `mutation-testing`?** None. No agent or skill file names it, and `agents/code-reviewer.md` does not mention mutation, while the `hooks/pre-push` comment says the gate is in code-reviewer Stage 4. Either the wiring was lost or the comment is stale; S.5 decides (verified by grep; DEC-006 and DEC-008 not read).
+3. **Does `hooks/build-verify.sh *` resolve from a project?** `setup.py` links `hooks/` into `~/.config/opencode/` and `~/.claude/`, not into a project, so a relative `hooks/build-verify.sh` from a project root probably does not exist (inferred). S.7 tests it. The `pre-push` hook uses its own copy and is not affected.
+4. **Is `tools/lib/frontmatter.py` used?** Yes: the validator calls `lint_frontmatter` and `tests/test_frontmatter_lint.py` covers it. It adds YAML-strict checks on top of the hand-rolled parser; it is neither dead nor a duplicate (verified). This replaces finding 6.
+5. **Rules repeated between `AGENTS.md` and skills:** rule 6 and `code-standards` give the same conflict order; rule 7 and `atomic-changes` share the sentence "One PR = one concern"; rule 10 and `surgical-changes` repeat the same points (verified from the text; the rest of the skills were not compared). Merge candidates for S.5, leaving the rule as a pointer.
+6. **Corrected counts:** by the "Always load" lists, `project-overview` is loaded by 10 agents, `agent-guidelines` 13, `pattern-enforcement` 11, `code-standards` 10, `atomic-changes` 8, `build-verify` 7. `tools/test_gap1_delegation.py` is named only by docs and its own usage line, and `tools/` has no `__init__.py`, so `unittest` probably does not run it (inferred).
+
+## Additional finding: VS Code wiring (2026-11-18)
+
+23. **verified (code read: `setup.py` `wire_vscode`, lines 349 to 374).** It writes `AGENTS.md`, `COPILOT.md` and `VSCODE.md` into the VS Code user setting `github.copilot.chat.codeGeneration.instructions` and `GIT_COMMIT.md` into the commit-message setting, by absolute path. It writes no file into a project. The headers of `COPILOT.md` and `VSCODE.md` say the file is wired to `.github/copilot-instructions.md`, and `VSCODE.md` calls itself a project-level file set up from inside each project; this function does neither. Lines 112 to 118 of `setup.py` were not read. Whether VS Code still supports that setting key was not checked.
+24. **verified.** The function reads the user's `settings.json` by deleting comments with two regular expressions, then writes the whole file back as plain JSON: comments, trailing commas and the original layout are lost, and no backup is made. It runs on every `python setup.py` when VS Code Copilot is detected.
+25. **verified on synthetic strings (run 2026-11-18; not on the developer's own file).** The comment regexes also match inside strings. `{"u": "http://x.y"}` gives 'a parse error'; `{"a": ["**/*.js", "**/*.ts"]}` gives {'a': ['***.ts']}. A URL makes the wiring skip; a changed value is written without any message.
+
+Candidate for plan step 5.3c: back up the file before writing, add the two keys without rewriting the rest, or skip the wiring when the file has comments.
