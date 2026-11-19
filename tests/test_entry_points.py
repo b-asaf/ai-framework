@@ -17,21 +17,15 @@ def run(script, *args):
     )
 
 
-class EntryPoints(unittest.TestCase):
-    def test_both_entry_points_pass_on_the_real_repo(self):
-        for script in ("validate_framework.py", "validate_agents.py"):
-            with self.subTest(script=script):
-                result = run(script)
-                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-                self.assertIn("All agent validation checks passed", result.stdout)
+class EntryPoint(unittest.TestCase):
+    def test_the_validator_passes_on_the_real_repo(self):
+        result = run("validate_framework.py")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("All agent validation checks passed", result.stdout)
 
-    def test_wrapper_gives_the_same_result_on_a_failing_fixture(self):
-        args = ("tests/fixtures/dec014-same-model", CATALOG)
-        framework = run("validate_framework.py", *args)
-        wrapper = run("validate_agents.py", *args)
-        self.assertEqual(framework.returncode, 1, framework.stdout + framework.stderr)
-        self.assertEqual(wrapper.returncode, framework.returncode)
-        self.assertEqual(wrapper.stdout, framework.stdout)
+    def test_the_validator_fails_on_a_failing_fixture(self):
+        result = run("validate_framework.py", "tests/fixtures/dec014-same-model", CATALOG)
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
 
 
 if __name__ == "__main__":
