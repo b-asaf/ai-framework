@@ -14,7 +14,6 @@ import hashlib
 import json
 import os
 import platform
-import re
 import shutil
 import subprocess
 import sys
@@ -346,30 +345,79 @@ def print_action_required():
 
 # ── VS Code global settings ────────────────────────────────────────────────────
 
+VSCODE_CODE_KEY   = "github.copilot.chat.codeGeneration.instructions"
+VSCODE_COMMIT_KEY = "github.copilot.chat.commitMessageGeneration.instructions"
+
+
+def _vscode_wanted():
+    """The two VS Code settings this script owns, as {key: [{"file": path}, ...]}."""
+    return {
+        VSCODE_CODE_KEY:   [{"file": str(REPO / "AGENTS.md")},
+                            {"file": str(INSTRUCTIONS / "COPILOT.md")}],
+        VSCODE_COMMIT_KEY: [{"file": str(INSTRUCTIONS / "GIT_COMMIT.md")}],
+    }
+
+
+def _norm_path(path):
+    return os.path.normcase(os.path.normpath(path))
+
+
+def _is_framework_entry(entry):
+    """True for a settings entry whose file lies inside this framework checkout.
+
+    Compared with a trailing separator, so a sibling such as <repo>-new is not a match.
+    """
+    path = entry.get("file") if isinstance(entry, dict) else None
+    return isinstance(path, str) and _norm_path(path).startswith(_norm_path(REPO) + os.sep)
+
+
+def _merge_entries(existing, wanted):
+    """Keep the developer's own entries; the framework's (also a stale VSCODE.md one) are replaced."""
+    own = [e for e in existing if not _is_framework_entry(e)] if isinstance(existing, list) else []
+    return own + wanted
+
+
+def _read_vscode_settings(path):
+    """Return (settings, None), or (None, why not). A missing or empty file gives ({}, None)."""
+    if not path.exists():
+        return {}, None
+    try:
+        text = path.read_text(encoding="utf-8-sig")
+        settings = json.loads(text) if text.strip() else {}
+    except ValueError as exc:
+        return None, str(exc)
+    if not isinstance(settings, dict):
+        return None, "the top level is not a JSON object"
+    return settings, None
+
+
+def _backup_once(path):
+    """Copy settings.json to settings.json.ai-framework.bak unless that backup already exists."""
+    bak = path.with_name(path.name + ".ai-framework.bak")
+    if path.exists() and not bak.exists():
+        shutil.copy2(path, bak)
+        info(f"backup: {bak}")
+
+
 def wire_vscode(det):
     if not det["copilot_vscode"]:
         return
     bold("Wiring VS Code Copilot...")
-    settings = {}
-    if VSCODE_SETTINGS.exists():
-        try:
-            raw   = VSCODE_SETTINGS.read_text(encoding="utf-8")
-            clean = re.sub(r"//.*$", "", raw, flags=re.MULTILINE)
-            clean = re.sub(r"/\*.*?\*/", "", clean, flags=re.DOTALL)
-            settings = json.loads(clean)
-        except Exception as exc:
-            warn(f"Could not parse settings.json: {exc} — skipping VS Code wiring")
-            return
-    else:
-        VSCODE_SETTINGS.parent.mkdir(parents=True, exist_ok=True)
-    settings["github.copilot.chat.codeGeneration.instructions"] = [
-        {"file": str(REPO / "AGENTS.md")},
-        {"file": str(INSTRUCTIONS / "COPILOT.md")},
-        {"file": str(INSTRUCTIONS / "VSCODE.md")},
-    ]
-    settings["github.copilot.chat.commitMessageGeneration.instructions"] = [
-        {"file": str(INSTRUCTIONS / "GIT_COMMIT.md")},
-    ]
+    wanted = _vscode_wanted()
+    settings, problem = _read_vscode_settings(VSCODE_SETTINGS)
+    if settings is None:
+        warn(f"settings.json is not plain JSON ({problem}) - left untouched")
+        info("VS Code allows comments there and this script does not rewrite such a file.")
+        info("Add these two settings by hand:")
+        info(json.dumps(wanted, indent=2))
+        return
+    merged = {key: _merge_entries(settings.get(key), value) for key, value in wanted.items()}
+    if all(settings.get(key) == value for key, value in merged.items()):
+        ok(f"{VSCODE_SETTINGS} (already configured)")
+        return
+    VSCODE_SETTINGS.parent.mkdir(parents=True, exist_ok=True)
+    _backup_once(VSCODE_SETTINGS)
+    settings.update(merged)
     VSCODE_SETTINGS.write_text(json.dumps(settings, indent=2, ensure_ascii=False), encoding="utf-8")
     ok(str(VSCODE_SETTINGS))
 

@@ -34,7 +34,6 @@ ai-framework/
 │   ├── CLAUDE.md                ← Claude Code additions
 │   ├── COPILOT.md               ← GitHub Copilot (VS Code + IntelliJ)
 │   ├── GEMINI.md                ← Gemini CLI wrapper (@imports AGENTS.md)
-│   ├── VSCODE.md                ← VS Code Copilot additions
 │   ├── GIT_COMMIT.md            ← commit message guidelines
 │   └── codex-AGENTS.md          ← Codex CLI wrapper (adds skills block)
 │
