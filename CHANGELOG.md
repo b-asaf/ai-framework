@@ -9,6 +9,7 @@ Changes are made on short-lived branches and merged to `main` through a pull req
 
 ## Unreleased
 
+- **The validate_agents.py wrapper is removed, and so is the old delegation log script (DEC-024, S.10a).** Run `python tools/validate_framework.py`. `tools/test_gap1_delegation.py` was a manual script that `unittest` never ran and whose log patterns were unverified; it stays in git history (commit 5dff2c3).
 - **The README explains every top-level folder, and a test keeps it that way (DEC-024, S.11).** The "Repo structure" block now covers `execution/`, `tools/` and `tests/`, drops the stale model note for `opencode.json`, and states why `scripts/` (helpers that run during a task) and `tools/` (maintainer tooling) are separate. `tests/test_readme_folders.py` fails when a tracked folder has no line there.
 - **Folder layout decided (DEC-024, S.3).** The top-level folders stay, `scripts/` and `tools/` stay apart, and the README is to explain each folder (next PR). The audit file answers its five open questions and records how `wire_vscode` rewrites the VS Code settings file. No framework behavior changes.
 - **A framework audit report is added (plan step S.2).** `docs/framework-audit-2026-11.md` lists, by reference counts and the files read, what each folder, agent and skill is used by, the duplicated or stale text, and the lizard debt; it feeds S.3 to S.5. No framework behavior changes.
