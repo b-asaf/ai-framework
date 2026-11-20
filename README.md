@@ -53,6 +53,8 @@ VS Code, or any other supported tool automatically picks up the framework.
 - **VS Code Copilot** — writes instruction file paths directly into VS Code's global
   `settings.json` (`codeGeneration.instructions` + `commitMessageGeneration.instructions`).
   No per-project step needed — active in every VS Code window immediately.
+  The file is saved once as `settings.json.ai-framework.bak` before the first change; a file
+  with comments is left untouched and the two settings are printed for you to add by hand.
 - **IntelliJ/WebStorm Copilot** — `COPILOT.md`, `AGENTS.md`, `GIT_COMMIT.md`
   symlinked into the Copilot global config folder. Windows only.
 - **Gemini CLI** — `GEMINI.md` (which `@imports AGENTS.md`) + `skills/` →
@@ -420,7 +422,6 @@ instructions/
   CLAUDE.md                 ← Claude Code additions
   COPILOT.md                ← GitHub Copilot (VS Code + IntelliJ)
   GEMINI.md                 ← Gemini CLI wrapper (@imports AGENTS.md)
-  VSCODE.md                 ← VS Code Copilot additions
   GIT_COMMIT.md             ← commit message guidelines
   codex-AGENTS.md           ← Codex CLI wrapper (@imports AGENTS.md + skills block)
 

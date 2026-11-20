@@ -1,7 +1,8 @@
 # COPILOT.md
-> GitHub Copilot instructions — default tool for this framework.
-> Works with VS Code (wired to `.github/copilot-instructions.md`)
-> and IntelliJ / WebStorm / JetBrains IDEs (wired globally on Windows).
+> GitHub Copilot instructions for VS Code and IntelliJ / WebStorm.
+> `python setup.py` adds this file and AGENTS.md to the VS Code user setting
+> `github.copilot.chat.codeGeneration.instructions`, and links it into the IntelliJ / WebStorm
+> Copilot global folder on Windows. It writes no file into a project.
 > All rules from AGENTS.md apply. This file adds Copilot-specific behaviour on top.
 
 ---
