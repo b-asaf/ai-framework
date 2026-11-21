@@ -183,6 +183,16 @@ SKIP_DIFF_SIZE_CHECK=1 git push
 
 The override affects only the diff-size backstop. It does not bypass protected-branch enforcement.
 
+A reviewed exception can also be recorded in the branch itself (DEC-025). One line of a commit message of the branch reads:
+
+```text
+Diff-Size-Approved: <lines> <reason>
+```
+
+`<lines>` is a whole number of 1 or more (at most 9 digits) and `<reason>` is not empty. The limit for that branch is then the larger of `maxDiffLines` and the largest approved number: the push passes up to that number and is blocked again above it. The gate reads the commits from the merge-base to the pushed commit, the range it measures, so an approval made before an earlier push still counts. A line that starts with `Diff-Size-Approved:` in any other form blocks the push and names the commit, so no other message line may start with those words.
+
+Only the developer decides such an exception. An agent never writes this line on its own and never suggests it as a way past a block: a push blocked for size goes back to the developer.
+
 This does not replace the agentic breakdown — a good PR breakdown table produced by `@architect` should mean this hook rarely triggers. The hook exists specifically as an independent deterministic safety net.
 
 ---
