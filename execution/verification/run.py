@@ -223,20 +223,29 @@ def main(argv, stdin_text, env, run_git):
 
 
 def _measure_branches(records, base, run_git, diff_size):
-    """(branch, lines, base) for every pushed branch, and a violation for each branch that cannot be measured."""
-    measurements, violations = [], []
+    """(branch, lines, base), the largest approved number per branch, and the violations (DEC-025).
+
+    A branch that cannot be measured, and each malformed approval line, is a violation, not a skip.
+    """
+    measurements, approved, violations = [], {}, []
     for branch, record in records.items():
         try:
             lines = diff_size.measure(record.local_sha, base, run_git=run_git)
+            number, problems = diff_size.read_approvals(record.local_sha, base, run_git=run_git)
         except diff_size.DiffSizeError as error:
             violations.append(_fail_closed("diff_size", f"{branch}: {error}"))
-        else:
-            measurements.append((branch, lines, base))
-    return measurements, violations
+            continue
+        measurements.append((branch, lines, base))
+        approved[branch] = number
+        violations.extend(_fail_closed("diff_size", f"{branch}: {problem}") for problem in problems)
+    return measurements, approved, violations
 
 
 def _diff_size_violations(repo, config, stdin_text, env, run_git):
-    """The diff-size check (F68, DEC-020). A base or a branch that cannot be measured is a violation, not a skip."""
+    """The diff-size check (F68, DEC-020). A base or a branch that cannot be measured is a violation, not a skip.
+
+    A Diff-Size-Approved line on a branch raises that branch's limit (DEC-025).
+    """
     from execution.verification import push_input
     from execution.verification.checks import diff_size
 
@@ -255,8 +264,8 @@ def _diff_size_violations(repo, config, stdin_text, env, run_git):
         base = diff_size.read_base(config, run_git=ds_run_git)
     except (diff_size.DiffSizeError, push_input.PushInputError) as error:
         return [_fail_closed("diff_size", str(error))]
-    measurements, violations = _measure_branches(records, base, ds_run_git, diff_size)
-    return violations + diff_size.find_violations(measurements, max_lines)
+    measurements, approved, violations = _measure_branches(records, base, ds_run_git, diff_size)
+    return violations + diff_size.find_violations(measurements, max_lines, approved)
 
 
 def main_or_block(argv, stdin_text, env, run_git):
