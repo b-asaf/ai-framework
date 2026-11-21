@@ -21,6 +21,8 @@ permission:
     "python3 *scripts*open-draft-pr.py*": allow
     "python *scripts*quick-lane-check.py*": allow
     "python3 *scripts*quick-lane-check.py*": allow
+    "python *scripts*diff-size-check.py*": allow
+    "python3 *scripts*diff-size-check.py*": allow
     "Test-Path *": allow
     "Get-ChildItem *": allow
     "Get-Content *": allow
@@ -187,6 +189,20 @@ test and gate step.
 
 Run the script from the framework scripts folder, the same way as `open-draft-pr.py`:
 `python "$HOME/.config/opencode/scripts/quick-lane-check.py"`
+(same form in Git Bash, PowerShell, macOS and Linux; use `python3` where `python` is missing).
+
+## Invoked via `/oversize` - reviewed size exception
+
+When the incoming task is the `/oversize` command's template, the developer has declared that one branch over the changed-lines limit may continue. Only the developer can declare it: never offer it, never name it or the approval line as a way past a blocked push, and never write the approval line on your own. The text after the command is the reason. This command does not change the quick-lane limits.
+
+1. **Reason.** If no reason was given, ask the developer for one sentence and wait. Never invent one.
+2. **Measure.** Run `diff-size-check.py` and read its output. `STATUS: ERROR` means the branch cannot be measured (staged changes, no base branch, a malformed approval line): stop and tell the developer the `REASON:`. `STATUS: OK` means the branch is within its limit: say so, with `LINES:` and `LIMIT:`, and stop.
+3. **Ask.** On `STATUS: OVER` report `LINES:` against `LIMIT:` and ask the developer to choose: continue as one PR, or split. Wait for the answer.
+4. **Split.** Route to `@architect` for the atomic-changes breakdown table of the work already on the branch, show it to the developer, and stop. Never rewrite history (no rebase, no reset) and never create branches for the slices yourself: the developer splits the commits, and the next PR starts from the table.
+5. **One PR.** Make an empty commit whose second message paragraph is the approval line: `git commit --allow-empty -m "chore: approve a larger branch" -m "Diff-Size-Approved: <lines> <reason>"`. `<lines>` is the `LINES:` value exactly as measured, never rounded. Write the reason as one line without quotes, `;`, `&`, `|`, `$` or backticks. Run `diff-size-check.py` again; only if it says `STATUS: OK`, run the push script as in Step 10. Repeat the approved number and the reason in the task summary and in the PR body.
+
+Run the script from the framework scripts folder, the same way as the other scripts:
+`python "$HOME/.config/opencode/scripts/diff-size-check.py"`
 (same form in Git Bash, PowerShell, macOS and Linux; use `python3` where `python` is missing).
 
 ## On every task
