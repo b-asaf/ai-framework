@@ -346,6 +346,7 @@ by name, in one place, so nothing manual gets lost in the automatic tables.
 | ------------ | ---------------------------------------------------------------------------------------------------- |
 | `/task`      | Start a new task — runs Check 1/2, then product-manager → architect → plan-reviewer → implementation |
 | `/quick`     | Fast lane for a small change you declare yourself: no spec or plan, review, QA and gate still run    |
+| `/oversize`  | Approve a branch that is over the line limit, as one PR or split (only you can declare it)           |
 | `/review`    | Full post-implementation pipeline on the current branch — code-reviewer, qa, gatekeeper              |
 | `/first-run` | Manually re-run first-run analysis (project-overview is stale or has `[XXX]`)                        |
 | `/handoff`   | Compact the session — saves a handoff doc, appends to `docs/session-summary.md`                      |
@@ -360,6 +361,17 @@ by name, in one place, so nothing manual gets lost in the automatic tables.
 4. Review, QA and the gatekeeper run as in the regular lane. The commit gets a second paragraph, `Lane: quick`, and the PR is opened as a draft through `scripts/open-draft-pr.py`.
 
 Use `/task` for anything that needs a spec or touches dependencies.
+
+**Running `/oversize` - approving a branch that is over the line limit:**
+
+A branch stays under `maxDiffLines` in `.ai-framework.json` (default 400; change the number there if 400 is wrong for a project), and the pre-push gate blocks a bigger one. When you decide that one branch is justified, type `/oversize <reason>`. Only you declare it: no agent offers it or writes the approval for you.
+
+1. The orchestrator measures the branch with `scripts/diff-size-check.py`, which uses the same count as the gate, and tells you the lines and the limit. If the branch is not over, it stops.
+2. It asks whether to continue as one PR or split.
+3. Split: the architect proposes the PR breakdown for the work on the branch and the orchestrator stops. Nothing in git changes; you split the commits and start the first PR of the table.
+4. One PR: the orchestrator adds an empty commit whose message carries `Diff-Size-Approved: <lines> <reason>` and runs the push script again. The push passes up to that number and is blocked again if the branch grows past it. `git log --grep "Diff-Size-Approved"` lists every approved exception.
+
+`SKIP_DIFF_SIZE_CHECK=1 git push` stays your own emergency switch, and it is not logged. The quick-lane limits (3 files, 60 lines) are not changed by `/oversize`.
 
 **Running `/review` — no arguments, no separate setup:**
 
@@ -410,9 +422,9 @@ workflow-guide.md           ← day-to-day developer guide
 
 agents/                     ← 15 agent definitions (models are set in `execution/profiles/default.json`)
 skills/                     ← 44 skill folders (most have a ## Quick reference section)
-commands/                   ← slash commands (/task, /quick, /review, /first-run, /handoff)
+commands/                   ← slash commands (/task, /quick, /oversize, /review, /first-run, /handoff)
 hooks/                      ← git hooks (pre-commit, commit-msg, pre-push, build-verify.sh — copied into new repos via git init.templateDir; `python setup.py --install-hooks <repo>` installs them in an existing repo)
-scripts/                    ← helpers that run during a task, called by agents, hooks and gates (git-context.py, static-analysis.py, quick-lane-check.py, open-draft-pr.py); linked into your tool config folders by setup.py
+scripts/                    ← helpers that run during a task, called by agents, hooks and gates (git-context.py, static-analysis.py, quick-lane-check.py, diff-size-check.py, open-draft-pr.py); linked into your tool config folders by setup.py
 tools/                      ← maintainer tooling, not linked into any tool: validate_framework.py, generate_routing.py, and lib/ (shared code that the validator and the runner import)
 execution/                  ← work that code runs and checks: runner/ (headless agent runs and benchmarks), verification/ (the pre-push gate), profiles/, policy.json and routing.json (which model runs which role), schemas/
 tests/                      ← the unittest suite (`python -m unittest`) and the benchmark evidence in tests/bench/

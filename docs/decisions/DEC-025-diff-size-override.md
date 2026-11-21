@@ -32,7 +32,7 @@
 
 Touches (planned, two PRs): `execution/verification/checks/diff_size.py`, `execution/verification/run.py` and `skills/atomic-changes/SKILL.md` (the gate, S.6b); `commands/oversize.md` (new), `scripts/diff-size-check.py` (new), `agents/orchestrator.md` and the README command list (the command, S.6c).
 
-Open, settled in S.6c: how the script shares the gate's measurement (a parity test, as for `quick-lane-check.py`, or a call through `aiFramework.root`); what split does with commits already made; whether the empty approval commit passes the `commit-msg` hook.
+Settled in S.6c (2026-11-20): `scripts/diff-size-check.py` imports the gate's own functions (the framework folder is found beside the script, else through the global git setting `aiFramework.root`), so there is no second copy of the count to keep in step. Split changes nothing in git: the architect step proposes the breakdown table for the work already on the branch and the developer splits the commits, because an agent may not rebase or reset. The empty approval commit passes `commit-msg` because its subject follows the conventional format (the hook accepts a message when any line matches), and `pre-commit` blocks only `main`, `master` and `develop`.
 
 ## Reasoning
 
