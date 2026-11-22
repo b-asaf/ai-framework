@@ -22,7 +22,7 @@ def model_config(role="qa"):
     return json.dumps({"agent": {role: {"model": "m/one"}}})
 
 
-class Target(unittest.TestCase):
+class Base(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
@@ -36,6 +36,8 @@ class Target(unittest.TestCase):
     def joined(self, **kwargs):
         return " | ".join(self.check(**kwargs))
 
+
+class Target(Base):
     def test_a_ready_target_is_clean(self):
         self.assertEqual(self.check(), [])
 
@@ -127,7 +129,7 @@ class Target(unittest.TestCase):
         self.assertIsNone(preflight.require(self.root, "qa", {}))
 
 
-class GeneratedFolder(Target):
+class GeneratedFolder(Base):
     """The stack file is looked for in the folder for generated files (DEC-026)."""
 
     def test_a_changed_folder_is_used(self):

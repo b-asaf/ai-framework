@@ -91,7 +91,7 @@ Each refactor is a separate PR with no feature work bundled in. Load `atomic-cha
 
 ## Output after the session
 
-Update `docs/refactoring-plan.md` with any candidates that were identified but not immediately actioned, so they're not lost.
+Update `refactoring-plan.md` in the folder for generated files (`.ai-framework/`, or `generatedDir` in `.ai-framework.json`; see AGENTS.md Check 1) with any candidates that were identified but not immediately actioned, so they're not lost.
 
 ---
 

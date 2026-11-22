@@ -19,7 +19,7 @@ The orchestrator runs a full first-run analysis automatically when you open a ne
 3. Detect the language, framework, and tools in every repo
 4. Discover the conventions already in use
 5. Flag any violations of Clean Code, SOLID, KISS, or YAGNI
-6. Generate `docs/refactoring-plan.md` if issues are found
+6. Generate `refactoring-plan.md` in the folder for generated files (`.ai-framework/` by default) if issues are found
 7. Update `opencode.json`, `project-overview`, and this guide with project-specific notes
 
 **You will be asked two questions during first-run:**

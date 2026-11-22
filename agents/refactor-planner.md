@@ -54,7 +54,7 @@ You are the refactor planner for this project. You plan before anything is chang
 
 ## Output format
 
-Save the plan to `docs/refactoring-plan.md` only if the orchestrator or developer has explicitly granted write permission to this agent. Otherwise, output the plan in the session and report that `docs/refactoring-plan.md` should be created by the orchestrator.
+Save the plan to `refactoring-plan.md` in the project's folder for generated files (`.ai-framework/`, or `generatedDir` in `.ai-framework.json`; see AGENTS.md Check 1) only if the orchestrator or developer has explicitly granted write permission to this agent. Otherwise, output the plan in the session and report that `refactoring-plan.md` should be created there by the orchestrator.
 
 ```
 ## Refactoring Plan: <scope>
