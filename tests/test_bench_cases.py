@@ -87,7 +87,7 @@ class Targets(unittest.TestCase):
                 self.assertEqual((root / path).read_text(encoding="utf-8"), text)
             for path, (_, after) in case.changes.items():
                 self.assertEqual((root / path).read_text(encoding="utf-8"), after)
-            stack = (root / "docs" / "project-overview" / "stack.md").read_text(encoding="utf-8")
+            stack = (root / ".ai-framework" / "project-overview" / "stack.md").read_text(encoding="utf-8")
             self.assertNotIn("[XXX]", stack)
             self.assertIn("Language", stack)
             self.assertEqual(json.loads((root / ".ai-framework.json").read_text(encoding="utf-8")), {})

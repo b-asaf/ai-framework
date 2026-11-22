@@ -15,7 +15,10 @@ sys.path.insert(0, str(REPO))
 from execution.runner import generated_dir  # noqa: E402
 
 ERROR = generated_dir.GeneratedDirError
-GOOD = (".ai-framework", "docs/ai-framework", "a/b/c", "my-dir", "ai.framework", ".hidden/dir", "docs/ai.git")
+GOOD = (
+    ".ai-framework", "docs/ai-framework", "a/b/c", "my-dir", "ai.framework", ".hidden/dir", "docs/ai.git",
+    "my docs/ai_1",
+)
 BAD = (
     (None, "must be a string"), (5, "must be a string"), (True, "must be a string"),
     ([], "must be a string"), ({}, "must be a string"),
@@ -28,6 +31,9 @@ BAD = (
     ("..", "'..'"), ("../x", "'..'"), ("a/../b", "'..'"), ("a/..", "'..'"), ("./a", "'.'"), ("a/./b", "'.'"),
     ("a//b", "empty segment"), ("a/", "empty segment"),
     (".git", "'.git'"), ("docs/.GIT/x", "'.git'"),
+    ("a&b", "letters, digits"), ("a;b", "letters, digits"), ('a"b', "letters, digits"),
+    ("a|b", "letters, digits"), ("a{b}", "letters, digits"), ("a$b", "letters, digits"),
+    ("a%b", "letters, digits"), ("a*b", "letters, digits"), ("a<b", "letters, digits"),
 )
 
 

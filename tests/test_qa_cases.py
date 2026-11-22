@@ -93,11 +93,11 @@ class Projects(unittest.TestCase):
         for case in qa_cases.CASES:
             with self.subTest(case=case.id), tempfile.TemporaryDirectory() as tmp:
                 root = qa_cases.build_project(case, Path(tmp) / "p")
-                patterns = (root / "docs/project-overview/sub/patterns.md").read_text(encoding="utf-8")
+                patterns = (root / ".ai-framework/project-overview/sub/patterns.md").read_text(encoding="utf-8")
                 self.assertIn(".test.ts", patterns)
                 self.assertEqual(facts.test_command(root), "node --test")
-                self.assertTrue((root / "docs/project-overview/stack.md").is_file())
-                self.assertTrue((root / "docs/project-overview/sub/stack.md").is_file())
+                self.assertTrue((root / ".ai-framework/project-overview/stack.md").is_file())
+                self.assertTrue((root / ".ai-framework/project-overview/sub/stack.md").is_file())
                 self.assertEqual((root / case.path).read_text(encoding="utf-8"), case.source)
 
     def test_the_mutant_project_has_the_defect_and_the_extra_files(self):

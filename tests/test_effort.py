@@ -230,8 +230,8 @@ class RunWiring(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             repo = make_repo(tmp, effort="high")
             target = Path(tmp) / "target"
-            (target / "docs" / "project-overview").mkdir(parents=True)
-            stack = target / "docs" / "project-overview" / "stack.md"
+            (target / ".ai-framework" / "project-overview").mkdir(parents=True)
+            stack = target / ".ai-framework" / "project-overview" / "stack.md"
             stack.write_text("# Stack\n\n- Language: JavaScript\n", encoding="utf-8")
             (target / ".ai-framework.json").write_text("{}", encoding="utf-8")
             diff = Path(tmp) / "case.patch"

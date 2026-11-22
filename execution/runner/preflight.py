@@ -11,18 +11,21 @@ Flagged in the target project: an agent model in opencode.json or
 .opencode/opencode.json (F35, F41), an agent file for the role in
 .opencode/agents (F40), and a jsonc config, which cannot be checked. The same
 agent-model check applies to the file named by OPENCODE_CONFIG in the caller's
-environment. The first-run files are required too: docs/project-overview/stack.md
-with content (F8) and .ai-framework.json (F14).
+environment. The first-run files are required too: project-overview/stack.md in the folder for
+generated files (generatedDir in .ai-framework.json, default .ai-framework; DEC-026) with content
+(F8), and .ai-framework.json (F14).
 """
 
 import json
 import os
 from pathlib import Path
 
+from . import generated_dir
+
 CONFIG_FILES = ("opencode.json", ".opencode/opencode.json")
 UNCHECKABLE_CONFIG_FILES = ("opencode.jsonc", ".opencode/opencode.jsonc")
 AGENT_DIRS = (".opencode/agents", ".opencode/agent")
-STACK = "docs/project-overview/stack.md"
+STACK_FILE = "project-overview/stack.md"
 FRAMEWORK_CONFIG = ".ai-framework.json"
 PLACEHOLDER = "[XXX]"
 HINT = "run the first-run analysis in the target project"
@@ -86,18 +89,29 @@ def _check_environment(environ):
     return _check_config(Path(value), "the OPENCODE_CONFIG file") if value else []
 
 
+def _stack_path(target):
+    """(path of the stack file relative to the target, None), or (None, problem) when the folder is refused."""
+    try:
+        return f"{generated_dir.relative_dir(target)}/{STACK_FILE}", None
+    except generated_dir.GeneratedDirError as error:
+        return None, str(error)
+
+
 def _check_stack(target):
-    path = target / STACK
+    stack, problem = _stack_path(target)
+    if problem:
+        return [problem]
+    path = target / stack
     if not path.is_file():
-        return [f"{STACK} is missing; {HINT} (F8)"]
+        return [f"{stack} is missing; {HINT} (F8)"]
     try:
         text = path.read_text(encoding="utf-8-sig")
     except (OSError, ValueError) as error:
-        return [f"{STACK} cannot be read: {error}"]
+        return [f"{stack} cannot be read: {error}"]
     if PLACEHOLDER in text:
-        return [f"{STACK} still contains {PLACEHOLDER}; {HINT} (F8)"]
+        return [f"{stack} still contains {PLACEHOLDER}; {HINT} (F8)"]
     if not [line for line in text.splitlines() if line.strip() and not line.lstrip().startswith("#")]:
-        return [f"{STACK} has no content beyond headings; {HINT} (F8)"]
+        return [f"{stack} has no content beyond headings; {HINT} (F8)"]
     return []
 
 
@@ -115,13 +129,15 @@ def check_target(target, role, environ=None):
     if not target.is_dir():
         return [f"target {target.as_posix()} is not a folder"]
     environ = os.environ if environ is None else environ
-    return (
+    problems = (
         _check_stack(target)
         + _check_framework_config(target)
         + _check_configs(target)
         + _check_agent_file(target, role)
         + _check_environment(environ)
     )
+    # A config that cannot be read is found by the folder lookup and by the config check: report it once.
+    return list(dict.fromkeys(problems))
 
 
 def require(target, role, environ=None):

@@ -41,6 +41,11 @@ def _check_absolute(value):
         raise _problem(value, "must not contain ':'")
 
 
+def _check_chars(value):
+    if not all(char.isalnum() or char in "._-/ " for char in value):
+        raise _problem(value, "may hold only letters, digits, spaces and . _ - /")
+
+
 def _check_segments(value):
     for segment in value.split("/"):
         if not segment:
@@ -55,6 +60,7 @@ def check_value(value):
     """The folder as a relative path with forward slashes, or GeneratedDirError. Pure: no file is read."""
     _check_text(value)
     _check_absolute(value)
+    _check_chars(value)
     _check_segments(value)
     return value
 

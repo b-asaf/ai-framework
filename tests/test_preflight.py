@@ -27,7 +27,7 @@ class Target(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
-        write(self.root, "docs/project-overview/stack.md", STACK_OK)
+        write(self.root, ".ai-framework/project-overview/stack.md", STACK_OK)
         write(self.root, ".ai-framework.json", "{}")
 
     def check(self, role="qa", environ=None):
@@ -45,17 +45,17 @@ class Target(unittest.TestCase):
         self.assertIn("not a folder", problems[0])
 
     def test_a_missing_stack_file_is_flagged(self):
-        (self.root / "docs" / "project-overview" / "stack.md").unlink()
+        (self.root / ".ai-framework" / "project-overview" / "stack.md").unlink()
         self.assertIn("stack.md is missing", self.joined())
 
     def test_a_stack_file_with_only_headings_is_flagged(self):
         for text in ("", "# Stack\n", "# Stack\n\n  \n## Build\n"):
             with self.subTest(text=text):
-                write(self.root, "docs/project-overview/stack.md", text)
+                write(self.root, ".ai-framework/project-overview/stack.md", text)
                 self.assertIn("no content beyond headings", self.joined())
 
     def test_a_stack_file_with_the_placeholder_is_flagged(self):
-        write(self.root, "docs/project-overview/stack.md", "# Stack\n- Language: [XXX]\n")
+        write(self.root, ".ai-framework/project-overview/stack.md", "# Stack\n- Language: [XXX]\n")
         self.assertIn("[XXX]", self.joined())
 
     def test_a_missing_framework_config_is_flagged(self):
@@ -108,7 +108,7 @@ class Target(unittest.TestCase):
         self.assertEqual(self.check(environ={"OPENCODE_CONFIG": str(self.root / "routing.json")}), [])
 
     def test_every_problem_is_reported_together(self):
-        (self.root / "docs" / "project-overview" / "stack.md").unlink()
+        (self.root / ".ai-framework" / "project-overview" / "stack.md").unlink()
         (self.root / ".ai-framework.json").unlink()
         write(self.root, "opencode.json", model_config())
         self.assertEqual(len(self.check()), 3)
@@ -125,6 +125,35 @@ class Target(unittest.TestCase):
 
     def test_require_returns_quietly_for_a_ready_target(self):
         self.assertIsNone(preflight.require(self.root, "qa", {}))
+
+
+class GeneratedFolder(Target):
+    """The stack file is looked for in the folder for generated files (DEC-026)."""
+
+    def test_a_changed_folder_is_used(self):
+        (self.root / ".ai-framework" / "project-overview" / "stack.md").unlink()
+        write(self.root, ".ai-framework.json", json.dumps({"generatedDir": "docs/ai"}))
+        self.assertIn("docs/ai/project-overview/stack.md is missing", self.joined())
+        write(self.root, "docs/ai/project-overview/stack.md", STACK_OK)
+        self.assertEqual(self.check(), [])
+
+    def test_files_only_under_the_old_place_are_not_found_and_the_message_names_the_path(self):
+        (self.root / ".ai-framework" / "project-overview" / "stack.md").unlink()
+        write(self.root, "docs/project-overview/stack.md", STACK_OK)
+        self.assertIn(".ai-framework/project-overview/stack.md is missing", self.joined())
+
+    def test_a_refused_folder_is_one_problem_and_no_stack_check(self):
+        for value in ("../x", "/abs", "docs\\ai", "a&b", 5):
+            with self.subTest(value=value):
+                write(self.root, ".ai-framework.json", json.dumps({"generatedDir": value}))
+                problems = self.check()
+                self.assertEqual(len(problems), 1)
+                self.assertIn("generatedDir", problems[0])
+
+    def test_a_config_that_cannot_be_read_is_reported_once(self):
+        write(self.root, ".ai-framework.json", "{bad")
+        problems = self.check()
+        self.assertEqual(len([problem for problem in problems if "cannot be read" in problem]), 1)
 
 
 if __name__ == "__main__":

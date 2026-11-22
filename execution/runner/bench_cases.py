@@ -377,7 +377,7 @@ def target_files(case):
     """Every file of the project after the change, with the files the first-run gate needs."""
     files = dict(case.context)
     files.update({path: after for path, (_, after) in case.changes.items()})
-    files["docs/project-overview/stack.md"] = STACK_TEXT
+    files[".ai-framework/project-overview/stack.md"] = STACK_TEXT
     files[".ai-framework.json"] = "{}\n"
     return files
 
