@@ -17,6 +17,11 @@ description: Runs automatically when project-overview is empty or contains [XXX]
 
 Run all 7 steps in order. Do not skip or abbreviate. Confirm with the developer at each decision point before proceeding.
 
+Everything this skill generates goes into the folder for generated files, except `.ai-framework.json`,
+`CONTEXT.md` and `_opencode.json`, which stay where they are (DEC-026). That folder is `.ai-framework/` at
+the repository root, or the path in `generatedDir` in `.ai-framework.json` (AGENTS.md Check 1 says how to
+read it). `<generated folder>` below means that folder.
+
 ## Step 1 — Topology detection
 
 Load the `repo-topology` skill and execute its Steps 1 and 2 (detect + confirm with developer).
@@ -51,13 +56,13 @@ For severity classification: read `references/detection-tables.md` (Convention e
 
 ## Step 6 — Generate refactoring-plan.md (if needed)
 
-If any High or Medium issues found, generate `docs/refactoring-plan.md`.
+If any High or Medium issues found, generate `<generated folder>/refactoring-plan.md`.
 For the template: read `references/refactoring-plan-template.md`.
 
 Present summary:
 
 ```
-📋 Refactoring plan generated: docs/refactoring-plan.md
+📋 Refactoring plan generated: <generated folder>/refactoring-plan.md
 🔴 [X] high  🟡 [Y] medium  🔵 [Z] low
 Review before starting feature work. No changes made automatically.
 ```
@@ -67,7 +72,7 @@ Review before starting feature work. No changes made automatically.
 ## Step 7 — Update all files
 
 - `project-overview` — populate all sections, replace all `[XXX]`. **Write the
-  populated content to the project's own repo** (e.g. `docs/project-overview/`,
+  populated content to the project's own repo** (in `<generated folder>/project-overview/`,
   mirroring the `sub/` folder structure), **never to the shared ai-framework skills
   location.** The shared `skills/project-overview/` stays a generic, unpopulated
   template for every project — see decisions/DEC-003 for why this matters.
@@ -80,8 +85,7 @@ Review before starting feature work. No changes made automatically.
 - **`CONTEXT.md`** — load `domain-model` skill, create with top 5-10 domain terms discovered
 - **`_opencode.json`** — replace `[XXX]`, apply topology changes (confirm with developer first)
 - **`workflow-guide.md`** — append `## Project-specific notes` only if genuinely needed
-- **`Manual.md`** — replace `[XXX]`, update workspace layout if microservices detected
-- **`.ai-framework.json`** — write to the root of **each individual repo** (not the shared framework install): `{"lint": "<cmd>", "format": "<cmd or empty string>", "test": "<cmd>"}` (optional: `coverage.minChangedLines`, a whole number from 0 to 100, default 90, 0 means no minimum, is the changed-line coverage minimum; write it only if the developer names a number), mirroring the Lint/Format/Test command fields you just wrote into that repo's `stack.md`. This is what the `pre-push` git hook reads to run `build-verify` structurally — it must live inside the project's own repo, not the shared skills location, since the hook has no other way to find it. Commit it.
+- **`.ai-framework.json`** — write to the root of **each individual repo** (not the shared framework install): `{"lint": "<cmd>", "format": "<cmd or empty string>", "test": "<cmd>"}` (optional: `coverage.minChangedLines`, a whole number from 0 to 100, default 90, 0 means no minimum, is the changed-line coverage minimum; write it only if the developer names a number), mirroring the Lint/Format/Test command fields you just wrote into that repo's `stack.md`. This is what the `pre-push` git hook reads to run `build-verify` structurally — it must live inside the project's own repo, not the shared skills location, since the hook has no other way to find it. Commit it. The optional key `generatedDir` (a relative path made of letters, digits, spaces and `. _ - /`, with no `..`) moves the folder for generated files; write it only if the developer names a folder.
 
 ## Completion message
 

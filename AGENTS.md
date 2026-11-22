@@ -13,11 +13,19 @@
 ## DO THIS FIRST — before anything else
 
 <check id="1" name="first-run">
-Read the **current project's own** `docs/project-overview/stack.md` (not the shared
-`skills/project-overview/` template — that stays generic across every project; see
-`decisions/DEC-003`).
+Find the folder for the files this framework generates in the project: read
+`.ai-framework.json` at the repository root (with the read tool) and use its `generatedDir` value,
+or `.ai-framework/` when the file or the key is missing. The value must be a relative path
+written with forward slashes and made only of letters, digits, spaces and `. _ - /`, with no
+`..` segment; if it is not, stop and tell the developer. Below, `<generated folder>` means
+this folder.
 
-If `docs/project-overview/` is missing, or `stack.md` is empty or contains `[XXX]`
+Read the **current project's own** `<generated folder>/project-overview/stack.md` (not the shared
+`skills/project-overview/` template — that stays generic across every project; see
+`decisions/DEC-003`). Wherever an agent or skill file names a `project-overview/...` file of the
+project, it means the copy in `<generated folder>/project-overview/`.
+
+If `<generated folder>/project-overview/` is missing, or `stack.md` is empty or contains `[XXX]`
 placeholders — **stop. Say this:**
 
 > "I need to run first-run analysis before I can help. This will scan the
@@ -153,7 +161,8 @@ Any dependency add / remove / update — propose and wait for explicit approval.
 </rule>
 
 <rule id="4" name="first-run-mandatory">
-The current project's own `docs/project-overview/stack.md` contains `[XXX]` or is
+The current project's own `<generated folder>/project-overview/stack.md` (the folder is
+defined in Check 1) contains `[XXX]` or is
 missing → run first-run analysis first. (Not the shared `skills/project-overview/`
 template — see Check 1 and `decisions/DEC-003`.)
 </rule>
