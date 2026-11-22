@@ -102,8 +102,8 @@ class RunReview(unittest.TestCase):
         self.repo = make_repo(base)
         self.target = base / "target"
         self.target.mkdir()
-        (self.target / "docs" / "project-overview").mkdir(parents=True)
-        stack = self.target / "docs" / "project-overview" / "stack.md"
+        (self.target / ".ai-framework" / "project-overview").mkdir(parents=True)
+        stack = self.target / ".ai-framework" / "project-overview" / "stack.md"
         stack.write_text("# Stack\n\n- Language: JavaScript\n", encoding="utf-8")
         (self.target / ".ai-framework.json").write_text("{}", encoding="utf-8")
         self.target_files = sorted(p.relative_to(self.target).as_posix() for p in self.target.rglob("*"))

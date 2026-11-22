@@ -29,7 +29,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 from . import opencode_adapter as adapter
-from . import facts, facts_check, facts_stage, preflight, record, report, resolve, tree
+from . import facts, facts_check, facts_stage, generated_dir, preflight, record, report, resolve, tree
 from lib.opencode_resolved import find_opencode  # noqa: E402
 
 RUNTIME = "opencode"
@@ -47,20 +47,34 @@ TASK_MESSAGE = (
     "Do not create a branch and do not ask to confirm a plan: the plan is approved."
 )
 
-QA_TASK_MESSAGE = (
+_QA_MESSAGE_HEAD = (
     "Write the missing tests for the attached diff. This run is made by an automated tool that parses "
     "your whole reply as JSON, so reply with only the JSON object that the attached task file describes, "
     "with no text before or after it. "
     "The attached files are already included in this message, so do not open them again. "
-    "The files of the project are in the current directory: read its docs/project-overview folder "
-    "(stack.md and sub/patterns.md) for the stack and the test file pattern, "
+    "The files of the project are in the current directory: read its "
+)
+_QA_MESSAGE_TAIL = (
+    " folder (stack.md and sub/patterns.md) for the stack and the test file pattern, "
     "and do not read files outside the current directory. "
     "Look at files with the read, glob and grep tools, not with bash. "
     "Use bash only to run the test command of the project, as one plain command "
     "with no cd, no pipes, no chaining and no redirects. "
     "Do not create a branch and do not ask to confirm a plan: the plan is approved."
 )
-TASK_MESSAGES = {"code-reviewer": TASK_MESSAGE, "qa": QA_TASK_MESSAGE}
+TASK_MESSAGES = {"code-reviewer": TASK_MESSAGE}
+
+
+def qa_task_message(folder):
+    """The qa task message for a target whose generated files are in `folder` (DEC-026); the rest is unchanged."""
+    return f"{_QA_MESSAGE_HEAD}{folder}/project-overview{_QA_MESSAGE_TAIL}"
+
+
+def _task_message(role, target):
+    """The task message of a role; the qa message names the folder of the target's generated files."""
+    if role == "qa":
+        return qa_task_message(generated_dir.relative_dir(target))
+    return TASK_MESSAGES.get(role, TASK_MESSAGE)
 
 
 @dataclass(frozen=True)
@@ -181,7 +195,7 @@ def _run(work, resolved, executable, agent_text, diff, target, runner, timeout, 
     setup = adapter.prepare_run_dir(work, role, agent_text, model, resolved.effort)
     task_file = work / "task.md"
     task_file.write_text(report.task_message(_report_role(role)), encoding="utf-8", newline="\n")
-    command = adapter.build_command(executable, role, TASK_MESSAGES.get(role, TASK_MESSAGE), [task_file, diff])
+    command = adapter.build_command(executable, role, _task_message(role, target), [task_file, diff])
     environment = adapter.build_environment(base, setup.config_file, setup.config_dir)
     started = _now()
     launched = _launch(runner, command, target, environment, timeout)

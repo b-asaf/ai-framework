@@ -3,7 +3,7 @@
 A case is a small TypeScript project whose production code is correct, the diff that adds it, and a mutant:
 the same project with one planted defect in the production file. A run passes when the tests the role wrote
 pass on the correct project, fail on the mutant, and the role changed no file outside the test pattern
-(scored in qa_benchmark.py). The test pattern is declared in docs/project-overview/sub/patterns.md, because
+(scored in qa_benchmark.py). The test pattern is declared in .ai-framework/project-overview/sub/patterns.md, because
 qa reads it from there. Nothing here knows about a model or a runtime.
 """
 
@@ -96,9 +96,9 @@ def project_files(case, mutant=False):
     """Every file of the project: the production file and what the first-run gate and qa read."""
     return {
         case.path: case.mutant if mutant else case.source,
-        "docs/project-overview/stack.md": STACK_TEXT,
-        "docs/project-overview/sub/stack.md": STACK_TEXT,
-        "docs/project-overview/sub/patterns.md": PATTERNS_TEXT,
+        ".ai-framework/project-overview/stack.md": STACK_TEXT,
+        ".ai-framework/project-overview/sub/stack.md": STACK_TEXT,
+        ".ai-framework/project-overview/sub/patterns.md": PATTERNS_TEXT,
         ".ai-framework.json": CONFIG_TEXT,
     }
 

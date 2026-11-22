@@ -64,7 +64,7 @@ def make_repo(base):
 
 def make_target(base, config):
     root = base / "target"
-    put(root, "docs/project-overview/stack.md", "# Stack\n\n- Language: TypeScript\n")
+    put(root, ".ai-framework/project-overview/stack.md", "# Stack\n\n- Language: TypeScript\n")
     put(root, ".ai-framework.json", config)
     put(root, "src/clamp.ts", "export const clamp = 1;\n")
     os.chmod(put(root, ".git/objects/pack/one.idx", "x"), stat.S_IREAD)
@@ -192,21 +192,37 @@ class WritingRun(unittest.TestCase):
     def test_the_qa_message_and_task_file_are_used(self):
         fake = QaFake(qa_report(TEST_FILE), {TEST_FILE: "t"})
         self.go(fake)
-        self.assertEqual(fake.calls[0][0][2], run.QA_TASK_MESSAGE)
+        self.assertEqual(fake.calls[0][0][2], run.qa_task_message(".ai-framework"))
         self.assertEqual(fake.seen["task"], report.task_message("qa"))
-        self.assertEqual(adapter.check_message(run.QA_TASK_MESSAGE), run.QA_TASK_MESSAGE)
+        message = run.qa_task_message(".ai-framework")
+        self.assertEqual(adapter.check_message(message), message)
         self.assertIs(run.TASK_MESSAGES["code-reviewer"], run.TASK_MESSAGE)
 
     def test_the_qa_message_points_at_the_project_docs_and_not_outside_the_folder(self):
-        self.assertIn("docs/project-overview", run.QA_TASK_MESSAGE)
-        self.assertIn("do not read files outside the current directory", run.QA_TASK_MESSAGE)
+        message = run.qa_task_message(".ai-framework")
+        self.assertIn(".ai-framework/project-overview", message)
+        self.assertIn("do not read files outside the current directory", message)
 
     def test_the_qa_message_describes_the_headless_shell_and_the_reviewer_message_is_unchanged(self):
-        message = run.QA_TASK_MESSAGE
+        message = run.qa_task_message(".ai-framework")
         self.assertIn("not with bash", message)
         self.assertIn("no cd, no pipes, no chaining and no redirects", message)
         self.assertFalse(set("&|<>;`$") & set(message))
         self.assertNotIn("bash", run.TASK_MESSAGE)
+
+    def test_the_qa_message_names_the_folder_of_the_target_and_stays_safe_for_the_shim(self):
+        for folder in (".ai-framework", "docs/ai", "my docs/ai_1"):
+            with self.subTest(folder=folder):
+                message = run.qa_task_message(folder)
+                self.assertIn(f"read its {folder}/project-overview folder", message)
+                self.assertEqual(adapter.check_message(message), message)
+
+    def test_the_task_message_follows_the_generated_dir_key_of_the_target(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertIn(".ai-framework/project-overview", run._task_message("qa", Path(tmp)))
+            put(tmp, ".ai-framework.json", json.dumps({"generatedDir": "docs/ai"}))
+            self.assertIn("docs/ai/project-overview", run._task_message("qa", Path(tmp)))
+            self.assertIs(run._task_message("code-reviewer", Path(tmp)), run.TASK_MESSAGE)
 
     def test_opencode_its_export_and_the_tests_start_without_the_shell_pwd(self):
         shell = {"PATH": "p", "PWD": "/d/ai-framework", "Pwd": "x"}
