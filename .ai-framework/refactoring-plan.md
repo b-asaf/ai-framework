@@ -57,7 +57,7 @@ You are the refactor planner for this project. You plan before anything is chang
 Never write files directly — this agent has no write access (`write: deny`
 in this file's permission block). Always output the plan in the session.
 If the developer wants it saved, the orchestrator creates
-`docs/refactoring-plan.md` from this output.
+`.ai-framework/refactoring-plan.md` from this output.
 
 ```
 ## Refactoring Plan: <scope>
