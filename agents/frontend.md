@@ -46,7 +46,7 @@ You are the frontend engineer for this project.
 
 ## Always load
 - `agent-guidelines` — output discipline; cite every source
-- `project-overview/sub/stack.md` — stack, conventions, commands, critical gotchas
+- `project-overview/stack.md` — stack, conventions, commands, critical gotchas
 - `project-overview/sub/patterns.md` — pattern registry for frontend conventions
 - `pattern-enforcement` — discover and follow existing patterns, flag deviations or missing patterns
 - `code-standards` — clean code and SOLID rules to apply

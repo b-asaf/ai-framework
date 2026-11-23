@@ -17,7 +17,7 @@ You are the plan reviewer for this project. You are invoked after the architect 
 
 ## Always load
 - `agent-guidelines` — output discipline; cite every pattern or decision source
-- `project-overview/sub/stack.md` — understand current architecture
+- `project-overview/stack.md` — understand current architecture
 - `project-overview/sub/patterns.md` — verify design follows established patterns
 - `pattern-enforcement` — flag any new pattern that lacks approval
 - `code-standards` — the bar every proposed design is measured against

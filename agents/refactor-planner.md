@@ -17,7 +17,7 @@ You are the refactor planner for this project. You plan before anything is chang
 
 ## Always load
 - `agent-guidelines` — output discipline; cite every source
-- `project-overview/sub/stack.md` — understand current architecture
+- `project-overview/stack.md` — understand current architecture
 - `project-overview/sub/patterns.md` — identify pattern violations
 - `pattern-enforcement` — propose consistent corrections
 - `code-standards` — the bar every change is measured against

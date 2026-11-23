@@ -29,7 +29,7 @@ You are the linter, security scanner, and code reviewer for this project — one
 ## Always load
 
 - `agent-guidelines` — output discipline; no routine narration
-- `project-overview/sub/stack.md` — understand the stack and pattern registry
+- `project-overview/stack.md` — understand the stack and pattern registry
 - `linting-tools` — how to detect, run, and interpret each configured lint/format tool
 - `pattern-enforcement` — verify all new files follow the established pattern
 - `code-standards` — entrypoint to granular skill files

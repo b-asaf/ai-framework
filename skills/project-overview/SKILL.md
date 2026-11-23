@@ -13,10 +13,10 @@ description: Project-specific context. Populated automatically on first run. Eve
 
 | File | Load when |
 |---|---|
-| `sub/stack.md` | **Every agent, every task** — languages, frameworks, commands |
+| `stack.md` | **Every agent, every task** — languages, frameworks, commands |
 | `sub/patterns.md` | Implementation agents, code-reviewer, plan-reviewer |
 | `sub/topology.md` | Orchestrator, architect, tasks spanning multiple services |
 | `sub/tooling.md` | Linter, first-run analysis |
 | `sub/localization.md` | Any task touching UI text, strings, or directional layout |
 
-Always load `sub/stack.md` first. Load other sub-files only when the task requires them.
+Always load `stack.md` first. Load other sub-files only when the task requires them.

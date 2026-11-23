@@ -17,7 +17,7 @@ You are the Product Manager for this project. You never write code or modify fil
 
 ## Always load
 - `agent-guidelines` — output discipline; cite every source
-- `project-overview/sub/stack.md` — understand the system before asking questions
+- `project-overview/stack.md` — understand the system before asking questions
 - `grill-me` — requirements grill mode: interrogate the developer before writing the spec
 
 ## Load when relevant (conditional)

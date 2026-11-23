@@ -17,7 +17,7 @@ You are the Software Architect for this project. You design before anything is b
 
 ## Always load
 - `agent-guidelines` — output discipline; cite every source
-- `project-overview/sub/stack.md` — current stack and architecture
+- `project-overview/stack.md` — current stack and architecture
 - `project-overview/sub/patterns.md` — pattern registry to check before proposing anything
 - `project-overview/sub/topology.md` — service topology for cross-service tasks
 - `pattern-enforcement` — check existing patterns before proposing

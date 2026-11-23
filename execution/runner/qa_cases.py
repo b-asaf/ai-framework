@@ -97,7 +97,6 @@ def project_files(case, mutant=False):
     return {
         case.path: case.mutant if mutant else case.source,
         ".ai-framework/project-overview/stack.md": STACK_TEXT,
-        ".ai-framework/project-overview/sub/stack.md": STACK_TEXT,
         ".ai-framework/project-overview/sub/patterns.md": PATTERNS_TEXT,
         ".ai-framework.json": CONFIG_TEXT,
     }

@@ -1,7 +1,7 @@
 # DEC-027 — The git hooks run as Python, and build-verify moves out of hooks/
 
 **Status:** Accepted
-**Date:** 2026-11-20
+**Date:** 2026-11-23
 
 ## Context
 
