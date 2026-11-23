@@ -1,47 +1,32 @@
 #!/bin/sh
-# pre-push: thin shell edge in front of the Python push gate.
+# ai-framework git hook launcher (plan step S.7, DEC-027).
 #
-#   1. Reads the push lines from stdin once.
-#   2. Runs the Python gate ($aiFramework.root/execution/verification/run.py):
-#      branch protection, dependency approval, quick-lane checks and the
-#      diff-size check (atomic changes, DEC-020).
-#   3. Runs the project's own build-verify (lint/format/test) from
-#      .ai-framework.json.
+# hooks/pre-commit, hooks/commit-msg and hooks/pre-push are this same file. It finds the framework
+# folder and a working Python 3 and runs execution/verification/hook.py with the hook's own name;
+# every check is in Python (protected branches, message format, the push gate and build-verify).
 #
-# "aiFramework.root" is a global git setting written by `python setup.py`. If it,
-# or a working Python 3, is missing, the push is blocked with a fix message: a
-# gate that cannot run must not pass silently.
-#
-# Mutation testing (DEC-006/DEC-008) is a separate, agent-side gate in
-# code-reviewer.md Stage 4 and is intentionally NOT part of this hook.
+# "aiFramework.root" is a global git setting written by `python setup.py`. If it, or a working
+# Python 3, is missing, the hook blocks with a fix message: a gate that cannot run must not pass silently.
 #
 # Escape hatches for emergencies:
-#   git push --no-verify             (skips this whole hook)
-#   SKIP_VERIFICATION=1 git push     (Python gate: dependency and quick-lane
-#                                     checks only; branch protection stays on)
-#   SKIP_DIFF_SIZE_CHECK=1 git push  (diff-size check only, in the Python gate)
+#   git commit --no-verify / git push --no-verify   (skips the hook)
+#   SKIP_VERIFICATION=1 git push     (dependency and quick-lane checks only; branch protection stays on)
+#   SKIP_DIFF_SIZE_CHECK=1 git push  (diff-size check only)
 #   SKIP_BUILD_VERIFY=1 git push     (build-verify only)
-#   AI_FRAMEWORK_PYTHON=<path>       (use this interpreter for the gate)
+#   AI_FRAMEWORK_PYTHON=<path>       (use this interpreter)
 
-REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null)
-COMMANDS_FILE="$REPO_ROOT/.ai-framework.json"
-
-json_get() {
-  # Extracts "key": "value" from a flat, single-level JSON file.
-  grep -o "\"$1\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" "$2" 2>/dev/null \
-    | sed -E 's/.*:[[:space:]]*"(.*)"/\1/'
-}
-
-# --- Push gate (Python) -------------------------------------------------------
+HOOK=$(basename "$0")
+BYPASS="git commit --no-verify"
+[ "$HOOK" = "pre-push" ] && BYPASS="git push --no-verify"
 
 block() {
   echo ""
-  echo "BLOCKED pre-push: $1"
+  echo "BLOCKED $HOOK: $1"
   shift
   for line in "$@"; do
     echo "  $line"
   done
-  echo "  Bypass once (reviewed exception only): git push --no-verify"
+  echo "  Bypass once (reviewed exception only): $BYPASS"
   echo ""
   exit 1
 }
@@ -61,27 +46,29 @@ run_python() {
 }
 
 # Git sends the push lines on stdin and they cannot be read twice.
-PUSH_INPUT=$(cat)
+PUSH_INPUT=""
+if [ "$HOOK" = "pre-push" ]; then
+  PUSH_INPUT=$(cat)
+fi
 
-# Local repository variables must not leak into the gate or into the project's
-# own lint and test commands (a test that runs git in a temp folder would
-# otherwise act on this repository).
+# Local repository variables must not leak into the checks or into the project's own lint and test
+# commands (a test that runs git in a temp folder would otherwise act on this repository).
 for var in $(git rev-parse --local-env-vars 2>/dev/null); do
   unset "$var"
 done
 
 FRAMEWORK_ROOT=$(git config --global --get aiFramework.root 2>/dev/null)
-GATE_SCRIPT="execution/verification/run.py"
+EDGE="execution/verification/hook.py"
 
 if [ -z "$FRAMEWORK_ROOT" ]; then
   block "the ai-framework folder is not configured on this machine." \
     "Fix: run 'python setup.py' in the ai-framework folder," \
     "or: git config --global aiFramework.root <path to the ai-framework folder>"
 fi
-if [ ! -f "$FRAMEWORK_ROOT/$GATE_SCRIPT" ]; then
-  block "gate script not found: $FRAMEWORK_ROOT/$GATE_SCRIPT" \
-    "The ai-framework folder was moved or deleted." \
-    "Fix: run 'python setup.py' in its new location."
+if [ ! -f "$FRAMEWORK_ROOT/$EDGE" ]; then
+  block "gate script not found: $FRAMEWORK_ROOT/$EDGE" \
+    "The ai-framework folder was moved or deleted, or it is older than these hooks." \
+    "Fix: run 'python setup.py' in its new location, or update the folder."
 fi
 
 PYTHON=""
@@ -100,73 +87,9 @@ if [ -z "$PYTHON" ]; then
     "or pin one: export AI_FRAMEWORK_PYTHON=<path to python>"
 fi
 
-run_gate() {
-  # Same call as the documented command: from the framework folder, with the
-  # absolute path of the repository being pushed.
-  (cd "$FRAMEWORK_ROOT" && run_python -B "$GATE_SCRIPT" "$REPO_ROOT")
-}
-
 if [ -n "$PUSH_INPUT" ]; then
-  printf '%s\n' "$PUSH_INPUT" | run_gate
+  printf '%s\n' "$PUSH_INPUT" | run_python -B "$FRAMEWORK_ROOT/$EDGE" "$HOOK" "$@"
 else
-  run_gate < /dev/null
+  run_python -B "$FRAMEWORK_ROOT/$EDGE" "$HOOK" "$@" < /dev/null
 fi
-GATE_EXIT=$?
-if [ "$GATE_EXIT" -ne 0 ]; then
-  echo ""
-  echo "ERROR: push gate failed - push blocked (see the lines above)."
-  echo "  Bypass once (reviewed exception only): git push --no-verify"
-  echo ""
-  exit 1
-fi
-
-# --- build-verify ------------------------------------------------------------
-# Unchanged; not part of DEC-006-009. Structural half of build-verify
-# (skills/build-verify/SKILL.md) - runs on the real `git push`, outside any
-# agent's control, using the project's own .ai-framework.json commands.
-
-if [ "${SKIP_BUILD_VERIFY:-}" = "1" ]; then
-  echo "build-verify skipped (SKIP_BUILD_VERIFY=1)"
-  exit 0
-fi
-
-HOOK_DIR=$(dirname "$0")
-VERIFY_SCRIPT="$HOOK_DIR/build-verify.sh"
-
-if [ ! -x "$VERIFY_SCRIPT" ]; then
-  block "build-verify.sh is missing next to the hook ($HOOK_DIR)." \
-    "Fix: python <ai-framework>/setup.py --install-hooks <this repository>"
-fi
-
-if [ ! -f "$COMMANDS_FILE" ]; then
-  block ".ai-framework.json not found: lint and tests cannot be verified." \
-    "Fix: run the first-run analysis in an agent session, or create the file with a \"test\" command." \
-    "A repository with nothing to verify can set \"test\": \"true\"." \
-    "Once only: SKIP_BUILD_VERIFY=1 git push"
-fi
-
-LINT_CMD=$(json_get lint "$COMMANDS_FILE")
-FORMAT_CMD=$(json_get format "$COMMANDS_FILE")
-TEST_CMD=$(json_get test "$COMMANDS_FILE")
-
-if [ -z "$LINT_CMD" ] && [ -z "$FORMAT_CMD" ] && [ -z "$TEST_CMD" ]; then
-  block ".ai-framework.json has no lint, format or test command." \
-    "Fix: add at least a \"test\" command; \"test\": \"true\" if there is nothing to run." \
-    "Once only: SKIP_BUILD_VERIFY=1 git push"
-fi
-
-echo ""
-echo "Running build-verify before push..."
-cd "$REPO_ROOT" || exit 1
-"$VERIFY_SCRIPT" --lint "$LINT_CMD" --format "$FORMAT_CMD" --test "$TEST_CMD"
-VERIFY_EXIT=$?
-
-if [ "$VERIFY_EXIT" -ne 0 ]; then
-  echo ""
-  echo "ERROR: build-verify failed - push blocked."
-  echo "  Fix the failure above, or SKIP_BUILD_VERIFY=1 git push to override."
-  echo ""
-  exit 1
-fi
-
-exit 0
+exit $?

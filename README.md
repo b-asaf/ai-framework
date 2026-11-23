@@ -336,13 +336,13 @@ Ask your tool:
 This is the one step that doesn't involve the AI tool at all — it confirms `build-verify` is a real git hook, not just an instruction an agent could skip.
 
 ```bash
-cat .git/hooks/pre-push   # should contain build-verify.sh logic, not just branch protection
+cat .git/hooks/pre-push   # should be the framework launcher: it calls execution/verification/hook.py
 cat .ai-framework.json    # should exist after first-run analysis, with real lint/format/test commands
 ```
 
 Then try pushing a commit that deliberately fails lint (or temporarily set `"test": "exit 1"` in `.ai-framework.json`) and run `git push`.
 
-✅ Pass: the push is blocked with `❌ build-verify failed — push blocked.`, independent of whether any agent is even running.
+✅ Pass: the push is blocked with `ERROR: build-verify failed - push blocked.`, independent of whether any agent is even running.
 ❌ Fail: the push succeeds — `.git/hooks/pre-push` is stale. Run `python <ai-framework>/setup.py --install-hooks <project>` (an existing hook is saved as `.bak`).
 
 ---
@@ -437,8 +437,8 @@ workflow-guide.md           ← day-to-day developer guide
 agents/                     ← 15 agent definitions (models are set in `execution/profiles/default.json`)
 skills/                     ← 44 skill folders (most have a ## Quick reference section)
 commands/                   ← slash commands (/task, /quick, /oversize, /review, /first-run, /handoff)
-hooks/                      ← git hooks (pre-commit, commit-msg, pre-push, build-verify.sh — copied into new repos via git init.templateDir; `python setup.py --install-hooks <repo>` installs them in an existing repo)
-scripts/                    ← helpers that run during a task, called by agents, hooks and gates (git-context.py, static-analysis.py, quick-lane-check.py, diff-size-check.py, open-draft-pr.py); linked into your tool config folders by setup.py
+hooks/                      ← git hooks (pre-commit, commit-msg and pre-push are one launcher over execution/verification/hook.py — copied into new repos via git init.templateDir; `python setup.py --install-hooks <repo>` installs them in an existing repo)
+scripts/                    ← helpers that run during a task, called by agents, hooks and gates (git-context.py, static-analysis.py, quick-lane-check.py, diff-size-check.py, build-verify.py, open-draft-pr.py); linked into your tool config folders by setup.py
 tools/                      ← maintainer tooling, not linked into any tool: validate_framework.py, generate_routing.py, and lib/ (shared code that the validator and the runner import)
 execution/                  ← work that code runs and checks: runner/ (headless agent runs and benchmarks), verification/ (the pre-push gate), profiles/, policy.json and routing.json (which model runs which role), schemas/
 tests/                      ← the unittest suite (`python -m unittest`) and the benchmark evidence in tests/bench/

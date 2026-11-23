@@ -61,7 +61,8 @@ AGENTS       = REPO / "agents"
 COMMANDS     = REPO / "commands"
 HOOKS        = REPO / "hooks"
 SCRIPTS      = REPO / "scripts"
-HOOK_NAMES   = ("pre-commit", "commit-msg", "pre-push", "build-verify.sh")
+HOOK_NAMES   = ("pre-commit", "commit-msg", "pre-push")
+RETIRED_HOOKS = ("build-verify.sh",)  # moved to scripts/build-verify.py (S.7); removed where an older install left it
 
 # ── Tool detection ─────────────────────────────────────────────────────────────
 
@@ -450,6 +451,7 @@ def add_git_template():
             shutil.copy2(src, dst)
             dst.chmod(dst.stat().st_mode | 0o111)
             copied += 1
+        _remove_retired(template_hooks)
         subprocess.run(
             ["git", "config", "--global", "init.templateDir", str(template_dir)],
             check=True, capture_output=True
@@ -487,6 +489,15 @@ def unset_framework_root():
     if code == 0 and current and _root_is_here(current):
         _git_global("--unset", "aiFramework.root")
         ok("git config --global aiFramework.root unset")
+
+def _remove_retired(folder):
+    """Delete hook files that an earlier framework version installed and that no longer exist (S.7)."""
+    for name in RETIRED_HOOKS:
+        old = folder / name
+        if old.exists():
+            old.unlink()
+            info(f"{name}: retired hook removed")
+
 
 def _install_one_hook(src, dst):
     if dst.exists() and _file_hash(dst) == _file_hash(src):
@@ -528,6 +539,7 @@ def install_hooks(target):
     hooks_dir.mkdir(parents=True, exist_ok=True)
     for name in HOOK_NAMES:
         _install_one_hook(HOOKS / name, hooks_dir / name)
+    _remove_retired(hooks_dir)
     code, root = _git_global("--get", "aiFramework.root")
     if code != 0 or not root:
         warn("aiFramework.root is not set: pushes are blocked until 'python setup.py' runs in the framework folder")

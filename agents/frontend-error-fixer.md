@@ -10,7 +10,8 @@ permission:
     "git status": allow
     "git log *": allow
     "git diff *": allow
-    "hooks/build-verify.sh *": allow
+    "python *scripts*build-verify.py*": allow
+    "python3 *scripts*build-verify.py*": allow
   edit:
     "*": allow
     "*package.json": ask
@@ -100,7 +101,7 @@ Only after you have a reproducible signal, proceed to the fix.
 
 ## Before declaring done
 
-- Run `build-verify` (`hooks/build-verify.sh`) with this project's lint/format/test commands from `stack.md` — confirms the error is gone and nothing else broke in one deterministic pass, rather than re-running individual commands ad hoc.
+- Run `build-verify` (`python "$HOME/.config/opencode/scripts/build-verify.py"`, which runs the lint, format and test commands of `.ai-framework.json`) — confirms the error is gone and nothing else broke in one deterministic pass, rather than re-running individual commands ad hoc.
 - On failure, follow `build-verify`'s retry-and-escalate rules (max 3 attempts, then stop and report — for a fix-scoped agent, hitting the cap is a strong signal the diagnosis itself was wrong, not just the patch).
 - Show all changed files and diffs.
 - Confirm no new errors were introduced.

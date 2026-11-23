@@ -92,6 +92,20 @@ class TemplateTest(SetupHooksCase):
         self.assertEqual(Path(self.global_value("init.templateDir")), self.fw / "git-template")
 
 
+class RetiredHooksTest(SetupHooksCase):
+    def test_the_retired_build_verify_script_is_removed_from_a_repo_and_from_the_template(self):
+        repo = self.make_repo("proj")
+        hooks = repo / ".git" / "hooks"
+        (hooks / "build-verify.sh").write_text("#!/bin/sh\n", newline="\n")
+        self.quiet(framework_setup.install_hooks, str(repo))
+        self.assertFalse((hooks / "build-verify.sh").exists())
+        template = self.fw / "git-template" / "hooks"
+        template.mkdir(parents=True)
+        (template / "build-verify.sh").write_text("#!/bin/sh\n", newline="\n")
+        self.quiet(framework_setup.add_git_template)
+        self.assertFalse((template / "build-verify.sh").exists())
+
+
 class FrameworkRootTest(SetupHooksCase):
     def test_root_is_recorded_with_forward_slashes_and_removed_again(self):
         self.quiet(framework_setup.set_framework_root)
@@ -153,10 +167,10 @@ class VerifyTest(SetupHooksCase):
     def test_stale_hooks_lists_missing_and_changed_files(self):
         folder = self.tmp / "copy"
         folder.mkdir()
-        for name in NAMES[:3]:
+        for name in NAMES[:2]:
             shutil.copy2(self.fw / "hooks" / name, folder / name)
         (folder / NAMES[0]).write_text("changed\n", newline="\n")
-        self.assertEqual(framework_setup._stale_hooks(folder), [NAMES[0], NAMES[3]])
+        self.assertEqual(framework_setup._stale_hooks(folder), [NAMES[0], NAMES[2]])
 
     def test_hook_python_finds_a_python_3(self):
         self.assertIsNotNone(framework_setup._hook_python())

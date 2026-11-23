@@ -10,7 +10,8 @@ permission:
     "git status": allow
     "git log *": allow
     "git diff *": allow
-    "hooks/build-verify.sh *": allow
+    "python *scripts*build-verify.py*": allow
+    "python3 *scripts*build-verify.py*": allow
   edit:
     "*": allow
     "*package.json": ask
@@ -77,6 +78,6 @@ Design tokens, shared UI primitives, component variants, accessibility contracts
 - Never deviate from an established pattern silently.
 
 ## Before declaring done
-- Run `build-verify` (`hooks/build-verify.sh`) with this project's lint/format/test commands from `stack.md` — do not declare done on your own read of the code, only on a passing exit code.
+- Run `build-verify` (`python "$HOME/.config/opencode/scripts/build-verify.py"`, which runs the lint, format and test commands of `.ai-framework.json`) — do not declare done on your own read of the code, only on a passing exit code.
 - On failure, follow `build-verify`'s retry-and-escalate rules (max 3 attempts per stage, then stop and report).
 - Show all changed files and diffs.

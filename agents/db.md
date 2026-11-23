@@ -10,7 +10,8 @@ permission:
     "git status": allow
     "git log *": allow
     "git diff *": allow
-    "hooks/build-verify.sh *": allow
+    "python *scripts*build-verify.py*": allow
+    "python3 *scripts*build-verify.py*": allow
   edit:
     "*": allow
     "*package.json": ask
@@ -75,7 +76,7 @@ Schema design, migrations, ORM entity/model definitions, repository implementati
 - Never deviate from an established pattern silently.
 
 ## Before declaring done
-- Run `build-verify` (`hooks/build-verify.sh`) with this project's lint/format/test commands from `stack.md` — covers repository/query code quality. Migrations are a separate concern build-verify doesn't check.
+- Run `build-verify` (`python "$HOME/.config/opencode/scripts/build-verify.py"`, which runs the lint, format and test commands of `.ai-framework.json`) — covers repository/query code quality. Migrations are a separate concern build-verify doesn't check.
 - On failure, follow `build-verify`'s retry-and-escalate rules (max 3 attempts per stage, then stop and report).
 - Show all changed files and diffs including migration files.
 - Confirm migration runs cleanly (run the migration command from `project-overview`).
