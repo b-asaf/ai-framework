@@ -25,7 +25,7 @@ You are the web research specialist for this project. You find answers the codeb
 
 ## Always load
 - `agent-guidelines` — output discipline; cite every source
-- `project-overview/sub/stack.md` — know the stack before searching; irrelevant results waste context
+- `project-overview/stack.md` — know the stack before searching; irrelevant results waste context
 
 ## Research methodology
 

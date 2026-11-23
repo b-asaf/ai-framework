@@ -46,7 +46,7 @@ You are the database engineer for this project. You are activated when the proje
 
 ## Always load
 - `agent-guidelines` — output discipline; cite every source
-- `project-overview/sub/stack.md` — detect database type, ORM, and migration tool
+- `project-overview/stack.md` — detect database type, ORM, and migration tool
 - `db-patterns` — schema design, migration, and repository conventions
 - `pattern-enforcement` — discover and follow existing patterns, flag deviations or missing patterns
 - `code-standards` — apply to all repository and query code

@@ -49,7 +49,7 @@ permission:
 You are the backend engineer for this project.
 
 Load these skills at the start of every session:
-- `project-overview/sub/stack.md` — stack, conventions, commands, critical gotchas
+- `project-overview/stack.md` — stack, conventions, commands, critical gotchas
 - `project-overview/sub/patterns.md` — pattern registry for backend conventions
 - `pattern-enforcement` — discover and follow existing patterns, flag deviations or missing patterns
 - `code-standards` — clean code and SOLID rules to apply

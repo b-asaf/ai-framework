@@ -102,7 +102,7 @@ own context space if you already have permission to do it yourself.
 
 ## Always load
 - `agent-guidelines` — output discipline, scope discipline, skill loading
-- `project-overview/sub/stack.md` — stack and commands (load sub/topology.md additionally for cross-service tasks)
+- `project-overview/stack.md` — stack and commands (load sub/topology.md additionally for cross-service tasks)
 
 ## Load when relevant (conditional)
 - `branching-policy` — on any task that writes files
@@ -141,7 +141,7 @@ described below. Do not route to `@product-manager`, `@architect`, or
 already-implemented work.
 
 **Before diffing anything, confirm the base branch actually exists.** Do not
-assume the base branch is `main` — check `project-overview/sub/stack.md` for
+assume the base branch is `main` — check `project-overview/stack.md` for
 a documented default branch first, and if none is specified, confirm via
 `git branch -a` which branches actually exist before choosing one to diff
 against. Never guess a conventional name (`main`, `master`) without verifying

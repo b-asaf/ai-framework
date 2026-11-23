@@ -435,7 +435,7 @@ setup.py                    ← run once per machine: links the framework into y
 workflow-guide.md           ← day-to-day developer guide
 
 agents/                     ← 15 agent definitions (models are set in `execution/profiles/default.json`)
-skills/                     ← 44 skill folders (most have a ## Quick reference section)
+skills/                     ← 43 skill folders (most have a ## Quick reference section)
 commands/                   ← slash commands (/task, /quick, /oversize, /review, /first-run, /handoff)
 hooks/                      ← git hooks (pre-commit, commit-msg and pre-push are one launcher over execution/verification/hook.py — copied into new repos via git init.templateDir; `python setup.py --install-hooks <repo>` installs them in an existing repo)
 scripts/                    ← helpers that run during a task, called by agents, hooks and gates (git-context.py, static-analysis.py, quick-lane-check.py, diff-size-check.py, build-verify.py, open-draft-pr.py); linked into your tool config folders by setup.py
@@ -505,7 +505,7 @@ action from you — just open a project and start a task.
 | ------------------------------- | ------------------------------------- |
 | `agent-guidelines`              | Every agent                           |
 | `surgical-changes`              | Every implementation agent            |
-| `project-overview/sub/stack.md` | Every agent                           |
+| `project-overview/stack.md` | Every agent                           |
 | `code-standards`                | Implementation agents + code-reviewer |
 | `static-code-analysis`          | Linter + code-reviewer (as precheck)  |
 

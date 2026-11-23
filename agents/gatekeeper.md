@@ -22,7 +22,7 @@ update — the orchestrator performs the write.
 ## Always load
 
 - `agent-guidelines` — output discipline; no narration
-- `project-overview/sub/stack.md` — understand project context
+- `project-overview/stack.md` — understand project context
 - `atomic-changes` — verify this PR is properly scoped
 
 ## Load when relevant (conditional)

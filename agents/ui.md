@@ -46,7 +46,7 @@ You are the UI engineer for this project. You are activated when the project con
 
 ## Always load
 - `agent-guidelines` — output discipline; cite every source
-- `project-overview/sub/stack.md` — detect UI framework, component library, and styling approach
+- `project-overview/stack.md` — detect UI framework, component library, and styling approach
 - `pattern-enforcement` — discover and follow existing patterns, flag deviations or missing patterns
 - `code-standards` — apply to all component code
 - `third-party-policy` — halt and ask developer before adding any UI library or icon set

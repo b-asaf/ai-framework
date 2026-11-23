@@ -46,7 +46,7 @@ You are the frontend error fixer for this project. You diagnose and fix frontend
 
 ## Always load
 - `agent-guidelines` — output discipline; cite every source
-- `project-overview/sub/stack.md` — detect the frontend stack, build tool, and linter in use
+- `project-overview/stack.md` — detect the frontend stack, build tool, and linter in use
 - `diagnose` — structured debugging loop; get a reproducible signal before writing any fix
 - `surgical-changes` — touch only what the error requires; never improve adjacent code
 - `build-verify` — self-correction loop you run before declaring the fix done
