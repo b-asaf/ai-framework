@@ -12,7 +12,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-HOOK_FILES = ("pre-push", "build-verify.sh")
+HOOK_FILES = ("pre-push",)
 SKIP_VARS = ("SKIP_VERIFICATION", "SKIP_DIFF_SIZE_CHECK", "SKIP_BUILD_VERIFY", "AI_FRAMEWORK_PYTHON")
 
 
@@ -233,15 +233,6 @@ class PrePushHookTest(unittest.TestCase):
         code, out = self.push("-u", "origin", "feature/x", SKIP_BUILD_VERIFY="1")
         self.assertEqual(code, 0, out)
         self.assertIn("refs/heads/feature/x", self.remote_heads())
-
-    def test_missing_build_verify_script_blocks_the_push(self):
-        self.write_config('{"test": "true"}\n')
-        (self.clone / ".git" / "hooks" / "build-verify.sh").unlink()
-        self.start_feature()
-        code, out = self.push("-u", "origin", "feature/x")
-        self.assertNotEqual(code, 0, out)
-        self.assertIn("build-verify.sh is missing", out)
-        self.assertNotIn("refs/heads/feature/x", self.remote_heads())
 
 
 class HookText(unittest.TestCase):

@@ -11,11 +11,11 @@ Labels: **KEEP** (unchanged), **MOVE** (logic goes elsewhere), **SPLIT** (become
 | File | Lines | Label | Phase | Notes |
 |---|---|---|---|---|
 | `hooks/pre-push` | 230 | SPLIT | 3A | Branch protection, diff-size and the verify gate move to `verification/checks/`; the hook becomes a thin entrypoint. All three skip silently when `origin/HEAD`, `protectedBranches`, `diffBaseBranch` or `.ai-framework.json` is missing (F14), so the new checks must fail closed (done: branch protection and diff size in the Python gate, build-verify in the shell hook, all blocking). Observed: it blocks `HEAD:main` only when `origin/HEAD` is set |
-| `hooks/build-verify.sh` | 98 | MOVE | 3A | Build and test facts go to `verification/checks/`. Stays shell or becomes Python per decision #2 |
-| `hooks/pre-commit` | 15 | KEEP | revisit with decision #2 | Commit-time rules (no direct commits to `main`, branch prefixes) were observed at the first plan commit. Confirm whether the rule lives here or in `commit-msg` |
-| `hooks/commit-msg` | 15 | KEEP | Phase 1 | Confirm which message format it enforces before the first Phase 1 commit |
+| `hooks/build-verify.sh` | 98 | MOVED | S.7 | Done (DEC-027): now `scripts/build-verify.py`, with its code in `execution/verification/build_verify.py`; the file is deleted |
+| `hooks/pre-commit` | 15 | REPLACED | S.7 | Done (DEC-027): the three hooks are one launcher over `execution/verification/hook.py`; protected branches come from `origin/HEAD` and `protectedBranches`, with `main master develop` only where neither exists |
+| `hooks/commit-msg` | 15 | REPLACED | S.7 | Done (DEC-027): same launcher; the first line that is not blank and not a comment must follow the conventional format |
 | `hooks/install-hooks.sh` | 21 | REMOVED | done (PR #80) | Its paths were relative, so it worked only from the framework folder, and it printed a false protected-branch list. Replaced by `python setup.py --install-hooks <repo>`. It was not the source of the `.bak` hooks (F65) |
-| `hooks/session-end.js` | 0 | REMOVE | 4 | Tracked as a symlink (mode 120000); without symlink support a checkout holds the 36-byte link text, not an empty file. Only `CHANGELOG.md` and this file mention it (checked 2026-11-03). Delete it in Phase 4 |
+| `hooks/session-end.js` | 0 | REMOVED | S.7 | Deleted (DEC-027); it was a link to a file that nothing used |
 | `agents/gatekeeper.md` | 146 | SPLIT | 3A.4 | Deterministic items move to `verification/`; judgment-only items stay (trimmed 2026-11-05; the replay moved into the soak, 4.5). Then decide whether the tier can drop |
 | `tools/validate_agents.py` | 533 | SPLIT | 1.3 to 1.8 | Becomes `validate_framework.py` plus `tools/lib/frontmatter.py` and `tools/lib/opencode_models.py`. The 16 cross-family edges move to `policy.json` (`constraints.independence`). `validate_agents.py` stays as a wrapper |
 | `setup.py` | 864 | KEEP | 4.2 | Small additions only (run the generator, link `adws/` if needed). Large file, so no refactor. The Windows copy fallback (`OUT OF DATE` warning) already exists |
