@@ -217,9 +217,9 @@ class Wiring(unittest.TestCase):
         ]
         self.assertEqual(found, [])
 
-    def test_the_hooks_folder_holds_the_three_launchers_only(self):
+    def test_the_hooks_folder_holds_the_two_launchers_only(self):
         names = sorted(path.name for path in (REPO / "hooks").iterdir())
-        self.assertEqual(names, ["commit-msg", "pre-commit", "pre-push"])
+        self.assertEqual(names, ["commit-msg", "pre-push"])
 
 
 if __name__ == "__main__":

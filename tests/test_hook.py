@@ -1,4 +1,4 @@
-"""The git hooks as Python (S.7, DEC-027): commit-msg, pre-commit, the edge script and the launcher on real git."""
+"""The git hooks as Python (S.7, DEC-027): commit-msg, the edge script and the launcher on real git."""
 
 import contextlib
 import io
@@ -16,7 +16,7 @@ sys.path.insert(0, str(ROOT))
 from execution.verification import hook  # noqa: E402
 from execution.verification.git_runner import GitError  # noqa: E402
 
-HOOKS = ("pre-commit", "commit-msg", "pre-push")
+HOOKS = ("commit-msg", "pre-push")
 SKIP_VARS = ("SKIP_VERIFICATION", "SKIP_DIFF_SIZE_CHECK", "SKIP_BUILD_VERIFY", "AI_FRAMEWORK_PYTHON")
 
 
@@ -76,20 +76,14 @@ class CommitMsg(unittest.TestCase):
         self.assertIn("cannot be read", out)
 
 
-class PreCommit(unittest.TestCase):
-    """DEC-029: protecting a branch is the git host's job, so the pre-commit hook never blocks."""
-
-    def test_a_commit_is_never_blocked_on_any_branch(self):
-        for branch in ("main", "master", "develop", "trunk", "feature/x", None):
-            with self.subTest(branch=branch):
-                code, out = captured(lambda: hook.pre_commit(".", fake_git(branch)))
-                self.assertEqual(code, 0)
-                self.assertEqual(out, "")
-
-
 class Dispatch(unittest.TestCase):
     def test_an_unknown_hook_is_blocked(self):
         code, out = captured(lambda: hook.main(["hook.py", "nope"], "", {}, fake_git("main")))
+        self.assertEqual(code, 1)
+        self.assertIn("unknown hook", out)
+
+    def test_the_removed_pre_commit_hook_is_an_unknown_hook(self):
+        code, out = captured(lambda: hook.main(["hook.py", "pre-commit"], "", {}, fake_git("main")))
         self.assertEqual(code, 1)
         self.assertIn("unknown hook", out)
 
@@ -97,7 +91,7 @@ class Dispatch(unittest.TestCase):
         def boom(argv, cwd=None, *, error=GitError):
             raise RuntimeError("boom")
 
-        code, out = captured(lambda: hook.main_or_block(["hook.py", "pre-commit"], "", {}, boom))
+        code, out = captured(lambda: hook.main_or_block(["hook.py", "pre-push"], "", {}, boom))
         self.assertEqual(code, 1)
         self.assertIn("internal error: RuntimeError: boom", out)
 
@@ -114,7 +108,7 @@ class Dispatch(unittest.TestCase):
 
 
 class Launchers(unittest.TestCase):
-    """The launcher on real git: three files, a temporary global git config, a repository without the framework template."""
+    """The launcher on real git: two files, a temporary global git config, a repository without the framework template."""
 
     def setUp(self):
         tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
@@ -205,7 +199,7 @@ class Launchers(unittest.TestCase):
         self.assertNotEqual(code, 0, out)
         self.assertIn("no working Python 3", out)
 
-    def test_the_three_hooks_are_one_file_with_unix_line_endings(self):
+    def test_the_two_hooks_are_one_file_with_unix_line_endings(self):
         first = (ROOT / "hooks" / HOOKS[0]).read_bytes()
         for name in HOOKS:
             with self.subTest(hook=name):

@@ -1,9 +1,8 @@
 """Edge script of the git hooks (plan step S.7, DEC-027, DEC-015).
 
-hooks/pre-commit, hooks/commit-msg and hooks/pre-push are one launcher that finds the framework folder and
+hooks/commit-msg and hooks/pre-push are one launcher that finds the framework folder and
 a working Python and runs this script with its own name. Each hook is decided here, in Python, and a hook that
 cannot decide blocks with a readable reason and never passes silently:
-  pre-commit  does nothing: protecting a branch is the git host's job (DEC-029); it stays so installed launchers work
   commit-msg  blocks a message whose first line is not a conventional commit line
   pre-push    runs the push gate (run.py) and then build-verify with the commands of .ai-framework.json
 main takes argv, stdin text, the environment and a run_git callable, so tests can drive it with fakes; the
@@ -22,7 +21,7 @@ if str(_ROOT) not in sys.path:
 from execution.verification import build_verify, run as gate  # noqa: E402
 from execution.verification.git_runner import GitError, run_git as real_run_git  # noqa: E402
 
-HOOKS = ("pre-commit", "commit-msg", "pre-push")
+HOOKS = ("commit-msg", "pre-push")
 SUBJECT = re.compile(
     r"(feat|fix|chore|refactor|docs|test|style|perf|ci|build|hotfix|release)(\(.+\))?: .{1,100}"
 )
@@ -64,13 +63,6 @@ def commit_msg(path):
             f"Your first line: {subject if subject is not None else '(none)'}",
         ],
     )
-
-
-def pre_commit(repo, run_git):
-    """Nothing to check: protecting a branch is the git host's job (DEC-029).
-
-    The hook stays so that launchers already installed in repositories keep working."""
-    return 0
 
 
 def _build_verify(repo, env):
@@ -117,8 +109,6 @@ def main(argv, stdin_text, env, run_git, cwd="."):
         print(f"BLOCKED hook: unknown hook {hook!r}; expected one of {', '.join(HOOKS)}")
         return 1
     repo = _repo_root(run_git, cwd)
-    if hook == "pre-commit":
-        return pre_commit(repo, run_git)
     return pre_push(repo, stdin_text, env, run_git)
 
 

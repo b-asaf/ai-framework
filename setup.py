@@ -61,7 +61,7 @@ AGENTS       = REPO / "agents"
 COMMANDS     = REPO / "commands"
 HOOKS        = REPO / "hooks"
 SCRIPTS      = REPO / "scripts"
-HOOK_NAMES   = ("pre-commit", "commit-msg", "pre-push")
+HOOK_NAMES   = ("commit-msg", "pre-push")
 RETIRED_HOOKS = ("build-verify.sh",)  # moved to scripts/build-verify.py (S.7); removed where an older install left it
 
 # ── Tool detection ─────────────────────────────────────────────────────────────

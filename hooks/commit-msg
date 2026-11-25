@@ -1,7 +1,7 @@
 #!/bin/sh
 # ai-framework git hook launcher (plan step S.7, DEC-027).
 #
-# hooks/pre-commit, hooks/commit-msg and hooks/pre-push are this same file. It finds the framework
+# hooks/commit-msg and hooks/pre-push are this same file. It finds the framework
 # folder and a working Python 3 and runs execution/verification/hook.py with the hook's own name;
 # every check is in Python (message format, the push gate and build-verify).
 #
