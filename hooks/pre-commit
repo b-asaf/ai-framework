@@ -3,14 +3,14 @@
 #
 # hooks/pre-commit, hooks/commit-msg and hooks/pre-push are this same file. It finds the framework
 # folder and a working Python 3 and runs execution/verification/hook.py with the hook's own name;
-# every check is in Python (protected branches, message format, the push gate and build-verify).
+# every check is in Python (message format, the push gate and build-verify).
 #
 # "aiFramework.root" is a global git setting written by `python setup.py`. If it, or a working
 # Python 3, is missing, the hook blocks with a fix message: a gate that cannot run must not pass silently.
 #
 # Escape hatches for emergencies:
 #   git commit --no-verify / git push --no-verify   (skips the hook)
-#   SKIP_VERIFICATION=1 git push     (dependency and quick-lane checks only; branch protection stays on)
+#   SKIP_VERIFICATION=1 git push     (skips the dependency and quick-lane checks)
 #   SKIP_DIFF_SIZE_CHECK=1 git push  (diff-size check only)
 #   SKIP_BUILD_VERIFY=1 git push     (build-verify only)
 #   AI_FRAMEWORK_PYTHON=<path>       (use this interpreter)

@@ -97,27 +97,13 @@ class PrePushHookTest(unittest.TestCase):
         self.assertEqual(code, 0, out)
         self.assertIn("refs/heads/feature/x", self.remote_heads())
 
-    def test_push_to_default_branch_is_blocked(self):
+    def test_a_push_to_the_default_branch_is_not_blocked_by_the_framework(self):
+        self.write_config('{"test": "true"}\n')
         self.commit("notes.txt", "hello\n")
         before = self.remote_main()
         code, out = self.push("origin", "main")
-        self.assertNotEqual(code, 0, out)
-        self.assertIn("branch_protection", out)
-        self.assertEqual(self.remote_main(), before)
-
-    def test_skip_verification_does_not_skip_branch_protection(self):
-        self.commit("notes.txt", "hello\n")
-        before = self.remote_main()
-        code, out = self.push("origin", "main", SKIP_VERIFICATION="1")
-        self.assertNotEqual(code, 0, out)
-        self.assertEqual(self.remote_main(), before)
-
-    def test_configured_protected_branch_is_blocked(self):
-        self.write_config('{"protectedBranches": ["temp-dev"]}\n')
-        self.start_feature("temp-dev")
-        code, out = self.push("-u", "origin", "temp-dev")
-        self.assertNotEqual(code, 0, out)
-        self.assertNotIn("refs/heads/temp-dev", self.remote_heads())
+        self.assertEqual(code, 0, out)
+        self.assertNotEqual(self.remote_main(), before)
 
     def test_dependency_change_needs_the_trailer(self):
         self.write_config('{"test": "true"}\n')
@@ -181,7 +167,7 @@ class PrePushHookTest(unittest.TestCase):
         self.assertNotIn("refs/heads/feature/x", self.remote_heads())
 
     def test_diff_size_without_a_base_blocks_instead_of_skipping(self):
-        self.write_config('{"test": "true", "protectedBranches": ["main"]}\n')
+        self.write_config('{"test": "true"}\n')
         self.start_feature()
         self.git("remote", "set-head", "origin", "-d", cwd=self.clone)
         code, out = self.push("-u", "origin", "feature/x")

@@ -20,9 +20,6 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
 from execution.verification import run  # noqa: E402
-from execution.verification.checks import branch_protection as bp  # noqa: E402
-from execution.verification.checks import dependency_change as dc  # noqa: E402
-from execution.verification.checks import quick_lane as ql  # noqa: E402
 
 IDENTITY = ["-c", "user.name=Test", "-c", "user.email=test@example.com", "-c", "commit.gpgsign=false"]
 ZERO = "0" * 40
@@ -113,7 +110,7 @@ class FakeRunGitUnit(unittest.TestCase):
             code = run.main(["run.py", "."], "bad record here\n", {}, lambda *a, **k: "")
         self.assertEqual(code, 1)
         text = out.getvalue()
-        self.assertIn("BLOCKED branch_protection", text)
+        self.assertIn("BLOCKED push_input", text)
         self.assertIn("BLOCKED dependency_change", text)
         self.assertIn("BLOCKED quick_lane", text)
 
@@ -123,7 +120,7 @@ class FakeRunGitUnit(unittest.TestCase):
             code = run.main(["run.py", "."], "bad record here\n", {"SKIP_VERIFICATION": "1"}, lambda *a, **k: "")
         self.assertEqual(code, 1)
         text = out.getvalue()
-        self.assertIn("BLOCKED branch_protection", text)
+        self.assertIn("BLOCKED push_input", text)
         self.assertNotIn("BLOCKED dependency_change", text)
         self.assertNotIn("BLOCKED quick_lane", text)
 
@@ -191,10 +188,9 @@ class RealGit(unittest.TestCase):
             code = run.main(["run.py", str(self.repo)], stdin_text, env or {}, self.run_git)
         return code, out.getvalue()
 
-    def test_push_to_protected_branch_is_blocked(self):
+    def test_a_push_to_the_default_branch_is_not_blocked_by_the_framework(self):
         code, out = self.main(f"refs/heads/main {self.a} refs/heads/main {self.a}\n")
-        self.assertEqual(code, 1)
-        self.assertIn("BLOCKED branch_protection", out)
+        self.assertEqual(code, 0, out)
 
     def test_push_to_a_feature_branch_is_not_blocked(self):
         b = commit(self.repo, self.scratch, {"docs/x.txt": "x\n"}, "feat: thing\n")
@@ -263,8 +259,7 @@ class RealGit(unittest.TestCase):
     def test_missing_ai_framework_json_is_not_a_violation(self):
         self.assertFalse((self.repo / ".ai-framework.json").exists())
         code, out = self.main(f"refs/heads/main {self.a} refs/heads/main {ZERO}\n")
-        # deletion of a protected branch is still blocked by branch_protection,
-        # but config itself is not the reason, so no "BLOCKED config" line.
+        # A missing config is not a violation of its own, so there is no "BLOCKED config" line.
         self.assertNotIn("BLOCKED config", out)
 
     def test_malformed_ai_framework_json_fails_closed(self):
@@ -277,7 +272,7 @@ class RealGit(unittest.TestCase):
         finally:
             config_path.unlink()
 
-    def test_no_origin_head_and_no_protected_branches_fails_closed(self):
+    def test_no_origin_head_and_no_diff_base_fails_closed(self):
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
             with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as scratch:
                 make_repo(folder)
@@ -295,15 +290,25 @@ class RealGit(unittest.TestCase):
                         {}, local_run_git,
                     )
                 self.assertEqual(code, 1)
-                self.assertIn("BLOCKED branch_protection", out.getvalue())
+                self.assertIn("BLOCKED diff_size", out.getvalue())
+                self.assertIn("BLOCKED dependency_change", out.getvalue())
 
-    def test_skip_verification_skips_dependency_change_and_quick_lane_but_not_branch_protection(self):
+    def test_skip_verification_skips_dependency_change_and_quick_lane(self):
+        git(self.repo, "checkout", "-q", "-b", "feature/skip-dep", self.a)
+        dep_head = commit(self.repo, self.scratch, {"package.json": "{}\n"}, "chore: dep\n")
+        git(self.repo, "checkout", "-q", "main")
         code, out = self.main(
-            f"refs/heads/main {self.a} refs/heads/main {self.a}\n", env={"SKIP_VERIFICATION": "1"}
+            f"refs/heads/feature/skip-dep {dep_head} refs/heads/feature/skip-dep {ZERO}\n",
+            env={"SKIP_VERIFICATION": "1"},
         )
-        self.assertEqual(code, 1)
+        self.assertEqual(code, 0, out)
         self.assertIn("SKIP_VERIFICATION=1", out)
-        self.assertIn("BLOCKED branch_protection", out)
+        self.assertNotIn("BLOCKED dependency_change", out)
+
+    def test_the_base_of_a_new_branch_is_diffBaseBranch_then_origin_head(self):
+        self.assertEqual(run._resolve_base(self.repo, {}, self.run_git), "origin/main")
+        self.assertEqual(run._resolve_base(self.repo, {"diffBaseBranch": "main"}, self.run_git), "main")
+        self.assertIsNone(run._resolve_base(self.repo, {"diffBaseBranch": "no-such-branch"}, self.run_git))
 
     def test_a_tag_push_is_ignored(self):
         code, out = self.main(f"refs/tags/v1.0 {self.a} refs/tags/v1.0 {ZERO}\n")
@@ -330,13 +335,13 @@ class RunPyAsSubprocess(unittest.TestCase):
                 git(folder, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/main")
 
                 script = REPO / "execution" / "verification" / "run.py"
-                stdin_text = f"refs/heads/main {a} refs/heads/main {a}\n"
+                stdin_text = "bad record here\n"
                 result = subprocess.run(
                     [sys.executable, str(script), str(folder)],
                     input=stdin_text, capture_output=True, text=True, cwd=folder,
                 )
                 self.assertEqual(result.returncode, 1)
-                self.assertIn("BLOCKED branch_protection", result.stdout)
+                self.assertIn("BLOCKED push_input", result.stdout)
 
 
 if __name__ == "__main__":

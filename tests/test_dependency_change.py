@@ -102,7 +102,7 @@ class ReadChangedPaths(unittest.TestCase):
         result = read_changed_paths("old123", _ZERO_SHA, run_git=failing_runner)
         self.assertEqual(result, [])
 
-    def test_new_branch_case_with_valid_protected_branch(self):
+    def test_new_branch_case_with_valid_base(self):
         calls = []
 
         def fake_run_git(argv):
@@ -121,11 +121,11 @@ class ReadChangedPaths(unittest.TestCase):
             ["diff", "--name-only", "--no-renames", "-z", "mergebasesha..new456", "--"],
         )
 
-    def test_new_branch_case_missing_protected_branch_raises(self):
+    def test_new_branch_case_missing_base_raises(self):
         with self.assertRaises(DependencyChangeError):
             read_changed_paths(_ZERO_SHA, "new456", None, run_git=failing_runner)
 
-    def test_new_branch_case_glob_protected_branch_raises(self):
+    def test_new_branch_case_glob_base_raises(self):
         with self.assertRaises(DependencyChangeError):
             read_changed_paths(_ZERO_SHA, "new456", "release/*", run_git=failing_runner)
 
@@ -207,7 +207,7 @@ class MergeBaseValidation(unittest.TestCase):
         result = read_commit_messages("old123", _ZERO_SHA, run_git=failing_runner)
         self.assertEqual(result, [])
 
-    def test_new_branch_case_with_valid_protected_branch(self):
+    def test_new_branch_case_with_valid_base(self):
         calls = []
 
         def fake_run_git(argv):
@@ -223,11 +223,11 @@ class MergeBaseValidation(unittest.TestCase):
         self.assertEqual(calls[0], ["merge-base", "new456", "main"])
         self.assertEqual(calls[1], ["log", "--format=%B%x00", "mergebasesha..new456"])
 
-    def test_new_branch_case_missing_protected_branch_raises(self):
+    def test_new_branch_case_missing_base_raises(self):
         with self.assertRaises(DependencyChangeError):
             read_commit_messages(_ZERO_SHA, "new456", None, run_git=failing_runner)
 
-    def test_new_branch_case_glob_protected_branch_raises(self):
+    def test_new_branch_case_glob_base_raises(self):
         with self.assertRaises(DependencyChangeError):
             read_commit_messages(_ZERO_SHA, "new456", "release/*", run_git=failing_runner)
 

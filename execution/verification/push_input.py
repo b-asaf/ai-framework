@@ -2,7 +2,7 @@
 
 The pre-push hook protocol feeds `local_ref local_sha remote_ref remote_sha`
 lines on stdin, one per ref being pushed. Several checks need this same
-information (`branch_protection` needs the `refs/heads/` branch names,
+information (the push gate needs the `refs/heads/` branch names,
 `dependency_change` and `quick_lane` need the shas to compute a commit
 range), so the parsing lives here once and each check builds on top of it.
 
@@ -46,3 +46,16 @@ def parse_push_records(stdin_text):
                 raise PushInputError(f"malformed object id {object_id!r} in pre-push input line: {line!r}")
         records.append(record)
     return records
+
+
+def read_pushed_branches(stdin_text):
+    """The branch names of the refs/heads/ records (a tag push gives none). A malformed record raises PushInputError."""
+    branches = []
+    for record in parse_push_records(stdin_text):
+        if not record.remote_ref.startswith("refs/heads/"):
+            continue
+        branch = record.remote_ref[len("refs/heads/"):]
+        if not branch:
+            raise PushInputError(f"empty branch name in remote_ref: {record.remote_ref!r}")
+        branches.append(branch)
+    return branches

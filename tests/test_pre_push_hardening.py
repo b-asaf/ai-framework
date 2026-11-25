@@ -58,17 +58,6 @@ class UnreadableConfig(unittest.TestCase):
         self.assertIn("cannot be read", violation["reason"])
 
 
-class FirstConcrete(unittest.TestCase):
-    def test_the_first_plain_name_is_the_base_for_a_new_branch(self):
-        self.assertEqual(run._first_concrete(["release/*", "main", "dev"]), "main")
-        self.assertEqual(run._first_concrete(["main"]), "main")
-
-    def test_patterns_are_not_a_base_and_nothing_gives_none(self):
-        for names in ([], ["release/*"], ["a?b", "c[de]"]):
-            with self.subTest(names=names):
-                self.assertIsNone(run._first_concrete(names))
-
-
 class GateCrash(unittest.TestCase):
     def test_an_unexpected_error_is_a_readable_block(self):
         out = io.StringIO()
@@ -88,9 +77,7 @@ class NonAsciiBranch(unittest.TestCase):
         branch = "\u0436"
         with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
             subprocess.run(["git", "init", "-q", "--template=", tmp], check=True, capture_output=True)
-            config = json.dumps({"protectedBranches": [branch]}, ensure_ascii=False)
-            (Path(tmp) / ".ai-framework.json").write_bytes(config.encode("utf-8"))
-            line = f"refs/heads/{branch} {ZERO} refs/heads/{branch} {SHA1}\n"
+            line = f"refs/heads/{branch} {SHA1} refs/heads/{branch} {ZERO}\n"
             result = subprocess.run(
                 [sys.executable, str(SCRIPT), tmp], input=line.encode("utf-8"), capture_output=True, check=False
             )

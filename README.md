@@ -359,17 +359,17 @@ by name, in one place, so nothing manual gets lost in the automatic tables.
 | Command      | What it does                                                                                         |
 | ------------ | ---------------------------------------------------------------------------------------------------- |
 | `/task`      | Start a new task — runs Check 1/2, then product-manager → architect → plan-reviewer → implementation |
-| `/quick`     | Fast lane for a small change you declare yourself: no spec or plan, review, QA and gate still run    |
+| `/quick`     | Quick lane for a small change you declare yourself: no spec or plan, review, QA and gate still run    |
 | `/oversize`  | Approve a branch that is over the line limit, as one PR or split (only you can declare it)           |
 | `/review`    | Full post-implementation pipeline on the current branch — code-reviewer, qa, gatekeeper              |
 | `/first-run` | Manually re-run first-run analysis (project-overview is stale or has `[XXX]`)                        |
 | `/handoff`   | Compact the session — saves a handoff doc, appends to `docs/session-summary.md`                      |
 
-**Running `/quick` - the fast lane for a small change you decide is small:**
+**Running `/quick` - the quick lane for a small change you decide is small:**
 
 `/quick <description>` is declared by you only. The framework never picks it for you and never offers it as a shortcut. The text after the command is the whole spec, so there is no `@product-manager`, no spec grill, no `@architect`, no `@plan-reviewer` and no PR breakdown. Review, QA and the gatekeeper still run.
 
-1. Start from a clean working tree. On the base branch a `fix/` or `chore/` branch is created for you; on any other branch you are asked once (Check 2 in `AGENTS.md`). `scripts/quick-lane-check.py --start` must say `STATUS: OK`.
+1. Start from a clean working tree. On the base branch a `fix/` or `chore/` branch is created for you; on any other branch the work stays on the current branch and nothing is asked (Check 2 in `AGENTS.md`). `scripts/quick-lane-check.py --start` must say `STATUS: OK`.
 2. The orchestrator states the plan in two lines and routes to one implementation agent. It does not wait for approval.
 3. `scripts/quick-lane-check.py` measures the change. More than 3 files, more than 60 changed lines, or a change to a dependency manifest, a lockfile or `.ai-framework.json` ends the lane: the orchestrator stops, says "This is no longer a quick fix", and offers `/task` or stopping. It never trims the change to fit.
 4. Review, QA and the gatekeeper run as in the regular lane. The commit gets a second paragraph, `Lane: quick`, and the PR is opened as a draft through `scripts/open-draft-pr.py`.
@@ -399,7 +399,7 @@ Runs entirely on your existing Claude Code/OpenCode session — no API key, no C
 
 **Want the findings as real inline GitHub PR comments**, not just in chat? `code-reviewer` stays read-only by default — ask for it explicitly after `/review` finishes (e.g. "post these as inline PR comments"). Requires an open PR and `gh` authenticated; you'll get a confirmation prompt before anything is posted.
 
-**Reviewing someone else's pushed branch:** works the same way — pull it locally first, then run `/review` exactly as above. It doesn't matter whose branch it is; the diff is always taken against the protected base, not against your own history.
+**Reviewing someone else's pushed branch:** works the same way — pull it locally first, then run `/review` exactly as above. It doesn't matter whose branch it is; the diff is always taken against the base branch, not against your own history.
 
 ```bash
 git fetch origin

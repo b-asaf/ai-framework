@@ -37,7 +37,7 @@ update — the orchestrator performs the write.
 
 ## Decided in code, not on this checklist
 
-Code checks these facts when the branch is pushed, so you do not check them: no commit on `main` or `master`, no dependency manifest change without an approval trailer, the quick-lane limits, and the project's own lint, format and test commands. A push the hook blocks is a failed gate that the orchestrator fixes (see `pr-provider`). Do not re-run these checks and do not ask another agent for them.
+Code checks these facts when the branch is pushed, so you do not check them: no dependency manifest change without an approval trailer, the quick-lane limits, and the project's own lint, format and test commands. A push the hook blocks is a failed gate that the orchestrator fixes (see `pr-provider`). Do not re-run these checks and do not ask another agent for them.
 
 ## Checklist — all must PASS
 
