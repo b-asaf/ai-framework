@@ -167,10 +167,10 @@ class VerifyTest(SetupHooksCase):
     def test_stale_hooks_lists_missing_and_changed_files(self):
         folder = self.tmp / "copy"
         folder.mkdir()
-        for name in NAMES[:2]:
+        for name in NAMES[:1]:
             shutil.copy2(self.fw / "hooks" / name, folder / name)
         (folder / NAMES[0]).write_text("changed\n", newline="\n")
-        self.assertEqual(framework_setup._stale_hooks(folder), [NAMES[0], NAMES[2]])
+        self.assertEqual(framework_setup._stale_hooks(folder), [NAMES[0], NAMES[1]])
 
     def test_hook_python_finds_a_python_3(self):
         self.assertIsNotNone(framework_setup._hook_python())

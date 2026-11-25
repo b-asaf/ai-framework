@@ -2,7 +2,7 @@
 # core.autocrlf. Without this, a Windows checkout with core.autocrlf=true
 # (the common default from the Git for Windows installer) silently
 # converts every text file — including extension-less git hook scripts
-# like hooks/pre-push, hooks/pre-commit, hooks/commit-msg — to CRLF on
+# like hooks/pre-push, hooks/commit-msg — to CRLF on
 # checkout. Those hooks are invoked via a shell (Git Bash's sh) that
 # chokes on the literal \r, breaking them at push/commit time.
 #

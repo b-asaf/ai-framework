@@ -179,7 +179,7 @@ class DiffSizeCheck(unittest.TestCase):
         hooks = self.repo / ".git" / "hooks"
         hooks.mkdir(exist_ok=True)
         self.gitconfig.write_text(f"[aiFramework]\n\troot = {REPO.as_posix()}\n", encoding="utf-8", newline="\n")
-        for name in ("commit-msg", "pre-commit"):
+        for name in ("commit-msg",):
             shutil.copy2(REPO / "hooks" / name, hooks / name)
         self.approve(APPROVAL)
         code, fields = self.check()
