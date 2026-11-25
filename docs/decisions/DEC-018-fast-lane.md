@@ -1,5 +1,7 @@
 # DEC-018 — Fast lane for quick fixes, declared by the developer
 
+> Naming note (DEC-029): the framework now calls this the quick lane everywhere; the command is `/quick`. This record keeps the name it was decided under.
+
 **Status:** Accepted
 **Date:** 2026-10-12
 
@@ -53,4 +55,4 @@ Touches: `commands/quick.md` (new), `scripts/quick-lane-check.py` (new), `agents
 - A model could claim `Lane: quick` for a regular task. The command is the only entry, the orchestrator is told never to declare it, and the script's limits apply either way. Step 3A adds a deterministic push-time check: a commit with the trailer that exceeds the limits is blocked.
 - A quick fix that needs a dependency change leaves the lane: the manifest check makes it over the limit, so the regular lane's third-party approval applies.
 - The limits are a starting point. If they feel wrong after real use, change them in `.ai-framework.json` or in the script's defaults.
-- Evidence: `tests/test_quick_lane_check.py` (the measuring script on real temporary git repos) and `tests/test_fast_lane.py` (the wording guards).
+- Evidence: `tests/test_quick_lane_check.py` (the measuring script on real temporary git repos) and `tests/test_quick_lane_wording.py` (the wording guards).

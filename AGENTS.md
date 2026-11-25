@@ -36,7 +36,9 @@ Then execute all first-run steps before accepting any task.
 
 <check id="2" name="branch-guard">
 If the developer's message requires writing or editing files, settle the branch before anything is
-written. The condition is deterministic: compare the current branch with the project's base branch
+written. A change gets a new branch, except in the quick lane (below). Protecting the base branch is the
+git host's job, not this framework's (DEC-029). The condition is deterministic: compare the current
+branch with the project's base branch
 (the documented default branch; if none is documented, the branch `origin/HEAD` points to).
 
 - **On the base branch:** create the branch automatically, no approval needed:
@@ -49,14 +51,17 @@ written. The condition is deterministic: compare the current branch with the pro
   `git-context.py` first. Implementation agents never ask this question: if they are on the base branch,
   or the branch was not settled, they stop and tell the orchestrator.
   - If `AHEAD_OF_BASE` is `0`, ask:
-    > "You are on `<current>`. Should this task (a) stay on `<current>`, (b) get a new branch from
-    > `<current>`, or (c) get a new branch from `<base>`?"
+    > "You are on `<current>`. Should this task get a new branch from
+    > `<current>` or from `<base>`?"
   - If `AHEAD_OF_BASE` is more than `0` or `unknown`, list the `COMMIT:` lines and ask:
-    > "You are on `<current>`, which already has these commits: <list>. Staying puts this task into the
-    > same PR. Should this task (a) get a new branch from `<base>` (recommended), (b) get a new branch
-    > from `<current>`, or (c) stay on `<current>` because it continues the same change?"
-  Then act on the answer without asking again: for a new branch run
-  `git checkout -b <prefix>/<task-name> <source>`; for stay do nothing.
+    > "You are on `<current>`, which already has these commits: <list>. A branch from `<current>` takes them into the
+    > same PR. Should this task get a new branch from `<base>` (recommended) or from
+    > `<current>`?"
+  Then act on the answer without asking again: run
+  `git checkout -b <prefix>/<task-name> <source>`.
+- **Quick lane (`/quick`):** only the developer can declare it. On the base branch create the branch as
+  above, with a `fix/` or `chore/` prefix. On any other branch the work stays on the current branch:
+  nothing is created and nothing is asked. The orchestrator tells the developer "Working on `<current>`."
 
 Only after the branch is settled may any file be written or edited.
 
@@ -173,7 +178,7 @@ The developer approves the plan at two checkpoints, not before every write: the 
 by `@plan-reviewer`). Once the PR breakdown is approved, implementation agents write files within the
 current PR row without asking again. Anything outside that row halts and goes back to the orchestrator
 and the developer.
-In the fast lane (`/quick`, which only the developer can declare) the declared description replaces both
+In the quick lane (`/quick`, which only the developer can declare) the declared description replaces both
 checkpoints. The lane's limits and every review, test and gate step still apply (see
 `agents/orchestrator.md`).
 </rule>

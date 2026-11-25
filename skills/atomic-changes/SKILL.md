@@ -109,19 +109,7 @@ Everything above this section is primarily agentic/engineering-process enforceme
 
 ### Protected branches
 
-`protectedBranches` answers only:
-
-> **"Where is direct push prohibited?"**
-
-The hook builds the protected set deterministically from:
-
-1. `main`, `master`, and `develop` as a compatibility fallback baseline
-2. Git's `origin/HEAD` pointer, when available, as the repository's actual default branch
-3. `.ai-framework.json` → `protectedBranches`, as additive project configuration
-
-Configured entries may be exact branch names or simple trailing patterns such as `release/*`.
-
-`origin/HEAD` identifies the default branch; it does **not** identify the target branch of every feature PR/MR.
+Protecting a branch is the git host's job (DEC-029): set a branch policy on GitHub, GitLab or Azure DevOps. The pre-push gate does not block a push by branch name, and no key in `.ai-framework.json` configures protection.
 
 ### Diff base
 
@@ -137,7 +125,7 @@ The preferred authoritative source when a PR/MR exists is its target branch. How
 
 A provider/CI integration may populate `diffBaseBranch` from the PR/MR target before running the gate.
 
-The hook must never select the "first" protected branch or use an LLM to guess the base.
+The hook must never pick a branch by its name or use an LLM to guess the base.
 
 ### Meaningful changed lines
 
@@ -159,13 +147,11 @@ This is intentionally conservative. The hook does **not** attempt to determine w
 
 ```json
 {
-  "protectedBranches": ["main", "dev", "release/*"],
   "diffBaseBranch": "dev",
   "maxDiffLines": 400
 }
 ```
 
-- `protectedBranches`: direct-push protection only
 - `diffBaseBranch`: deterministic diff comparison base
 - `maxDiffLines`: meaningful changed-line backstop threshold
 

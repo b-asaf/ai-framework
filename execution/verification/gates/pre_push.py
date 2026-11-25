@@ -1,8 +1,9 @@
-"""Pre-push gate (Phase 3A, plan step 3A.2, DEC-015, DEC-018).
+"""Pre-push gate (Phase 3A, plan step 3A.2, DEC-015, DEC-018, DEC-029).
 
-Composes three checks into the single decision `hooks/pre-push` needs:
-branch_protection, dependency_change and quick_lane. protected_paths is
-deliberately not part of this gate (it answers a different question --
+Composes two checks into the single decision `hooks/pre-push` needs:
+dependency_change and quick_lane. Protecting a branch is the git host's job
+(DEC-029), so no check here looks at which branch is pushed to. protected_paths
+is deliberately not part of this gate (it answers a different question --
 whether a protected path changed during an agent run, section 5.6 -- not
 whether a push should be blocked).
 
@@ -10,19 +11,16 @@ This module is pure: it takes plain data (already read by run.py at the
 edge) and returns the combined list of violations. It never calls git or
 touches the filesystem, so it is trivial to test with fabricated data.
 
-SKIP_VERIFICATION, when set, skips dependency_change and quick_lane only
-(DEC-018 still wants a visible record of what ran, so the caller is
-responsible for printing the notice; this module only decides which
-checks' violations are included). branch_protection is never skipped --
-a protected branch must stay protected regardless of the environment.
+SKIP_VERIFICATION, when set, skips both checks (DEC-018 still wants a visible
+record of what ran, so the caller is responsible for printing the notice;
+this module only decides which checks' violations are included).
 """
 
-from ..checks import branch_protection, dependency_change, quick_lane
+from ..checks import dependency_change, quick_lane
 
 
 def find_violations(
     pushed_branches,
-    protected_branches,
     per_ref_changed_paths,
     per_ref_commit_messages,
     per_ref_quick_lane_measurements,
@@ -31,7 +29,7 @@ def find_violations(
     *,
     skip_verification=False,
 ):
-    """Return the combined violations from all three checks.
+    """Return the combined violations from both checks.
 
     per_ref_changed_paths, per_ref_commit_messages and
     per_ref_quick_lane_measurements are dicts keyed by branch name, each
@@ -41,14 +39,10 @@ def find_violations(
     and validates .ai-framework.json at the edge; this function only
     applies them).
     """
-    violations = [
-        dict(item, check="branch_protection")
-        for item in branch_protection.find_violations(pushed_branches, protected_branches)
-    ]
-
     if skip_verification:
-        return violations
+        return []
 
+    violations = []
     for branch in pushed_branches:
         changed_paths = per_ref_changed_paths.get(branch, [])
         commit_messages = per_ref_commit_messages.get(branch, [])

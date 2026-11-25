@@ -44,7 +44,7 @@ Note (2026-10-18): the reviewer spike mentioned in this plan is not in the repos
   | 3C | `feat/phase-3c-pipeline-experiment` |
   | S | `chore/phase-s-<step>`, one branch per step |
   | 4 | `chore/phase-4-soak` |
-- **Repo hooks:** direct commits to `main` are blocked, and branch names need a prefix (`feat/ fix/ chore/ refactor/ docs/ hotfix/ release/`). Merging is done through a GitHub pull request, not a local merge.
+- **Repo hooks:** the framework does not block a commit or a push by branch name (the git host does, decision #20), and branch names need a prefix (`feat/ fix/ chore/ refactor/ docs/ hotfix/ release/`). Merging is done through a GitHub pull request, not a local merge.
 - **Merge rule:** `main` is what is installed, so only merge what you would be comfortable having live today. Merge at phase exit, when the phase's exit test passes.
 - **Phases that change live behavior (1b model routing, 3A hooks):** verify in a throwaway clone with a fresh `setup.py` run before opening the PR.
 - **Keep in sync:** `git merge main` into the phase branch if it lives longer than a few days.
@@ -459,8 +459,8 @@ Decided in DEC-017 and implemented in step 1.9.
 - **The developer keeps:** (1) publishing, meaning draft to ready and merging; (2) third-party changes; (3) a new task on an existing branch (stay, new from current, or new from base).
 - **Approval checkpoints:** the confirmed spec (`@product-manager`, `grill-me`) and the HLD with its PR breakdown (`@architect`, checked by `@plan-reviewer`).
 - **Permissions:** the global `opencode.json` has the catch-all first. The orchestrator's own block repeats the denies, because its own `"*"` rule overrides the global ones (F20). The validator enforces both (`lint_opencode_config`, `lint_commit_agents`).
-- **Fast lane:** `/quick`, declared by the developer only (DEC-018). It skips the spec grill, the HLD, the plan review and the PR breakdown, and keeps every review, test and gate step. `scripts/quick-lane-check.py` measures it: at most 3 files and 60 changed lines, and no manifest, lockfile or `.ai-framework.json`. Over the limit, the orchestrator stops and the developer decides.
-- **Backstops:** `branch_protection`, `dependency_change`, the quick-lane check and `diff_size` run in the pre-push gate (PR #78 to #80, installed by `setup.py`). Still to do: server-side branch protection.
+- **Quick lane:** `/quick`, declared by the developer only (DEC-018). It skips the spec grill, the HLD, the plan review and the PR breakdown, and keeps every review, test and gate step. `scripts/quick-lane-check.py` measures it: at most 3 files and 60 changed lines, and no manifest, lockfile or `.ai-framework.json`. Over the limit, the orchestrator stops and the developer decides.
+- **Backstops:** `dependency_change`, the quick-lane check and `diff_size` run in the pre-push gate (PR #78 to #80, installed by `setup.py`). Protecting a branch is the git host's job (decision #20, DEC-029).
 
 ## 7. Acceptance criteria
 
@@ -484,7 +484,7 @@ Checked at the Phase 2 gate and again at 4.5. A phase that breaks one is a reaso
 | Noisy comparisons (3-5 tasks, non-deterministic models) | Treat results as directional; log failures, do not chase averages |
 | Cost of skills loaded per run (F11) | Track in `RunRecord`; consider a leaner role prompt for headless runs |
 | Pattern-based git rules miss bypasses | Pre-push gate and server-side branch protection are the real enforcement |
-| Pre-push hook fails open (F14) | Explicit protected-branch list, fail closed, server-side branch protection |
+| Pre-push hook fails open (F14) | The gate fails closed; protecting a branch is the git host's job (decision #20) |
 | Broad deny patterns such as `git push*main*` also match unrelated branch names | Tighten the patterns in step 1.9 and retest |
 | Tools differ in instruction file names (`AGENTS.md`, `GEMINI.md`) | Step 4.7 pointer files |
 | Live install changes by accident while working | Worktree per phase; throwaway-clone test for 1b and 3A |
@@ -528,6 +528,8 @@ Checked at the Phase 2 gate and again at 4.5. A phase that breaks one is a reaso
 18. **Reviewed override of the changed-lines limit (S.6).** Decided 2026-11-20 (DEC-025): the standing limit stays `maxDiffLines` in `.ai-framework.json` (default 400). A developer-declared `/oversize <reason>` makes the orchestrator ask whether to continue as one PR or split; continuing records a `Diff-Size-Approved: <lines> <reason>` line in an empty commit, and the push gate raises that branch's limit to the largest approved number. No clock, no state file, no clear command. The gate (S.6b) and the command (S.6c) are built.
 
 19. **Generated files folder (S.12).** Decided 2026-11-20 (DEC-026), closing the open points of decision #14: the folder is `.ai-framework/` and the key is `generatedDir`; `docs/project-overview/` and `docs/refactoring-plan.md` move in; the fixed-path files stay, and so do `CONTEXT.md`, `CONTEXT-MAP.md` and `_opencode.json`, which belong to a workspace and not to one repository; one helper serves the runner, agents read the key themselves; no fallback and no migration command, the developer moves existing projects by hand.
+
+20. **Protected branches belong to the git host.** Decided 2026-11-24 (DEC-029): the framework no longer blocks a push to, or a commit on, a branch by its name, and no code or text reads `protectedBranches` (a leftover key is ignored); the branch policy of GitHub, GitLab or Azure DevOps is the authority. A new-branch range is measured from `diffBaseBranch`, else `origin/HEAD`, for `diff_size`, `dependency_change` and `quick_lane` alike. Every task gets a new branch; only the developer-declared quick lane (`/quick`) works on the current branch, and on the base branch it creates a `fix/` or `chore/` branch. The lane is called the quick lane everywhere. Supersedes the protected-branch part of DEC-009 and the `pre-commit` protection of DEC-027.
 
 ## 10. What is not changing
 

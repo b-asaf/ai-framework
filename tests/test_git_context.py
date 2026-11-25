@@ -132,7 +132,7 @@ class AgentsMdBranchGuardTest(unittest.TestCase):
     def test_check_2_uses_the_ahead_count(self):
         text = self.agents_md()
         self.assertIn("AHEAD_OF_BASE", text)
-        self.assertIn("Staying puts this task into the same PR", text)
+        self.assertIn("takes them into the same PR", text)
 
     def test_check_2_recommends_a_new_branch_from_base(self):
         self.assertIn("(recommended)", self.agents_md())

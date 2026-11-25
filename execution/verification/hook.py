@@ -3,7 +3,7 @@
 hooks/pre-commit, hooks/commit-msg and hooks/pre-push are one launcher that finds the framework folder and
 a working Python and runs this script with its own name. Each hook is decided here, in Python, and a hook that
 cannot decide blocks with a readable reason and never passes silently:
-  pre-commit  blocks a commit on a protected branch (the push gate's set; the old list only where there is none)
+  pre-commit  does nothing: protecting a branch is the git host's job (DEC-029); it stays so installed launchers work
   commit-msg  blocks a message whose first line is not a conventional commit line
   pre-push    runs the push gate (run.py) and then build-verify with the commands of .ai-framework.json
 main takes argv, stdin text, the environment and a run_git callable, so tests can drive it with fakes; the
@@ -20,11 +20,9 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from execution.verification import build_verify, run as gate  # noqa: E402
-from execution.verification.checks import branch_protection  # noqa: E402
 from execution.verification.git_runner import GitError, run_git as real_run_git  # noqa: E402
 
 HOOKS = ("pre-commit", "commit-msg", "pre-push")
-FALLBACK_PROTECTED = ("main", "master", "develop")
 SUBJECT = re.compile(
     r"(feat|fix|chore|refactor|docs|test|style|perf|ci|build|hotfix|release)(\(.+\))?: .{1,100}"
 )
@@ -68,34 +66,11 @@ def commit_msg(path):
     )
 
 
-def _protected_for_commit(repo, run_git):
-    """origin/HEAD plus protectedBranches; the old list only where neither exists or the config cannot be read."""
-    config, _problem = gate._read_config(repo)
-
-    def git(args):
-        return run_git(args, cwd=repo, error=branch_protection.BranchProtectionError)
-
-    try:
-        return branch_protection.read_protected_branches(config, run_git=git)
-    except branch_protection.BranchProtectionError:
-        return list(FALLBACK_PROTECTED)
-
-
 def pre_commit(repo, run_git):
-    try:
-        branch = run_git(["symbolic-ref", "--short", "HEAD"], cwd=repo).strip()
-    except GitError:
-        return 0  # a detached HEAD has no branch name to protect
-    if not branch or not branch_protection.find_violations([branch], _protected_for_commit(repo, run_git)):
-        return 0
-    return _block(
-        "pre-commit",
-        f"direct commits to '{branch}' are not allowed.",
-        [
-            "Create a feature branch: git checkout -b feat/your-task-name",
-            "Prefixes: feat/ fix/ chore/ refactor/ docs/ hotfix/ release/",
-        ],
-    )
+    """Nothing to check: protecting a branch is the git host's job (DEC-029).
+
+    The hook stays so that launchers already installed in repositories keep working."""
+    return 0
 
 
 def _build_verify(repo, env):

@@ -2,7 +2,6 @@
 
 import contextlib
 import io
-import json
 import os
 import shutil
 import subprocess
@@ -78,39 +77,14 @@ class CommitMsg(unittest.TestCase):
 
 
 class PreCommit(unittest.TestCase):
-    def check(self, head, origin=None, config=None):
-        with tempfile.TemporaryDirectory() as tmp:
-            if config is not None:
-                text = config if isinstance(config, str) else json.dumps(config)
-                (Path(tmp) / ".ai-framework.json").write_text(text, encoding="utf-8", newline="\n")
-            return captured(lambda: hook.pre_commit(tmp, fake_git(head, origin)))
+    """DEC-029: protecting a branch is the git host's job, so the pre-commit hook never blocks."""
 
-    def test_without_a_remote_the_old_list_applies(self):
-        for branch in ("main", "master", "develop"):
+    def test_a_commit_is_never_blocked_on_any_branch(self):
+        for branch in ("main", "master", "develop", "trunk", "feature/x", None):
             with self.subTest(branch=branch):
-                code, out = self.check(branch)
-                self.assertEqual(code, 1)
-                self.assertIn("BLOCKED pre-commit", out)
-                self.assertIn(branch, out)
-        for branch in ("feature/x", "fix/y"):
-            with self.subTest(branch=branch):
-                self.assertEqual(self.check(branch)[0], 0)
-
-    def test_the_default_branch_of_the_remote_is_protected_instead_of_the_old_list(self):
-        self.assertEqual(self.check("trunk", "origin/trunk")[0], 1)
-        self.assertEqual(self.check("main", "origin/trunk")[0], 0)
-
-    def test_configured_branches_are_added(self):
-        config = {"protectedBranches": ["release/*"]}
-        self.assertEqual(self.check("release/1", "origin/main", config)[0], 1)
-        self.assertEqual(self.check("feature/x", "origin/main", config)[0], 0)
-        self.assertEqual(self.check("temp-dev", None, {"protectedBranches": ["temp-dev"]})[0], 1)
-
-    def test_a_config_that_cannot_be_read_falls_back_to_the_old_list(self):
-        self.assertEqual(self.check("main", None, "{bad")[0], 1)
-
-    def test_a_detached_head_is_not_blocked(self):
-        self.assertEqual(self.check(None)[0], 0)
+                code, out = captured(lambda: hook.pre_commit(".", fake_git(branch)))
+                self.assertEqual(code, 0)
+                self.assertEqual(out, "")
 
 
 class Dispatch(unittest.TestCase):
@@ -192,15 +166,10 @@ class Launchers(unittest.TestCase):
     def feature(self):
         self.git(self.repo, "checkout", "-q", "-b", "feature/x")
 
-    def test_a_commit_on_main_is_blocked(self):
+    def test_a_commit_on_main_passes(self):
         code, out = self.commit("chore: x")
-        self.assertNotEqual(code, 0, out)
-        self.assertIn("BLOCKED pre-commit", out)
-        self.assertEqual(self.count(), 1)
-
-    def test_a_commit_on_main_with_no_verify_is_allowed(self):
-        code, out = self.commit("chore: x", flags=("--no-verify",))
         self.assertEqual(code, 0, out)
+        self.assertEqual(self.count(), 2)
 
     def test_a_feature_commit_with_a_good_message_passes(self):
         self.feature()

@@ -26,7 +26,7 @@ from pathlib import Path
 CONFIG_NAME = ".ai-framework.json"
 
 _HINTS = {
-    "branch_protection": "This branch is protected; open a feature branch and push that instead.",
+    "push_input": "Git's push input could not be read. Push again; if it repeats, report it.",
     "dependency_change": (
         "A dependency manifest changed without a visible approval trailer; "
         "add a `Dependency-Approved:` line to a commit message in this push."
@@ -84,9 +84,17 @@ def _records_by_branch(stdin_text, push_input):
     return records_by_branch
 
 
-def _first_concrete(branches):
-    """The first protected branch that is a plain name, not a pattern: the base a new branch is compared with."""
-    return next((name for name in branches if not any(char in name for char in "*?[")), None)
+def _resolve_base(repo, config, run_git):
+    """The base a new branch is compared with, the same one diff_size uses (DEC-029), or None when there is none."""
+    from execution.verification.checks import diff_size
+
+    def git(args):
+        return run_git(args, cwd=repo, error=diff_size.DiffSizeError)
+
+    try:
+        return diff_size.read_base(config, run_git=git)
+    except diff_size.DiffSizeError:
+        return None
 
 
 def _read_per_ref_checks(ctx):
@@ -99,7 +107,7 @@ def _read_per_ref_checks(ctx):
     """
     per_ref_changed_paths, per_ref_commit_messages, per_ref_measurements = {}, {}, {}
     violations = []
-    protected_branch_for_new = _first_concrete(ctx.protected_branches)
+    base = ctx.base
 
     for branch in ctx.pushed_branches:
         record = ctx.records_by_branch[branch]
@@ -107,10 +115,10 @@ def _read_per_ref_checks(ctx):
 
         try:
             changed_paths = ctx.dependency_change.read_changed_paths(
-                old_sha, new_sha, protected_branch_for_new, run_git=ctx.dc_run_git
+                old_sha, new_sha, base, run_git=ctx.dc_run_git
             )
             commit_messages = ctx.dependency_change.read_commit_messages(
-                old_sha, new_sha, protected_branch_for_new, run_git=ctx.dc_run_git
+                old_sha, new_sha, base, run_git=ctx.dc_run_git
             )
         except ctx.dependency_change.DependencyChangeError as error:
             violations.append(_fail_closed("dependency_change", f"{branch}: {error}"))
@@ -121,7 +129,7 @@ def _read_per_ref_checks(ctx):
         try:
             measurements = _read_quick_lane_measurements(
                 ctx.quick_lane, ctx.dependency_change, old_sha, new_sha,
-                protected_branch_for_new, ctx.dc_run_git, ctx.ql_run_git,
+                base, ctx.dc_run_git, ctx.ql_run_git,
             )
         except (ctx.quick_lane.QuickLaneError, ctx.dependency_change.DependencyChangeError) as error:
             violations.append(_fail_closed("quick_lane", f"{branch}: {error}"))
@@ -134,10 +142,10 @@ def _read_per_ref_checks(ctx):
 class _Context:
     """Plain holder for the modules and run_git wrappers _read_per_ref_checks needs."""
 
-    def __init__(self, pushed_branches, protected_branches, records_by_branch,
+    def __init__(self, pushed_branches, base, records_by_branch,
                  dependency_change, quick_lane, dc_run_git, ql_run_git):
         self.pushed_branches = pushed_branches
-        self.protected_branches = protected_branches
+        self.base = base
         self.records_by_branch = records_by_branch
         self.dependency_change = dependency_change
         self.quick_lane = quick_lane
@@ -147,23 +155,17 @@ class _Context:
 
 def main(argv, stdin_text, env, run_git):
     from execution.verification import push_input
-    from execution.verification.checks import branch_protection, coverage_config, dependency_change, quick_lane
+    from execution.verification.checks import coverage_config, dependency_change, quick_lane
     from execution.verification.gates import pre_push
 
     repo = argv[1] if len(argv) > 1 else "."
     skip_verification = str(env.get("SKIP_VERIFICATION", "")) == "1"
     if skip_verification:
-        print(
-            "SKIP_VERIFICATION=1: skipping dependency_change and quick_lane checks "
-            "(branch_protection still runs)."
-        )
+        print("SKIP_VERIFICATION=1: skipping dependency_change and quick_lane checks.")
 
     config, config_violation = _read_config(repo)
     violations = [config_violation] if config_violation else []
     violations.extend(_coverage_violation(config, coverage_config))
-
-    def bp_run_git(args):
-        return run_git(args, cwd=repo, error=branch_protection.BranchProtectionError)
 
     def dc_run_git(args):
         return run_git(args, cwd=repo, error=dependency_change.DependencyChangeError)
@@ -172,24 +174,18 @@ def main(argv, stdin_text, env, run_git):
         return run_git(args, cwd=repo, error=quick_lane.QuickLaneError)
 
     try:
-        pushed_branches = branch_protection.read_pushed_branches(stdin_text)
-    except branch_protection.BranchProtectionError as error:
-        violations.append(_fail_closed("branch_protection", str(error)))
+        pushed_branches = push_input.read_pushed_branches(stdin_text)
+    except push_input.PushInputError as error:
+        violations.append(_fail_closed("push_input", str(error)))
         if not skip_verification:
             violations.append(_fail_closed("dependency_change", str(error)))
             violations.append(_fail_closed("quick_lane", str(error)))
         return _report(violations)
 
-    try:
-        protected_branches = branch_protection.read_protected_branches(config, run_git=bp_run_git)
-    except branch_protection.BranchProtectionError as error:
-        violations.append(_fail_closed("branch_protection", str(error)))
-        protected_branches = []
-
     per_ref_changed_paths, per_ref_commit_messages, per_ref_measurements = {}, {}, {}
     if not skip_verification:
         ctx = _Context(
-            pushed_branches, protected_branches, _records_by_branch(stdin_text, push_input),
+            pushed_branches, _resolve_base(repo, config, run_git), _records_by_branch(stdin_text, push_input),
             dependency_change, quick_lane, dc_run_git, ql_run_git,
         )
         per_ref_changed_paths, per_ref_commit_messages, per_ref_measurements, per_ref_violations = (
@@ -208,7 +204,6 @@ def main(argv, stdin_text, env, run_git):
     violations.extend(
         pre_push.find_violations(
             pushed_branches,
-            protected_branches,
             per_ref_changed_paths,
             per_ref_commit_messages,
             per_ref_measurements,
@@ -279,7 +274,7 @@ def main_or_block(argv, stdin_text, env, run_git):
 
 
 def _read_quick_lane_measurements(
-    quick_lane, dependency_change, old_sha, new_sha, protected_branch, dc_run_git, ql_run_git
+    quick_lane, dependency_change, old_sha, new_sha, base, dc_run_git, ql_run_git
 ):
     """Measure every quick-lane commit in the pushed range for one ref.
 
@@ -290,7 +285,7 @@ def _read_quick_lane_measurements(
     if not new_sha or new_sha == dependency_change._ZERO_SHA:
         return []
 
-    range_spec = dependency_change.commit_range(old_sha, new_sha, protected_branch, run_git=dc_run_git)
+    range_spec = dependency_change.commit_range(old_sha, new_sha, base, run_git=dc_run_git)
     commits = quick_lane.read_commits_in_range(range_spec, run_git=ql_run_git)
     quick_lane_commits = quick_lane.find_quick_lane_commits(commits)
     return [
@@ -303,11 +298,9 @@ def _describe(violation):
     """Build a readable reason string from a violation's own shape.
 
     A violation already carries "reason" (fail-closed violations built by
-    this module) or "check" plus the check's own fields (the three
+    this module) or "check" plus the check's own fields (the two
     composed checks, tagged by gates/pre_push.py).
     """
-    if "branch" in violation:
-        return f"push to protected branch '{violation['branch']}' (matches '{violation['matched_pattern']}')"
     where = f" (branch {violation['pushed_branch']})" if "pushed_branch" in violation else ""
     if "manifests" in violation:
         return f"dependency manifest changed without an approval trailer: {', '.join(violation['manifests'])}{where}"

@@ -14,7 +14,7 @@ multi-commit changes (e.g. a manifest edit followed by a lockfile
 regeneration commit) for no safety benefit.
 
 An unresolvable merge-base (e.g. in a shallow/fresh clone where the
-protected ref is not present locally) fails closed via
+base ref is not present locally) fails closed via
 DependencyChangeError -- this is deliberate, not a bug: the check cannot
 safely assume "no dependency change" when it cannot compute the diff.
 
@@ -24,8 +24,7 @@ the resulting error message should mention that a `git fetch` may be
 needed to resolve it.
 
 A branch deletion (new_sha all-zero) has no commits to inspect and
-short-circuits to an empty result with zero git calls; a protected
-branch being deleted is caught separately by the branch_protection check.
+short-circuits to an empty result with zero git calls.
 """
 
 import fnmatch
@@ -94,21 +93,22 @@ def find_violations(changed_paths, commit_messages, trailer="Dependency-Approved
     ]
 
 
-def _resolve_new_branch_range(new_sha, protected_branch, *, run_git):
+def _resolve_new_branch_range(new_sha, base, *, run_git):
     """Resolve the diff range for a new-branch push (old_sha all-zero).
 
-    Requires a concrete (non-glob) protected_branch to compute a merge-base
-    against. Raises DependencyChangeError if that is not possible, or if
-    the merge-base lookup fails or returns something unresolvable.
+    Requires a concrete (non-glob) base to compute a merge-base against: the
+    base of the diff-size check, diffBaseBranch or origin/HEAD (DEC-029).
+    Raises DependencyChangeError if that is not possible, or if the
+    merge-base lookup fails or returns something unresolvable.
     """
-    if not protected_branch or "*" in protected_branch or "?" in protected_branch:
+    if not base or "*" in base or "?" in base:
         raise DependencyChangeError(
-            "cannot determine a base to diff a new branch against: "
-            f"protected_branch={protected_branch!r} is missing or not a concrete ref"
+            "cannot determine a base to diff a new branch against: set diffBaseBranch in "
+            f".ai-framework.json or run git remote set-head origin --auto (base={base!r})"
         )
 
     try:
-        output = run_git(["merge-base", new_sha, protected_branch])
+        output = run_git(["merge-base", new_sha, base])
     except DependencyChangeError:
         raise
     except Exception as error:
@@ -121,17 +121,17 @@ def _resolve_new_branch_range(new_sha, protected_branch, *, run_git):
     return f"{merge_base}..{new_sha}"
 
 
-def commit_range(old_sha, new_sha, protected_branch=None, *, run_git=run_git):
+def commit_range(old_sha, new_sha, base=None, *, run_git=run_git):
     if not old_sha:
         raise DependencyChangeError("old_sha is missing or empty; cannot determine commit range")
 
     if old_sha != _ZERO_SHA:
         return f"{old_sha}..{new_sha}"
 
-    return _resolve_new_branch_range(new_sha, protected_branch, run_git=run_git)
+    return _resolve_new_branch_range(new_sha, base, run_git=run_git)
 
 
-def read_changed_paths(old_sha, new_sha, protected_branch=None, *, run_git=run_git):
+def read_changed_paths(old_sha, new_sha, base=None, *, run_git=run_git):
     """Return the list of changed paths in the pushed commit range.
 
     old_sha missing/unfetched (e.g. after a force-push) fails closed via
@@ -142,7 +142,7 @@ def read_changed_paths(old_sha, new_sha, protected_branch=None, *, run_git=run_g
     if new_sha == _ZERO_SHA:
         return []
 
-    range_spec = commit_range(old_sha, new_sha, protected_branch, run_git=run_git)
+    range_spec = commit_range(old_sha, new_sha, base, run_git=run_git)
     output = run_git(["diff", "--name-only", "--no-renames", "-z", range_spec, "--"])
 
     parts = output.split("\0")
@@ -151,14 +151,14 @@ def read_changed_paths(old_sha, new_sha, protected_branch=None, *, run_git=run_g
     return [path for path in parts if path]
 
 
-def read_commit_messages(old_sha, new_sha, protected_branch=None, *, run_git=run_git):
+def read_commit_messages(old_sha, new_sha, base=None, *, run_git=run_git):
     """Return the list of commit messages in the pushed commit range."""
     if not new_sha:
         raise DependencyChangeError("new_sha is missing or empty; cannot determine commit range")
     if new_sha == _ZERO_SHA:
         return []
 
-    range_spec = commit_range(old_sha, new_sha, protected_branch, run_git=run_git)
+    range_spec = commit_range(old_sha, new_sha, base, run_git=run_git)
     output = run_git(["log", "--format=%B%x00", range_spec])
 
     # git adds a newline after each terminator, so the last piece is "\n", not "": it is not a message.

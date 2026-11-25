@@ -14,7 +14,6 @@ REPO = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO))
 
 from execution.verification import git_runner  # noqa: E402
-from execution.verification.checks import branch_protection as bp  # noqa: E402
 from execution.verification.checks import dependency_change as dc  # noqa: E402
 
 IDENTITY = ["-c", "user.name=Test", "-c", "user.email=test@example.com", "-c", "commit.gpgsign=false"]
@@ -71,9 +70,6 @@ class RealGit(unittest.TestCase):
     def dc_git(self, argv):
         return dc.run_git(argv, cwd=self.repo)
 
-    def bp_git(self, argv):
-        return bp.run_git(argv, cwd=self.repo)
-
     def paths(self, old, new, base=None):
         return dc.read_changed_paths(old, new, base, run_git=self.dc_git)
 
@@ -107,30 +103,13 @@ class RealGit(unittest.TestCase):
         violations = dc.find_violations(paths, self.messages(dc._ZERO_SHA, self.d, "main"))
         self.assertEqual([item["manifests"] for item in violations], [["requirements-dev.txt"]])
 
-    def test_a_new_branch_without_a_resolvable_protected_branch_fails_closed(self):
+    def test_a_new_branch_without_a_resolvable_base_fails_closed(self):
         with self.assertRaises(dc.DependencyChangeError):
             self.paths(dc._ZERO_SHA, self.d, "no-such-branch")
-
-    def test_origin_head_is_read_from_real_git(self):
-        self.assertEqual(bp.read_protected_branches(None, run_git=self.bp_git), ["main"])
-
-    def test_without_origin_head_the_configured_branches_are_used_or_the_check_fails_closed(self):
-        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as folder:
-            make_repo(folder)
-
-            def run(argv):
-                return bp.run_git(argv, cwd=folder)
-
-            config = {"protectedBranches": ["release/*"]}
-            self.assertEqual(bp.read_protected_branches(config, run_git=run), ["release/*"])
-            with self.assertRaises(bp.BranchProtectionError):
-                bp.read_protected_branches(None, run_git=run)
 
     def test_a_failing_git_command_raises_each_checks_own_error(self):
         with self.assertRaises(dc.DependencyChangeError):
             dc.run_git(["no-such-subcommand"], cwd=self.repo)
-        with self.assertRaises(bp.BranchProtectionError):
-            bp.run_git(["no-such-subcommand"], cwd=self.repo)
 
     def test_the_shared_helper_decodes_utf8(self):
         out = git_runner.run_git(["log", "-1", "--format=%s", self.b], cwd=self.repo)

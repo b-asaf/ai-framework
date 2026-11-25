@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""quick-lane-check.py - measure a quick fix against the fast lane limits (DEC-018).
+"""quick-lane-check.py - measure a quick fix against the quick lane limits (DEC-018).
 
 Usage:
   python quick-lane-check.py --start    # STATUS: OK only if the working tree is clean before the fix starts
@@ -140,7 +140,7 @@ def run(args):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="Measure a quick fix against the fast lane limits.")
+    parser = argparse.ArgumentParser(description="Measure a quick fix against the quick lane limits.")
     parser.add_argument("--repo", default=".")
     parser.add_argument("--start", action="store_true", help="check that the working tree is clean")
     parser.add_argument("--max-files", type=int)

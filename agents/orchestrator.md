@@ -163,15 +163,16 @@ the list of blocking issues — and stop. Do not proceed to Step 10's branch/PR
 handoff flow; that step assumes freshly-implemented work ready to commit,
 which is out of scope for a standalone review invocation.
 
-## Invoked via `/quick` - fast lane
+## Invoked via `/quick` - quick lane
 
 When the incoming task is the `/quick` command's template, the developer has declared a quick fix. Only the
 developer can declare it: never choose this lane yourself, never offer it as a shortcut, and never treat a
 request as quick because it sounds small. The text after the command is the whole spec. Keep every review,
 test and gate step.
 
-1. **Branch.** Run the branch check from Step 1 (AGENTS.md Check 2): on the base branch create a `fix/` or
-   `chore/` branch, on any other branch ask the developer once. Then run `quick-lane-check.py --start`. If it
+1. **Branch.** Follow the quick-lane rule of AGENTS.md Check 2: on the base branch create a `fix/` or
+   `chore/` branch; on any other branch stay on it, ask nothing, and tell the developer "Working on
+   `<current>`." Then run `quick-lane-check.py --start`. If it
    does not say `STATUS: OK` (for example the working tree is not clean), stop and tell the developer.
 2. **Plan in two lines, no wait.** State what will change and in which files. There is no `@product-manager`,
    no `@architect`, no `@plan-reviewer` and no PR breakdown in this lane.
@@ -234,9 +235,8 @@ Before opening any branch, confirm the architect's PR breakdown is agreed:
 
 ### Step 4 — Branch
 Create the branch for the **current PR** automatically, with no confirmation wait
-(see AGENTS.md Check 2):
-- If the developer chose in Step 1 to stay on the current branch, create nothing.
-- Otherwise run `git checkout -b <prefix>/<descriptive-name> [<source>]`, where `<source>` is the branch the developer chose in Step 1 (leave it out to branch from the current branch), then tell the developer:
+(see AGENTS.md Check 2). Every PR gets its own new branch:
+- Run `git checkout -b <prefix>/<descriptive-name> [<source>]`, where `<source>` is the branch the developer chose in Step 1 (leave it out to branch from the current branch), then tell the developer:
 > "Created branch `<prefix>/<descriptive-name>`."
 Only proceed to Step 5 once the branch is settled.
 
