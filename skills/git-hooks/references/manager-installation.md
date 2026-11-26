@@ -3,7 +3,6 @@
 ## Husky
 ```bash
 npx husky install
-npx husky add .husky/pre-commit 'bash .husky/scripts/check-branch.sh'
 npx husky add .husky/commit-msg 'bash .husky/scripts/check-commit-msg.sh "$1"'
 npx husky add .husky/pre-push 'bash .husky/scripts/check-push.sh'
 ```
@@ -12,10 +11,6 @@ Add to `package.json`: `"prepare": "husky install"`
 ## Lefthook
 Add to `lefthook.yml`:
 ```yaml
-pre-commit:
-  commands:
-    check-branch:
-      run: bash .lefthook/scripts/pre-commit
 commit-msg:
   commands:
     check-message:
@@ -49,7 +44,7 @@ folder doesn't carry its own copy.
 
 ## Verification
 ```bash
-ls -la .git/hooks/pre-commit .git/hooks/commit-msg .git/hooks/pre-push
+ls -la .git/hooks/commit-msg .git/hooks/pre-push
 git checkout -b test/hook-check
 git commit --allow-empty -m "bad message"    # should fail
 git commit --allow-empty -m "chore: test"    # should pass

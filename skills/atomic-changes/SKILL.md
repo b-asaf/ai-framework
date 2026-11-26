@@ -123,7 +123,7 @@ The preferred authoritative source when a PR/MR exists is its target branch. How
 2. Origin's default branch (`origin/HEAD`)
 3. Otherwise the push is **blocked** with a message that names the fix (DEC-020); the check never skips
 
-A provider/CI integration may populate `diffBaseBranch` from the PR/MR target before running the gate.
+A provider/CI integration may populate `diffBaseBranch` from the PR/MR target before running the gate. First-run asks the developer for the PR target branch and writes `diffBaseBranch` when it is not the default branch.
 
 The hook must never pick a branch by its name or use an LLM to guess the base.
 

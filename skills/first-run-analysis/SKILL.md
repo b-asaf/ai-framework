@@ -41,6 +41,15 @@ Record all findings in `project-overview`.
 
 Run `zoom-out` on each repo. Output feeds into Step 4 (knowing where to look) and Step 7 (CONTEXT.md vocabulary).
 
+## Step 3c — Base branch (per repo)
+
+Find the branch the developer's PRs target, for each repo. Run `python "$HOME/.config/opencode/scripts/git-context.py"` from that repo and read the `BASE:` line of the `--- ahead ---` section (the branch `origin/HEAD` points to; there is no such line when none was found). Ask once per repo: "Which branch do your PRs target? Default: `<BASE>`." (without the default when there is no `BASE:` line).
+
+- If the answer is the default (ignore a leading `origin/` when comparing), write nothing.
+- Otherwise, or when there was no `BASE:` line, Step 7 writes the answer as `diffBaseBranch`, as `origin/<branch>`. If that ref does not exist locally, tell the developer to run `git fetch`.
+
+The size, dependency and quick-lane checks measure a new branch against this base. A repo whose `origin/HEAD` is not where its work starts would be measured against the wrong branch (DEC-029).
+
 ## Step 4 — Convention detection
 
 Detect:
@@ -85,7 +94,7 @@ Review before starting feature work. No changes made automatically.
 - **`CONTEXT.md`** — load `domain-model` skill, create with top 5-10 domain terms discovered
 - **`_opencode.json`** — replace `[XXX]`, apply topology changes (confirm with developer first)
 - **`workflow-guide.md`** — append `## Project-specific notes` only if genuinely needed
-- **`.ai-framework.json`** — write to the root of **each individual repo** (not the shared framework install): `{"lint": "<cmd>", "format": "<cmd or empty string>", "test": "<cmd>"}` (optional: `coverage.minChangedLines`, a whole number from 0 to 100, default 90, 0 means no minimum, is the changed-line coverage minimum; write it only if the developer names a number), mirroring the Lint/Format/Test command fields you just wrote into that repo's `stack.md`. This is what the `pre-push` git hook reads to run `build-verify` structurally — it must live inside the project's own repo, not the shared skills location, since the hook has no other way to find it. Commit it. The optional key `generatedDir` (a relative path made of letters, digits, spaces and `. _ - /`, with no `..`) moves the folder for generated files; write it only if the developer names a folder.
+- **`.ai-framework.json`** — write to the root of **each individual repo** (not the shared framework install): `{"lint": "<cmd or empty string>", "format": "<cmd or empty string>", "test": "<cmd or empty string>"}` (optional: `coverage.minChangedLines`, a whole number from 0 to 100, default 90, 0 means no minimum, is the changed-line coverage minimum; write it only if the developer names a number), mirroring the Lint/Format/Test command fields you just wrote into that repo's `stack.md` (a field recorded as "none configured" is written as an empty string, and that stage is skipped). At least one of the three must be non-empty, because the pre-push gate blocks a repo with no command at all. This is what the `pre-push` git hook reads to run `build-verify` structurally — it must live inside the project's own repo, not the shared skills location, since the hook has no other way to find it. Commit it. The optional key `generatedDir` (a relative path made of letters, digits, spaces and `. _ - /`, with no `..`) moves the folder for generated files; write it only if the developer names a folder. The optional key `diffBaseBranch` (`origin/<branch>`) is written only as Step 3c says.
 
 ## Completion message
 
