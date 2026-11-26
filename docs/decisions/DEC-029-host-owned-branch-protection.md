@@ -35,7 +35,7 @@ Supersedes the protected-branch detection of DEC-009, the `pre-commit` protectio
 
 ## Consequences
 
-- A repository whose `origin/HEAD` is not the branch its work starts from sets `diffBaseBranch` (for example `origin/dev`), which also fixes the diff-size base.
+- A repository whose `origin/HEAD` is not the branch its work starts from sets `diffBaseBranch` (for example `origin/dev`), which also fixes the diff-size base. First-run asks for it (Step 3c) and writes it only when the answer is not the branch `origin/HEAD` points to.
 - A new-branch range is measured against `diffBaseBranch` or the remote-tracking `origin/<default>`, no longer against a local branch name, so a stale local `main` cannot skew it.
 - A quick fix on a branch that already has commits joins that branch's PR; the orchestrator says "Working on `<current>`" so it is visible.
 - Evidence: `tests/test_quick_lane_wording.py`, `tests/test_pre_push_hook.py` and `tests/test_verification_run.py` (a push to `main` is not blocked by the framework; the base comes from `diffBaseBranch`, then `origin/HEAD`).

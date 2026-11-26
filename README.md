@@ -337,7 +337,7 @@ This is the one step that doesn't involve the AI tool at all — it confirms `bu
 
 ```bash
 cat .git/hooks/pre-push   # should be the framework launcher: it calls execution/verification/hook.py
-cat .ai-framework.json    # should exist after first-run analysis, with real lint/format/test commands
+cat .ai-framework.json    # should exist after first-run analysis, with at least one real lint, format or test command (an empty one is skipped)
 ```
 
 Then try pushing a commit that deliberately fails lint (or temporarily set `"test": "exit 1"` in `.ai-framework.json`) and run `git push`.

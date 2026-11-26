@@ -10,7 +10,7 @@ description: The self-correction loop backend/frontend agents run before declari
 - **Retry cap: 3 attempts.** Fix against the failing output each time, not a summary of it.
 - **Output is trimmed to ~40 lines by default** on failure — full output is always saved to a log file (path printed alongside the trimmed output), so retries don't re-inject a full noisy dump into your context each time. Use `--full` only for the escalation report on the 3rd failure.
 - **On the 3rd consecutive failure of the same stage: stop looping and escalate** — see below. Do not attempt a 4th time.
-- **You may not skip a stage because you're confident the code is fine.** If a command is missing from `stack.md`, that's a data gap to flag, not a license to skip.
+- **You may not skip a stage because you're confident the code is fine.** A stage left empty in `.ai-framework.json` (for example a repo with no lint or format command) is skipped by the script on purpose; that is not a license to skip a stage that has a command, and a command you can find in the repo but that is missing from `stack.md` is a data gap to flag.
 - **Structural backstop:** `pre-push` runs this again, outside your control, reading `.ai-framework.json` at the repo root — keep that file's commands in sync with what you use here (`first-run-analysis` writes both from the same detection pass). The hook blocks when the file is missing or has no command; a repository with nothing to verify sets `"test": "true"`. A blocked push is a failed gate: read its `BLOCKED` lines and fix the cause.
 
 # Build-verify
@@ -32,7 +32,7 @@ An agent that just wrote code is the worst-positioned agent to decide whether it
 
 ## The loop
 
-1. Make sure the commands exist: `.ai-framework.json` at the repository root holds this repo's **lint**, **format** and **test** commands (`first-run-analysis` writes it from the `stack.md` commands). If the file is missing or has no command, stop and trigger `first-run-analysis` rather than guessing a command.
+1. Make sure the commands exist: `.ai-framework.json` at the repository root holds this repo's **lint**, **format** and **test** commands, each of which may be empty as long as one is not (`first-run-analysis` writes it from the `stack.md` commands). If the file is missing or has no command, stop and trigger `first-run-analysis` rather than guessing a command.
 2. Run:
    ```bash
    python "$HOME/.config/opencode/scripts/build-verify.py"
