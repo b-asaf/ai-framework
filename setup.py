@@ -644,6 +644,57 @@ def uninstall_git_template():
     info("every push until you run 'python setup.py' again or delete .git/hooks/pre-push there.")
     print()
 
+# ── Code graph (graphify CLI) ─────────────────────────────────────────────────
+
+GRAPHIFY_PACKAGE = "graphifyy"  # the PyPI name; the command it installs is `graphify`
+
+def _graphify_version():
+    """The first line of `graphify --version`, or None when the command is missing or fails."""
+    exe = shutil.which("graphify")
+    if exe is None:
+        return None
+    try:
+        done = subprocess.run([exe, "--version"], capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if done.returncode != 0:
+        return None
+    return done.stdout.strip() or None
+
+def check_graphify():
+    """Read-only: report the graphify CLI for --verify (DEC-030)."""
+    bold("Code graph:")
+    version = _graphify_version()
+    if version:
+        ok(version)
+    else:
+        warn("graphify CLI not found: run 'python setup.py' to install it")
+
+def install_graphify():
+    """Install the graphify CLI with uv when it is missing (DEC-030). The framework never runs `graphify install`."""
+    bold("Code graph (graphify CLI):")
+    version = _graphify_version()
+    if version:
+        ok(version)
+        return
+    uv = shutil.which("uv")
+    if uv is None:
+        warn("graphify is not installed and uv was not found")
+        _need_action("graphify CLI is not installed",
+                     "Install uv (https://docs.astral.sh/uv/), then run: uv tool install graphifyy",
+                     "Or run: pipx install graphifyy")
+        return
+    try:
+        done = subprocess.run([uv, "tool", "install", GRAPHIFY_PACKAGE], capture_output=True, text=True, timeout=600)
+    except (OSError, subprocess.SubprocessError):
+        done = None
+    if done is not None and done.returncode == 0 and _graphify_version():
+        ok("graphify installed with uv")
+        return
+    warn(f"uv tool install {GRAPHIFY_PACKAGE} did not give a working graphify command")
+    _need_action("graphify CLI is not installed",
+                 f"Run: uv tool install {GRAPHIFY_PACKAGE}, and make sure the uv tool folder is on PATH")
+
 # ── PR/MR provider tooling ───────────────────────────────────────────────────
 
 def check_pr_provider():
@@ -746,6 +797,9 @@ def verify_only():
     check_hooks()
     print()
 
+    check_graphify()
+    print()
+
     template_dir = REPO / "git-template"
     current = subprocess.run(
         ["git", "config", "--global", "--get", "init.templateDir"],
@@ -821,6 +875,10 @@ def main():
 
     # 4. PR/MR provider tooling (detect only — see check_pr_provider docstring)
     check_pr_provider()
+    print()
+
+    # 5. Code graph CLI (graphify, DEC-030)
+    install_graphify()
     print()
 
     # Collect the remaining action items that only make sense after wiring

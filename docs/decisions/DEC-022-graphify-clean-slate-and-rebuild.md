@@ -3,6 +3,8 @@
 **Status:** Accepted
 **Date:** 2026-11-17
 
+> Note (DEC-030, 2026-11-26): the new integration does not use graphify's git hooks; the framework runs graphify itself. The rest of this record stands.
+
 ## Context
 
 - The developer wants the framework to use graphify: build the graph when work on a repository starts, and update it when changes are made. The only instruction for the transition (2026-11-14, clarified 2026-11-17) is that the existing graphify files may be removed during it, provided the tool is installed and linked properly afterwards.

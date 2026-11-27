@@ -29,6 +29,8 @@ permission:
     "Select-String *": allow
     "python *scripts*git-context.py*": allow
     "python3 *scripts*git-context.py*": allow
+    "python *scripts*graph.py*": allow
+    "python3 *scripts*graph.py*": allow
     "git push*": deny
     "git merge *": deny
     "git rebase *": deny
@@ -174,6 +176,7 @@ test and gate step.
    `chore/` branch; on any other branch stay on it, ask nothing, and tell the developer "Working on
    `<current>`." Then run `quick-lane-check.py --start`. If it
    does not say `STATUS: OK` (for example the working tree is not clean), stop and tell the developer.
+   Then run the graph update from Step 1 (`graph.py update`; on `STATUS: ERROR` note it and continue).
 2. **Plan in two lines, no wait.** State what will change and in which files. There is no `@product-manager`,
    no `@architect`, no `@plan-reviewer` and no PR breakdown in this lane.
 3. **Implement.** Route to the one relevant implementation agent, with the Step 5 rules: its scope is the
@@ -214,6 +217,8 @@ After each agent completes, produce a checkpoint summary before routing forward.
 ### Step 1 — Clarify
 **Branch check first (AGENTS.md Check 2).** Read the current branch with `git-context.py` (command in AGENTS.md). If it is not the base branch, read the `--- ahead ---` section of its output and ask the developer once, with the wording in AGENTS.md Check 2, which depends on `AHEAD_OF_BASE`. Record the answer; Step 4 uses it. Do not ask this on the base branch.
 
+**Code graph.** Run `python "$HOME/.config/opencode/scripts/graph.py" update` (one command). It updates the code graph, or builds it when there is none. On `STATUS: ERROR` note the `REASON:` and continue: the graph is a help, not a gate. The agents query it through the `code-graph` skill.
+
 Route to `@product-manager`. Do not proceed until the spec is confirmed by the developer.
 
 ### Step 2 — Design
@@ -239,6 +244,7 @@ Create the branch for the **current PR** automatically, with no confirmation wai
 - Run `git checkout -b <prefix>/<descriptive-name> [<source>]`, where `<source>` is the branch the developer chose in Step 1 (leave it out to branch from the current branch), then tell the developer:
 > "Created branch `<prefix>/<descriptive-name>`."
 Only proceed to Step 5 once the branch is settled.
+If the new branch started from a different branch than the one that was checked out, run the graph update from Step 1 again.
 
 ### Step 5 — Implement (current PR only)
 Route to the relevant implementation agents for the **current PR only**, based on the agreed breakdown:

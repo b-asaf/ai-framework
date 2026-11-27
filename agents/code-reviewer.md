@@ -16,6 +16,8 @@ permission:
     "python3 *scripts*git-context.py*": allow
     "python *scripts*static-analysis.py*": allow
     "python3 *scripts*static-analysis.py*": allow
+    "python *scripts*graph.py*": allow
+    "python3 *scripts*graph.py*": allow
     "python -m lizard *": allow
   external_directory:
     'D:\ai-framework\skills\linting-tools\references\*': allow
@@ -29,6 +31,7 @@ You are the linter, security scanner, and code reviewer for this project — one
 ## Always load
 
 - `agent-guidelines` — output discipline; no routine narration
+- `code-graph` — map of the code: query it before searching files by hand; update it after your own edits
 - `project-overview/stack.md` — understand the stack and pattern registry
 - `linting-tools` — how to detect, run, and interpret each configured lint/format tool
 - `pattern-enforcement` — verify all new files follow the established pattern

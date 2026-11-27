@@ -8,6 +8,8 @@ permission:
     "git status": allow
     "git log *": allow
     "git diff *": allow
+    "python *scripts*graph.py*": allow
+    "python3 *scripts*graph.py*": allow
   edit: deny
   write: deny
   task: deny
@@ -17,6 +19,7 @@ You are the Software Architect for this project. You design before anything is b
 
 ## Always load
 - `agent-guidelines` — output discipline; cite every source
+- `code-graph` — map of the code: query it before searching files by hand; update it after your own edits
 - `project-overview/stack.md` — current stack and architecture
 - `project-overview/sub/patterns.md` — pattern registry to check before proposing anything
 - `project-overview/sub/topology.md` — service topology for cross-service tasks

@@ -387,6 +387,8 @@ A branch stays under `maxDiffLines` in `.ai-framework.json` (default 400; change
 
 `SKIP_DIFF_SIZE_CHECK=1 git push` stays your own emergency switch, and it is not logged. The quick-lane limits (3 files, 60 lines) are not changed by `/oversize`.
 
+**The code graph:** `first-run` builds a graph of each repository's code with graphify (`scripts/graph.py build`: code only, no API key, no cost). It lives in `<generated folder>/graphify/`, which gets its own `.gitignore` so `git add .` never takes it. The orchestrator runs `scripts/graph.py update` at the start of a task, and the architect, the code-reviewer and the implementation agents query it (`query`, `path`, `explain`) through the `code-graph` skill. The framework does not use graphify's git hooks or its installers (they write a `.gitattributes`, a second graph at the repository root, and sections of `AGENTS.md` and `CLAUDE.md`). `python setup.py` installs the graphify CLI with `uv tool install graphifyy`, and `--verify` reports it.
+
 **Running `/review` — no arguments, no separate setup:**
 
 1. `git checkout` your **feature branch** (the source branch — not `main`). The command reviews "the current branch," so it needs to be the one with your changes checked out.
@@ -435,10 +437,10 @@ setup.py                    ← run once per machine: links the framework into y
 workflow-guide.md           ← day-to-day developer guide
 
 agents/                     ← 15 agent definitions (models are set in `execution/profiles/default.json`)
-skills/                     ← 43 skill folders (most have a ## Quick reference section)
+skills/                     ← 44 skill folders (most have a ## Quick reference section)
 commands/                   ← slash commands (/task, /quick, /oversize, /review, /first-run, /handoff)
 hooks/                      ← git hooks (commit-msg and pre-push are one launcher over execution/verification/hook.py — copied into new repos via git init.templateDir; `python setup.py --install-hooks <repo>` installs them in an existing repo)
-scripts/                    ← helpers that run during a task, called by agents, hooks and gates (git-context.py, static-analysis.py, quick-lane-check.py, diff-size-check.py, build-verify.py, open-draft-pr.py); linked into your tool config folders by setup.py
+scripts/                    ← helpers that run during a task, called by agents, hooks and gates (git-context.py, static-analysis.py, quick-lane-check.py, diff-size-check.py, build-verify.py, graph.py, open-draft-pr.py); linked into your tool config folders by setup.py
 tools/                      ← maintainer tooling, not linked into any tool: validate_framework.py, generate_routing.py, and lib/ (shared code that the validator and the runner import)
 execution/                  ← work that code runs and checks: runner/ (headless agent runs and benchmarks), verification/ (the pre-push gate), profiles/, policy.json and routing.json (which model runs which role), schemas/
 tests/                      ← the unittest suite (`python -m unittest`) and the benchmark evidence in tests/bench/
