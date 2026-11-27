@@ -44,6 +44,24 @@ class ImplementerDrift(unittest.TestCase):
             with self.subTest(agent=agent):
                 self.assertIn("- `build-verify`", read(REPO / "agents" / f"{agent}.md"))
 
+    def test_every_implementer_loads_agent_guidelines_and_code_graph(self):
+        for agent in IMPLEMENTERS:
+            text = read(REPO / "agents" / f"{agent}.md")
+            with self.subTest(agent=agent):
+                self.assertIn("- `agent-guidelines`", text)
+                self.assertIn("- `code-graph`", text)
+
+    def test_the_agents_that_use_the_code_graph_may_run_its_script(self):
+        users = ("architect", "code-reviewer", "orchestrator", *IMPLEMENTERS)
+        for agent in users:
+            front = read(REPO / "agents" / f"{agent}.md").split("---")[1]
+            with self.subTest(agent=agent):
+                self.assertIn('"python *scripts*graph.py*": allow', front)
+                self.assertIn('"python3 *scripts*graph.py*": allow', front)
+        for agent in ("architect", "code-reviewer"):
+            with self.subTest(agent=agent):
+                self.assertIn("- `code-graph`", read(REPO / "agents" / f"{agent}.md"))
+
 
 class SkillSet(unittest.TestCase):
     def test_every_skill_folder_has_a_skill_file_or_is_the_routing_data(self):

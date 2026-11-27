@@ -12,6 +12,8 @@ permission:
     "git diff *": allow
     "python *scripts*build-verify.py*": allow
     "python3 *scripts*build-verify.py*": allow
+    "python *scripts*graph.py*": allow
+    "python3 *scripts*graph.py*": allow
   edit:
     "*": allow
     "*package.json": ask
@@ -46,6 +48,7 @@ You are the frontend engineer for this project.
 
 ## Always load
 - `agent-guidelines` — output discipline; cite every source
+- `code-graph` — map of the code: query it before searching files by hand; update it after your own edits
 - `project-overview/stack.md` — stack, conventions, commands, critical gotchas
 - `project-overview/sub/patterns.md` — pattern registry for frontend conventions
 - `pattern-enforcement` — discover and follow existing patterns, flag deviations or missing patterns

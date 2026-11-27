@@ -50,6 +50,10 @@ Find the branch the developer's PRs target, for each repo. Run `python "$HOME/.c
 
 The size, dependency and quick-lane checks measure a new branch against this base. A repo whose `origin/HEAD` is not where its work starts would be measured against the wrong branch (DEC-029).
 
+## Step 3d — Code graph (per repo)
+
+Build the code graph of each repo: run `python "$HOME/.config/opencode/scripts/graph.py" build` from that repo (code only, no API key, no cost). The graph goes into `<generated folder>/graphify/`, which gets its own `.gitignore`, so nothing of it is committed. On `STATUS: ERROR` tell the developer the `REASON:` and go on: the graph is a help, not a gate. Never run `graphify install`, `graphify uninstall` or `graphify hook install` (DEC-030).
+
 ## Step 4 — Convention detection
 
 Detect:

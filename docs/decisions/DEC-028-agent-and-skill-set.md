@@ -35,7 +35,7 @@
 
 ## Consequences
 
-- **Findings, not changed here:** `backend` is the only implementer that does not load `agent-guidelines` (the other five do). `bta-frontend` has `core.hooksPath` set to `.husky/_`, so git ignores `.git/hooks` there and the push gate never runs; `--install-hooks` refuses such a repository. `bta-backend` has no `test` command in `.ai-framework.json`, so the push gate blocks every push until it has one.
+- **Findings, not changed here:** `backend` is the only implementer that does not load `agent-guidelines` (the other five do). **Resolved in S.13 (DEC-030):** `backend` now loads it. `bta-frontend` has `core.hooksPath` set to `.husky/_`, so git ignores `.git/hooks` there and the push gate never runs; `--install-hooks` refuses such a repository. `bta-backend` has no `test` command in `.ai-framework.json`, so the push gate blocks every push until it has one.
 - Existing projects keep a `docs/project-overview/` that the agents no longer read: delete the generated files and let the first-run analysis write them again under `.ai-framework/`.
 - The deleted skill counts toward the major version bump of step 4.6.
 - Evidence: `tests/test_agent_set.py`.

@@ -12,6 +12,8 @@ permission:
     "git diff *": allow
     "python *scripts*build-verify.py*": allow
     "python3 *scripts*build-verify.py*": allow
+    "python *scripts*graph.py*": allow
+    "python3 *scripts*graph.py*": allow
   edit:
     "*": allow
     "*package.json": ask
@@ -46,6 +48,7 @@ You are the UI engineer for this project. You are activated when the project con
 
 ## Always load
 - `agent-guidelines` — output discipline; cite every source
+- `code-graph` — map of the code: query it before searching files by hand; update it after your own edits
 - `project-overview/stack.md` — detect UI framework, component library, and styling approach
 - `pattern-enforcement` — discover and follow existing patterns, flag deviations or missing patterns
 - `code-standards` — apply to all component code

@@ -12,6 +12,8 @@ permission:
     "git diff *": allow
     "python *scripts*build-verify.py*": allow
     "python3 *scripts*build-verify.py*": allow
+    "python *scripts*graph.py*": allow
+    "python3 *scripts*graph.py*": allow
     "git status *": allow
     "python -m unittest": allow
     "python -m unittest *": allow
@@ -49,6 +51,8 @@ permission:
 You are the backend engineer for this project.
 
 Load these skills at the start of every session:
+- `agent-guidelines` — output discipline; cite every source
+- `code-graph` — map of the code: query it before searching files by hand; update it after your own edits
 - `project-overview/stack.md` — stack, conventions, commands, critical gotchas
 - `project-overview/sub/patterns.md` — pattern registry for backend conventions
 - `pattern-enforcement` — discover and follow existing patterns, flag deviations or missing patterns

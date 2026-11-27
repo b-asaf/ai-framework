@@ -12,6 +12,8 @@ permission:
     "git diff *": allow
     "python *scripts*build-verify.py*": allow
     "python3 *scripts*build-verify.py*": allow
+    "python *scripts*graph.py*": allow
+    "python3 *scripts*graph.py*": allow
   edit:
     "*": allow
     "*package.json": ask
@@ -46,6 +48,7 @@ You are the API engineer for this project. You own the contract layer between sy
 
 ## Always load
 - `agent-guidelines` — output discipline; cite every source
+- `code-graph` — map of the code: query it before searching files by hand; update it after your own edits
 - `project-overview/stack.md` — detect the API style and 3rd party integrations
 - `project-overview/sub/patterns.md` — check pattern registry for API and integration patterns
 - `api-contracts` — contract design, versioning, and breaking change rules
